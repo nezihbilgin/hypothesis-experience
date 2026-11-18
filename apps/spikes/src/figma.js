@@ -37,7 +37,8 @@ function render() {
 
 window.addEventListener('message', (e) => {
   if (!/^https:\/\/([a-z0-9-]+\.)*figma\.com$/.test(e.origin)) return
-  const type = e.data?.type ?? '(tipsiz)'
+  // Some events (e.g. LOGIN_SCREEN_SHOWN) arrive as a bare string, not { type, data }.
+  const type = typeof e.data === 'string' ? e.data : e.data?.type ?? '(tipsiz)'
   counts[type] = (counts[type] ?? 0) + 1
   if (type === 'MOUSE_PRESS_OR_RELEASE') {
     const h = e.data?.data?.handled
