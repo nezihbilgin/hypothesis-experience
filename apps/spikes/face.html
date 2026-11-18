@@ -1,0 +1,22 @@
+<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FaceLandmarker fps spike</title><link rel="stylesheet" href="./src/style.css"></head>
+<body><main>
+<p><a href="./index.html">← Spike'lar</a></p>
+<h1>Spike 2: FaceLandmarker fps</h1>
+<p class="lead">Yüz takibi bir Web Worker'da çalışır, kamera kareleri cihazdan çıkmaz. 60 saniye boyunca normal şekilde ekrana bak, istersen yandaki prototipte gezin. Test 2017-2019 dönemi bir laptopta yapılmalı. Hedef: medyan ≥ 10 fps.</p>
+<div class="card">
+  <label for="url">Yanında açılacak Figma prototip linki (opsiyonel, aynı anda yük bindirmek için)</label>
+  <input id="url" type="url" placeholder="https://www.figma.com/proto/...">
+  <label><input id="cpu" type="checkbox"> GPU yerine CPU delegate kullan (karşılaştırma için)</label>
+  <button id="start">Testi başlat (60 sn)</button><button id="stop" class="secondary" disabled>Durdur</button><button id="dl" class="secondary" disabled>Sonucu indir (JSON)</button>
+</div>
+<div class="row">
+  <div class="card">
+    <div class="big" id="fps">– fps</div>
+    <table id="stats"></table>
+    <video id="video" playsinline muted style="max-width:240px;margin-top:12px"></video>
+  </div>
+  <div><iframe id="frame" title="Prototip" allowfullscreen></iframe></div>
+</div>
+</main>
+<script type="module" src="./src/face.js"></script>
+</body></html>

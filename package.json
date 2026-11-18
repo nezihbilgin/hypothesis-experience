@@ -1,0 +1,12 @@
+{
+  "name": "hypothesis-experience",
+  "private": true,
+  "workspaces": ["packages/*", "apps/*"],
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p packages/core",
+    "spikes": "npm run build -w @hx/spikes && npm run preview -w @hx/spikes",
+    "spikes:dev": "npm run dev -w @hx/spikes"
+  },
+  "devDependencies": { "@types/node": "^22", "tsx": "4.20.3", "typescript": "5.8.3", "vitest": "3.2.4" }
+}

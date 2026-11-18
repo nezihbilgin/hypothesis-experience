@@ -1,0 +1,20 @@
+<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sekme kaydı spike</title><link rel="stylesheet" href="./src/style.css"></head>
+<body><main>
+<p><a href="./index.html">← Spike'lar</a></p>
+<h1>Spike 4: Sekme kaydı + kamera</h1>
+<p class="lead">Sekme kaydı (getDisplayMedia) ve kamera aynı anda 15 saniye kaydedilir. Seçim penceresinde "Bu sekme"yi seç. Chrome, Edge, Safari ve Firefox'ta ayrı ayrı çalıştırıp her birinin JSON'unu indir.</p>
+<div class="card">
+  <button id="start">Kaydı başlat (15 sn)</button><button id="dl" class="secondary" disabled>Sonucu indir (JSON)</button>
+  <div id="ticker" style="margin-top:12px;font:600 20px ui-monospace,monospace">0.0</div>
+</div>
+<div class="row">
+  <div class="card"><h2 style="margin-top:0">Destek</h2><table id="support"></table></div>
+  <div class="card"><h2 style="margin-top:0">Sonuç</h2><table id="result"></table></div>
+</div>
+<div class="row">
+  <div><h2>Sekme kaydı</h2><video id="vTab" controls playsinline></video></div>
+  <div><h2>Kamera kaydı</h2><video id="vCam" controls playsinline></video></div>
+</div>
+</main>
+<script type="module" src="./src/record.js"></script>
+</body></html>

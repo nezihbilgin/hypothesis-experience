@@ -1,0 +1,26 @@
+<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Figma Embed spike</title><link rel="stylesheet" href="./src/style.css"></head>
+<body><main>
+<p><a href="./index.html">← Spike'lar</a></p>
+<h1>Spike 1: Figma Embed olayları</h1>
+<p class="lead">Bu sayfayı Figma'ya giriş yapılmamış bir tarayıcıda (gizli pencere) aç. Prototipte birkaç ekran gez, bir de tıklanamayan bir yere tıkla. Sonra aynı testi giriş yapılmış tarayıcıda tekrarla.</p>
+<div class="card">
+  <label for="url">Public prototip linki (figma.com/proto/... ya da figma.com/design/...)</label>
+  <input id="url" type="url" placeholder="https://www.figma.com/proto/FILEKEY/Ad?node-id=1-2&starting-point-node-id=1%3A2">
+  <label for="cid">Figma OAuth app client-id (Embed Kit 2.0 olayları için gerekli)</label>
+  <input id="cid" type="text" placeholder="ör. AbCdEf123...">
+  <label><input id="loggedOut" type="checkbox"> Bu tarayıcıda Figma'ya giriş yapılmamış (gizli pencere)</label>
+  <button id="go">Yükle</button><button id="dl" class="secondary">Sonucu indir (JSON)</button>
+  <p id="embedUrl" class="lead" style="word-break:break-all"></p>
+</div>
+<div class="row">
+  <div><iframe id="frame" title="Figma prototip" allowfullscreen></iframe></div>
+  <div class="card">
+    <h2 style="margin-top:0">Sonuç</h2>
+    <table id="checks"></table>
+    <h2>Olay günlüğü</h2>
+    <pre class="log" id="log"></pre>
+  </div>
+</div>
+</main>
+<script type="module" src="./src/figma.js"></script>
+</body></html>

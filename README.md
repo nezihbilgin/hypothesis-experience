@@ -1,0 +1,28 @@
+# Hypothesis & Real Experience (çalışma adı)
+
+Tasarımcının ekran bazlı hipotezini katılımcının gerçek davranışıyla karşılaştıran self-moderated usability test aracı.
+Tasarım kararları: `HANDOFF-hypothesis-experience.md`. Faz 0 durumu: [FAZ0-RAPOR.md](./FAZ0-RAPOR.md).
+
+```
+packages/core/   Saf, deterministik model (Vitest). Senti felt.ts'ten port edildi.
+  src/engine.ts      baseline yüzdelik, runs, impulse+EMA eğrisi, aynı tür birleştirme
+  src/screens.ts     ekran pencereli model: hipotez kartı -> beklenen seviye, 4 sapma tipi, Türkçe cümleler, retro klip seçimi
+  src/compat/        Senti uyumluluk modeli (sadece regresyon testi için)
+  test/              regresyon (docs/evidence), Senti'nin birim testleri, ekran modeli testleri
+apps/spikes/     Faz 0 tarayıcı spike'ları (Vite, çok sayfalı)
+```
+
+## Çalıştırma
+
+Node 20+ gerekir.
+
+```bash
+npm install
+npm test            # core testleri (24 test)
+npm run spikes      # spike sayfalarını derler ve http://localhost:4173 adresinde açar
+```
+
+Kamera ve ekran kaydı güvenli bağlam ister: `localhost` ya da `https`. Başka bir bilgisayardan (eski laptop) test için
+sayfaların https üzerinden yayınlanması gerekir (GitHub Pages önerilir).
+
+Lisans notu: `packages/core/src/compat/`, `engine.ts` ve `test/senti-ref/` Senti'den (MIT, Techkeyy) uyarlanmıştır; lisans metni `packages/core/test/senti-ref/LICENSE-senti`.
