@@ -1,6 +1,8 @@
 import { $, download, envInfo, load, save } from './env.js'
 
 const WANT = ['INITIAL_LOAD', 'PRESENTED_NODE_CHANGED', 'MOUSE_PRESS_OR_RELEASE', 'NEW_STATE']
+// Seeing either of these means the viewer was blocked (login wall / password), which is itself a spike answer.
+const BLOCKERS = ['LOGIN_SCREEN_SHOWN', 'PASSWORD_SCREEN_SHOWN']
 const counts = {}
 const events = []
 let handledSeen = { true: 0, false: 0, missing: 0 }
@@ -27,7 +29,8 @@ function render() {
     return `<tr><td>${k}</td><td class="${n ? 'ok' : 'bad'}">${n ? `geldi (${n})` : 'gelmedi'}</td></tr>`
   })
   rows.push(`<tr><td>MOUSE…handled</td><td>true: ${handledSeen.true}, false: ${handledSeen.false}, alan yok: ${handledSeen.missing}</td></tr>`)
-  const other = Object.keys(counts).filter((k) => !WANT.includes(k))
+  for (const k of BLOCKERS) if (counts[k]) rows.push(`<tr><td>${k}</td><td class="bad">göründü (${counts[k]}): izleyici engellendi</td></tr>`)
+  const other = Object.keys(counts).filter((k) => !WANT.includes(k) && !BLOCKERS.includes(k))
   if (other.length) rows.push(`<tr><td>Diğer</td><td>${other.map((k) => `${k} (${counts[k]})`).join(', ')}</td></tr>`)
   $('#checks').innerHTML = rows.join('')
 }
