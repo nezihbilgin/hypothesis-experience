@@ -7,7 +7,7 @@ Son güncelleme: 18 Kasım 2026
 | 3 | `felt.ts` → `core` port'u | **Evet** | Senti ile birebir aynı çıktı |
 | 4 | Sekme kaydı + kamera | **Chromium'da evet**, Edge/Safari/Firefox bekliyor | Headless Chromium'da ikisi aynı anda kaydediyor |
 | 2 | FaceLandmarker worker ≥ 10 fps | **Boru hattı çalışıyor**, eski laptopta ölçüm bekliyor | Bulutta yazılım GPU'suyla 10-11 fps |
-| 1 | Figma Embed olayları (oturumsuz) | **Büyük ölçüde evet** (19 Kasım), ekran geçişi ve handled:true teyidi bekliyor | Oturumsuz gizli pencerede olaylar geliyor |
+| 1 | Figma Embed olayları (oturumsuz) | **Evet** (19 Kasım) | Oturumsuz gizli pencerede ekran geçişleri ve tıklamalar (handled true/false) geliyor |
 
 ## Spike 3: core port'u (tamamlandı)
 
@@ -42,7 +42,7 @@ Son güncelleme: 18 Kasım 2026
 - **Ücretsiz plan app'i + ücretsiz plan dosyası, oturumsuz:** sadece `LOGIN_SCREEN_SHOWN` (düz metin olarak geldi). Sebep: ücretsiz planda dosya "Anyone with the link" ile paylaşılamadı. Bu app emekliye ayrıldı.
 - **Şirket planı app'i + link ile paylaşılan şirket dosyası, oturumsuz (gizli pencere):** `INITIAL_LOAD`, `PRESENTED_NODE_CHANGED` (açılış ekranı, `interactionType: NONE`) ve `MOUSE_PRESS_OR_RELEASE` (`handled: false`, `targetNodeId`, koordinatlar) geldi. Forumdaki Aralık 2025 / Ocak 2026 olumsuz raporları bu kurulumda tekrarlanmadı.
 - **Aynı kurulum, oturumlu:** `INITIAL_LOAD` ve `PRESENTED_NODE_CHANGED` geldi; bu oturumda tıklama yapılmamış görünüyor.
-- Bekleyen teyit: ekranlar arası geçişte `PRESENTED_NODE_CHANGED` tekrar geliyor mu, hotspot tıklamasında `handled: true` geliyor mu.
+- **Teyit, oturumsuz gizli pencere:** gezinmede 5 `PRESENTED_NODE_CHANGED` (geçişlerde `interactionType: ON_CLICK`) ve 6 `MOUSE_PRESS_OR_RELEASE` (4 `handled: true`, 2 `handled: false`) geldi. Ekran geçmişi, geri dönüş ve dead click sinyalleri Figma modunda üretilebilir.
 - Kurulum notu: Figma'nın dosya paylaşımı herkese açık olmalı; bu ücretli plan gerektiriyor ya da şirket admin ayarlarına bağlı olabilir. Ürün aşamasında araştırmacıya "dosyayı link ile paylaş" adımı gösterilmeli.
 
 ## Kalan adımlar
