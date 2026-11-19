@@ -1,4 +1,4 @@
-import { $, download, envInfo, load, pct, save } from './env.js'
+import { $, clientId, download, envInfo, load, pct, save } from './env.js'
 
 const DURATION = 60
 const TARGET_FPS = 15
@@ -13,7 +13,7 @@ function toEmbed(raw) {
     if (!/(^|\.)figma\.com$/.test(u.hostname)) return raw
     u.hostname = 'embed.figma.com'
     u.searchParams.set('embed-host', location.hostname || 'localhost')
-    const cid = load('hx.figma.cid') || 'fXJbAQXtLCtwkR6egPY7YX'
+    const cid = clientId()
     if (cid) u.searchParams.set('client-id', cid)
     return u.toString()
   } catch { return '' }

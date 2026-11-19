@@ -1,4 +1,4 @@
-import { $, download, envInfo, load, save } from './env.js'
+import { $, clientId, download, envInfo, load, save } from './env.js'
 
 const WANT = ['INITIAL_LOAD', 'PRESENTED_NODE_CHANGED', 'MOUSE_PRESS_OR_RELEASE', 'NEW_STATE']
 // Seeing either of these means the viewer was blocked (login wall / password), which is itself a spike answer.
@@ -9,9 +9,7 @@ let handledSeen = { true: 0, false: 0, missing: 0 }
 let t0 = performance.now()
 
 $('#url').value = load('hx.figma.url')
-// Client-id is public (it appears in every embed URL), so a default is fine.
-const DEFAULT_CLIENT_ID = 'fXJbAQXtLCtwkR6egPY7YX'
-$('#cid').value = load('hx.figma.cid') || DEFAULT_CLIENT_ID
+$('#cid').value = clientId()
 
 export function toEmbedUrl(raw, clientId, host) {
   const u = new URL(raw)
