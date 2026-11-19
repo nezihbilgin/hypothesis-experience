@@ -1,4 +1,4 @@
-import { $, clientId, download, envInfo, load, pct, save } from './env.js'
+import { $, clientId, download, envInfo, load, pct, protoUrl, save } from './env.js'
 
 const DURATION = 60
 const TARGET_FPS = 15
@@ -7,7 +7,7 @@ let perSecond = [], inferMs = [], faceFrames = 0, frames = 0, longFrames = 0, ma
 let secFrames = 0, secStart = 0, startedAt = 0, info = {}, logs = []
 // Startup breakdown, to tell permission wait / model load / first-inference warm-up apart.
 let timing = {}
-$('#url').value = load('hx.figma.url')
+$('#url').value = protoUrl()
 
 function toEmbed(raw) {
   try {

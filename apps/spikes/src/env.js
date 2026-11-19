@@ -34,3 +34,7 @@ export function clientId() {
   const v = load('hx.figma.cid')
   return v && !RETIRED_CLIENT_IDS.includes(v) ? v : DEFAULT_CLIENT_ID
 }
+
+// Test prototype (link-shared company file) prefilled so a second machine only needs the page address.
+export const DEFAULT_PROTO_URL = 'https://www.figma.com/proto/3QmbkTQZoS3UIZ08CDeRQh/Untitled?node-id=2-4145&viewport=1062%2C1243%2C0.23&t=IGj1RdNk6lvjTW0c-0&scaling=min-zoom&content-scaling=fixed&starting-point-node-id=2%3A4145'
+export const protoUrl = () => new URLSearchParams(location.search).get('url') || load('hx.figma.url') || DEFAULT_PROTO_URL
