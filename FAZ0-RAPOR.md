@@ -6,7 +6,7 @@ Son güncelleme: 18 Kasım 2026
 |---|---|---|---|
 | 3 | `felt.ts` → `core` port'u | **Evet** | Senti ile birebir aynı çıktı |
 | 4 | Sekme kaydı + kamera | **Chromium'da evet**, Edge/Safari/Firefox bekliyor | Headless Chromium'da ikisi aynı anda kaydediyor |
-| 2 | FaceLandmarker worker ≥ 10 fps | **Boru hattı çalışıyor**, eski laptopta ölçüm bekliyor | Bulutta yazılım GPU'suyla 10-11 fps |
+| 2 | FaceLandmarker worker ≥ 10 fps | **M1'de evet**, Intel Mac ölçümü bekliyor | M1 + Figma iframe: 14-15 fps (hedef 15'te tavan), çıkarım 17.5 ms |
 | 1 | Figma Embed olayları (oturumsuz) | **Evet** (19 Kasım) | Oturumsuz gizli pencerede ekran geçişleri ve tıklamalar (handled true/false) geliyor |
 
 ## Spike 3: core port'u (tamamlandı)
@@ -30,6 +30,14 @@ Son güncelleme: 18 Kasım 2026
 - Sayfa: `apps/spikes/face.html`. `@mediapipe/tasks-vision` 0.10.35, module Web Worker, GPU delegate (başarısız olursa CPU), hedef 15 fps, 60 sn. Ölçtükleri: saniyelik fps (medyan ve p10), çıkarım süresi p50/p95, yüz bulunan kare oranı, ana thread takılması. Yanına Figma prototipi yüklenebilir.
 - Bulgu: module worker'da klasik wasm yükleyicisi sessizce takılıyor; `forVisionTasks(base, true)` ile module wasm varyantı kullanılınca çalışıyor. Bu Faz 1'deki `sensing` paketine not.
 - Bulut (headless Chromium, SwiftShader yazılım GPU'su, sahte kamera, yüz yok): 10-11 fps, model 400 ms'de yüklendi. Gerçek GPU'lu bir laptopta daha yüksek olması beklenir ama asıl ölçüm 2017-2019 laptopta yapılmalı.
+
+### Ölçüm: M1 MacBook, Chrome 157, Figma iframe açık (19 Kasım)
+
+- GPU delegate, medyan 14 fps, p10 14 fps: hedef 15 fps'te tavana vuruyor, darboğaz yok.
+- Çıkarım p50 17.5 ms / p95 21.6 ms, yani kapasite yaklaşık 45-55 fps. Eski donanımda 3-4 kat yavaşlamaya kadar 10 fps eşiği tutar.
+- Yüz bulunan kare: %96.
+- Model yükleme 4.4 sn, ilk ~6 sn kare yok (GPU shader ısınması). Akışta kamera kontrolü ekranı bu süreyi zaten örter.
+- Ana thread: 60 sn'de 29 kare > 50 ms, en uzun boşluk 333 ms. Muhtemelen iframe yüklenmesi ve `createImageBitmap`. Faz 1'de ana thread zamanlaması ekran kaydı ve olay zaman damgaları açısından izlenmeli.
 
 ## Spike 1: Figma Embed olayları
 
