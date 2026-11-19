@@ -25,6 +25,7 @@ Son güncelleme: 18 Kasım 2026
 - Headless Chromium: sekme 1280x720 @ 15 fps (412 KB, VP9), kamera (1249 KB, VP9 + Opus), ikisi aynı anda. Region Capture (`CropTarget`) ve Element Capture (`RestrictionTarget`) da mevcut, yani kaydı sadece prototip iframe'ine kırpmak mümkün olabilir.
 - **Chrome 157, M1 (19 Kasım):** sekme 3248x1864 @ 15 fps (15 sn'de 2.2 MB, VP9) ve kamera + mikrofon (4.1 MB, VP9 + Opus) aynı anda kaydedildi. Region/Element Capture mevcut. Not: sekme Retina çözünürlüğünde geliyor; Faz 1'de genişlik ~1280'e sınırlanmalı.
 - **Firefox (19 Kasım):** kamera çalışıyor, sekme kaydı `NotFoundError`. Firefox sekme yakalamayı desteklemiyor (yalnızca pencere/ekran), Region/Element Capture ve CaptureController da yok. macOS'ta Ekran Kaydı izni verilmemişse de aynı hata gelir. Sayfaya düz `getDisplayMedia` yedeği eklendi, pencere kaydının çalışıp çalışmadığı tekrar denenecek.
+- Öneri: MVP katılımcı akışı Chrome/Edge ister; Firefox ve Safari desteği Faz 2 tarayıcı matrisine (pencere kaydı ya da kayıtsız mod).
 - Bekleyen: Edge, Safari.
 
 ## Spike 2: FaceLandmarker fps
