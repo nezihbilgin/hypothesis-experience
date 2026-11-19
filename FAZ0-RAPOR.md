@@ -7,7 +7,7 @@ Son güncelleme: 18 Kasım 2026
 | 3 | `felt.ts` → `core` port'u | **Evet** | Senti ile birebir aynı çıktı |
 | 4 | Sekme kaydı + kamera | **Chromium'da evet**, Edge/Safari/Firefox bekliyor | Headless Chromium'da ikisi aynı anda kaydediyor |
 | 2 | FaceLandmarker worker ≥ 10 fps | **Boru hattı çalışıyor**, eski laptopta ölçüm bekliyor | Bulutta yazılım GPU'suyla 10-11 fps |
-| 1 | Figma Embed olayları (oturumsuz) | **Test sayfası hazır**, ölçüm bekliyor | Figma client-id ve oturumsuz tarayıcı gerekli |
+| 1 | Figma Embed olayları (oturumsuz) | **Büyük ölçüde evet** (19 Kasım), ekran geçişi ve handled:true teyidi bekliyor | Oturumsuz gizli pencerede olaylar geliyor |
 
 ## Spike 3: core port'u (tamamlandı)
 
@@ -36,6 +36,14 @@ Son güncelleme: 18 Kasım 2026
 - Sayfa: `apps/spikes/figma.html`. Prototip linkini `embed.figma.com` + `embed-host` + `client-id` formatına çevirir, figma.com kaynaklı tüm `postMessage` olaylarını sayar: `INITIAL_LOAD`, `PRESENTED_NODE_CHANGED`, `MOUSE_PRESS_OR_RELEASE` (ve `handled` true/false dağılımı), `NEW_STATE`.
 - Bulutta çalıştırılamadı: ortamın ağ politikası embed.figma.com'u engelliyor, ayrıca oturumsuz/oturumlu karşılaştırması için gerçek tarayıcı gerekiyor.
 - Gerekenler: Figma'da bir OAuth app (client-id) ve test sayfasının adresinin (localhost ya da GitHub Pages) app ayarlarında izinli olması.
+
+### Ölçümler (19 Kasım, Chrome 157, macOS M1)
+
+- **Ücretsiz plan app'i + ücretsiz plan dosyası, oturumsuz:** sadece `LOGIN_SCREEN_SHOWN` (düz metin olarak geldi). Sebep: ücretsiz planda dosya "Anyone with the link" ile paylaşılamadı. Bu app emekliye ayrıldı.
+- **Şirket planı app'i + link ile paylaşılan şirket dosyası, oturumsuz (gizli pencere):** `INITIAL_LOAD`, `PRESENTED_NODE_CHANGED` (açılış ekranı, `interactionType: NONE`) ve `MOUSE_PRESS_OR_RELEASE` (`handled: false`, `targetNodeId`, koordinatlar) geldi. Forumdaki Aralık 2025 / Ocak 2026 olumsuz raporları bu kurulumda tekrarlanmadı.
+- **Aynı kurulum, oturumlu:** `INITIAL_LOAD` ve `PRESENTED_NODE_CHANGED` geldi; bu oturumda tıklama yapılmamış görünüyor.
+- Bekleyen teyit: ekranlar arası geçişte `PRESENTED_NODE_CHANGED` tekrar geliyor mu, hotspot tıklamasında `handled: true` geliyor mu.
+- Kurulum notu: Figma'nın dosya paylaşımı herkese açık olmalı; bu ücretli plan gerektiriyor ya da şirket admin ayarlarına bağlı olabilir. Ürün aşamasında araştırmacıya "dosyayı link ile paylaş" adımı gösterilmeli.
 
 ## Kalan adımlar
 

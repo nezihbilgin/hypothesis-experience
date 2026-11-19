@@ -35,6 +35,8 @@ function render() {
 
 window.addEventListener('message', (e) => {
   if (!/^https:\/\/([a-z0-9-]+\.)*figma\.com$/.test(e.origin)) return
+  // Figma's internal frame plumbing ({ command: 'calculateSubFramePositioning', ... }) is not an Embed API event.
+  if (e.data && typeof e.data === 'object' && 'command' in e.data && !('type' in e.data)) return
   // Some events (e.g. LOGIN_SCREEN_SHOWN) arrive as a bare string, not { type, data }.
   const type = typeof e.data === 'string' ? e.data : e.data?.type ?? '(tipsiz)'
   counts[type] = (counts[type] ?? 0) + 1
