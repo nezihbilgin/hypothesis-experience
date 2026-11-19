@@ -20,13 +20,22 @@ import {
 export const HESITATION_FLOOR_SEC = 3
 export const STARTLE_FLOOR = 1.0
 export const AWAY_MIN_SEC = 2
+/** Seconds with fewer processed frames than this carry no camera data (Faz 0: old GPUs dip to 5-7 fps). */
+export const MIN_SAMPLES = 5
 const DECAY_SEC = 4
 const EMA_ALPHA = 0.3
 const MEANINGFUL: InteractionEvent['type'][] = ['click', 'dead-click', 'rage-click', 'input-edit', 'input-delete']
 
 // ---- Baseline ----------------------------------------------------------------------------------------
+/** Keep one sample per second and drop seconds below MIN_SAMPLES: they are "no data", not "away". */
+export function usableSeconds(samples: SecondSample[]): Map<number, SecondSample> {
+  const m = bucket(samples)
+  for (const [k, s] of m) if (s.samples < MIN_SAMPLES) m.delete(k)
+  return m
+}
+
 export function computeBaseline(warmupSamples: SecondSample[], warmupEvents: InteractionEvent[]): Baseline {
-  const faced = warmupSamples.filter((s) => s.face)
+  const faced = [...usableSeconds(warmupSamples).values()].filter((s) => s.face)
   return {
     headSpeedP95: percentile(faced.map((s) => s.headSpeedMax).filter((v): v is number => v !== null), 0.95),
     talkingMean: mean(faced.map((s) => s.talking).filter((v): v is number => v !== null)),
@@ -79,7 +88,7 @@ export function computeScreenReport(input: ScreenSessionInput): ScreenReport {
   const end = Math.max(1, Math.ceil(input.endSec))
   const visits = visitsFrom(events, input.endSec)
   const order = new Map(cards.map((c) => [c.screenKey, c.order]))
-  const play = bucket(cameraEnabled ? input.samples : [])
+  const play = usableSeconds(cameraEnabled ? input.samples : [])
   const hesThr = personalThreshold(HESITATION_FLOOR_SEC, baseline.firstActionP95)
   const headThr = personalThreshold(STARTLE_FLOOR, baseline.headSpeedP95)
 
@@ -182,7 +191,11 @@ export function computeScreenReport(input: ScreenSessionInput): ScreenReport {
     a.severity = Math.max(a.severity, b.severity)
   }).sort((a, b) => a.start - b.start)
 
-  return { baseline, expectedCurve, realCurve, screens: stats, mismatches }
+  let covered = 0
+  for (let t = 0; t < end; t++) if (play.has(t)) covered++
+  const cameraCoverage = Math.round((covered / end) * 100) / 100
+
+  return { baseline, expectedCurve, realCurve, screens: stats, mismatches, cameraCoverage }
 }
 
 /** Expected curve generated from cards (no hand drawing): each visit holds its card's level. */

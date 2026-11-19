@@ -7,7 +7,8 @@ tarayıcıda çalışan self-moderated usability test aracı. Sahibi Nezih; Tür
 - `docs/HANDOFF-hypothesis-experience.md`: ilkeler, veri modeli, sinyaller, fazlar. Kaynak doğruluk burası.
 - `FAZ0-RAPOR.md`: Faz 0 sonuçları ve Faz 1'e taşınan kararlar (bölüm "Faz 1'e taşınan kararlar").
 
-Durum (19 Kasım 2026): Faz 0 kapandı. Sıradaki iş Faz 1, `core` ve `sensing` paketleriyle başlıyor.
+Durum (19 Kasım 2026): Faz 0 kapandı, Faz 1 başladı. `core`'a çalışma JSON'u, Figma adaptörü, rage click, kalite kontrolü kararı,
+az örnekli saniye kuralı ve çalışma özeti eklendi. Sıradaki: `sensing` paketi (worker, SecondSample, kalite ölçümü).
 
 Kurallar:
 - İlke 1: raporda ve kodda duygu/niyet çıkarımı yok, sadece gözlemlenen davranış. Yüz ifadesi skoru kullanılmaz.

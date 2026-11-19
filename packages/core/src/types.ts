@@ -15,7 +15,7 @@ export interface SecondSample {
   faceWidthRatio?: number | null
   /** Fraction of this second with voice activity, 0..1. */
   talking: number | null
-  /** Landmark packets this second (frame-rate proxy / quality). */
+  /** Frames processed this second, with or without a face (frame-rate proxy). Below 5 the second counts as no data. */
   samples: number
 }
 
@@ -101,4 +101,6 @@ export interface ScreenReport {
   realCurve: CurvePoint[]
   screens: ScreenStats[]
   mismatches: Mismatch[]
+  /** Fraction of task seconds with usable camera data (0 when the camera is off). */
+  cameraCoverage: number
 }

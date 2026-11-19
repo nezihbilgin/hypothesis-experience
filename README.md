@@ -7,6 +7,11 @@ Tasarım kararları: [docs/HANDOFF-hypothesis-experience.md](./docs/HANDOFF-hypo
 packages/core/   Saf, deterministik model (Vitest). Senti felt.ts'ten port edildi.
   src/engine.ts      baseline yüzdelik, runs, impulse+EMA eğrisi, aynı tür birleştirme
   src/screens.ts     ekran pencereli model: hipotez kartı -> beklenen seviye, 4 sapma tipi, Türkçe cümleler, retro klip seçimi
+  src/study.ts       çalışma tanımı JSON'u ve doğrulama (örnek: test/fixtures/study.example.json)
+  src/adapters/figma.ts  Figma Embed mesajları -> interaction_event
+  src/signals.ts     rage click tespiti (Figma ve embed-sdk ortak)
+  src/quality.ts     kamera kalite kontrolü kararı (fps, yüz, ışık ipucu)
+  src/aggregate.ts   çalışma bazında özet (ekran başına sapma sayısı)
   src/compat/        Senti uyumluluk modeli (sadece regresyon testi için)
   test/              regresyon (docs/evidence), Senti'nin birim testleri, ekran modeli testleri
 apps/spikes/     Faz 0 tarayıcı spike'ları (Vite, çok sayfalı)
@@ -18,7 +23,7 @@ Node 20+ gerekir.
 
 ```bash
 npm install
-npm test            # core testleri (24 test)
+npm test            # core testleri
 npm run spikes      # spike sayfalarını derler ve http://localhost:4173 adresinde açar
 ```
 
