@@ -24,17 +24,25 @@ function renderResult() {
 }
 
 function record(stream, label) {
+  // A video-only mimeType on a stream with audio makes Firefox throw, so fall back to the browser's default.
   const mimeType = support.mimeTypes[0]
-  const rec = new MediaRecorder(stream, mimeType ? { mimeType } : undefined)
+  let rec
+  try {
+    rec = new MediaRecorder(stream, mimeType ? { mimeType } : undefined)
+    rec.start(1000)
+  } catch (err) {
+    result[label + ' ilk recorder hatası'] = `${err.name}: ${err.message} (${mimeType})`
+    rec = new MediaRecorder(stream)
+    rec.start(1000)
+  }
   const chunks = []
   rec.ondataavailable = (e) => e.data.size && chunks.push(e.data)
   const done = new Promise((resolve) => (rec.onstop = () => resolve(new Blob(chunks, { type: rec.mimeType }))))
   rec.onerror = (e) => { result[label + ' hata'] = String(e.error ?? e) }
-  rec.start(1000)
   return { rec, done }
 }
 
-$('#start').onclick = async () => {
+async function run() {
   $('#start').disabled = true
   cancelAnimationFrame(raf)
   for (const k of Object.keys(result)) delete result[k]
@@ -68,22 +76,26 @@ $('#start').onclick = async () => {
   renderResult()
   tick()
   const recs = []
-  if (tab) recs.push(['Sekme', record(tab, 'Sekme'), tab, '#vTab'])
-  if (cam) recs.push(['Kamera', record(cam, 'Kamera'), cam, '#vCam'])
+  for (const [label, stream, sel] of [['Sekme', tab, '#vTab'], ['Kamera', cam, '#vCam']]) {
+    if (!stream) continue
+    try { recs.push([label, record(stream, label), stream, sel]) }
+    catch (err) { result[label + ' kayıt hatası'] = `${err.name}: ${err.message}`; stream.getTracks().forEach((t) => t.stop()) }
+  }
   result['Aynı anda kayıt'] = recs.length === 2
   renderResult()
   await new Promise((r) => setTimeout(r, SECONDS * 1000))
   for (const [, r] of recs) if (r.rec.state !== 'inactive') r.rec.stop()
   for (const [label, r, stream, sel] of recs) {
-    const blob = await r.done
+    const blob = await Promise.race([r.done, new Promise((res) => setTimeout(() => res(new Blob([])), 5000))])
     stream.getTracks().forEach((t) => t.stop())
     result[label + ' dosya'] = `${(blob.size / 1024).toFixed(0)} KB, ${blob.type}`
     result[label + ' kayıt başarılı'] = blob.size > 10_000
     $(sel).src = URL.createObjectURL(blob)
   }
-  renderResult()
-  $('#start').disabled = false
-  $('#dl').disabled = false
 }
+$('#start').onclick = () =>
+  run()
+    .catch((err) => { result['Beklenmeyen hata'] = `${err.name}: ${err.message}` })
+    .finally(() => { renderResult(); $('#start').disabled = false; $('#dl').disabled = false })
 $('#dl').onclick = () => download(`spike4-record-${Date.now()}.json`, { spike: 'tab-record-plus-camera', support, result, env: envInfo() })
 window.__hx = { support, result }
