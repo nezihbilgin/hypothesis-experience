@@ -36,10 +36,17 @@ function record(stream, label) {
 
 $('#start').onclick = async () => {
   $('#start').disabled = true
+  cancelAnimationFrame(raf)
   for (const k of Object.keys(result)) delete result[k]
   let tab, cam
   try {
-    const opts = { video: { displaySurface: 'browser', frameRate: 15 }, audio: false, preferCurrentTab: true, selfBrowserSurface: 'include', surfaceSwitching: 'exclude' }
+    // Firefox can't capture tabs. Ask it plainly on the first call: a retry after a rejection loses the click's
+    // user activation, and Firefox then ignores the request silently.
+    const isFirefox = /Firefox\//.test(navigator.userAgent)
+    const opts = isFirefox
+      ? { video: { frameRate: 15 }, audio: false }
+      : { video: { displaySurface: 'browser', frameRate: 15 }, audio: false, preferCurrentTab: true, selfBrowserSurface: 'include', surfaceSwitching: 'exclude' }
+    $('#ticker').textContent = isFirefox ? 'Adres çubuğunun altındaki izin kutusundan bir pencere ya da ekran seç…' : 'Seçim penceresinde "Bu sekme"yi seç…'
     try {
       tab = await navigator.mediaDevices.getDisplayMedia(opts)
     } catch (first) {
@@ -59,6 +66,7 @@ $('#start').onclick = async () => {
     result['Kamera + mikrofon izni'] = true
   } catch (err) { result['Kamera + mikrofon izni'] = false; result['Kamera hata'] = err.name + ': ' + err.message }
   renderResult()
+  tick()
   const recs = []
   if (tab) recs.push(['Sekme', record(tab, 'Sekme'), tab, '#vTab'])
   if (cam) recs.push(['Kamera', record(cam, 'Kamera'), cam, '#vCam'])
