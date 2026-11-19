@@ -5,6 +5,8 @@ const TARGET_FPS = 15
 let worker, stream, running = false, busy = false
 let perSecond = [], inferMs = [], faceFrames = 0, frames = 0, longFrames = 0, maxGap = 0
 let secFrames = 0, secStart = 0, startedAt = 0, info = {}, logs = []
+// Startup breakdown, to tell permission wait / model load / first-inference warm-up apart.
+let timing = {}
 $('#url').value = load('hx.figma.url')
 
 function toEmbed(raw) {
@@ -37,7 +39,7 @@ function render() {
   const s = summary()
   $('#fps').innerHTML = `<span class="${s.medianFps >= 10 ? 'ok' : 'bad'}">${s.medianFps} fps</span> <span class="lead" style="font-size:14px">medyan</span>`
   const rows = [
-    ['Delegate', info.delegate ?? '–'], ['Model yükleme', info.loadMs ? info.loadMs + ' ms' : '–'],
+    ['Delegate', info.delegate ?? '–'], ['İzin + kamera açılışı', timing.permissionAndCameraMs != null ? timing.permissionAndCameraMs + ' ms' : '–'], ['İlk sonuç (sayım başladıktan sonra)', timing.firstResultMs != null ? `${timing.firstResultMs} ms (ilk çıkarım ${timing.firstInferMs} ms)` : '–'], ['Model yükleme', info.loadMs ? info.loadMs + ' ms' : '–'],
     ['fps p10 (en kötü %10)', s.p10Fps], ['Çıkarım süresi p50 / p95', `${s.inferP50} / ${s.inferP95} ms`],
     ['Yüz bulunan kare', s.faceRate + '%'], ['Ana thread takılma (>50 ms kare)', s.longFrames],
     ['En uzun ana thread boşluğu', s.maxMainGapMs + ' ms'], ['Süre', `${s.seconds} / ${DURATION} sn`]
@@ -50,10 +52,14 @@ async function start() {
   if ($('#url').value.trim()) $('#frame').src = toEmbed($('#url').value.trim())
   perSecond = []; inferMs = []; faceFrames = frames = longFrames = maxGap = 0; logs = []
   $('#start').disabled = true
+  timing = {}
+  const tClick = performance.now()
   stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, frameRate: 30 }, audio: false })
   const video = $('#video')
   video.srcObject = stream
   await video.play()
+  timing.permissionAndCameraMs = Math.round(performance.now() - tClick)
+  const tInit = performance.now()
   worker = new Worker(new URL('./face-worker.js', import.meta.url), { type: 'module' })
   const base = new URL('./', location.href).href
   await new Promise((resolve, reject) => {
@@ -67,10 +73,12 @@ async function start() {
   worker.onmessage = (e) => {
     if (e.data.type === 'log') return logs.push(e.data.text)
     busy = false
+    if (timing.firstResultMs === undefined) { timing.firstResultMs = Math.round(performance.now() - startedAt); timing.firstInferMs = Math.round(e.data.inferMs) }
     frames++; secFrames++
     if (e.data.face) faceFrames++
     inferMs.push(e.data.inferMs)
   }
+  timing.modelInitMs = Math.round(performance.now() - tInit)
   running = true
   $('#stop').disabled = false
   startedAt = secStart = performance.now()
@@ -114,7 +122,7 @@ $('#start').onclick = () => start().catch((err) => { alertBox(err); stop() })
 $('#stop').onclick = stop
 $('#dl').onclick = () => download(`spike2-face-${Date.now()}.json`, {
   spike: 'facelandmarker-fps', targetFps: TARGET_FPS, withIframe: !!$('#url').value.trim(), forcedCpu: $('#cpu').checked,
-  ...info, summary: summary(), perSecond, logs, env: envInfo()
+  ...info, timing, summary: summary(), perSecond, logs, env: envInfo()
 })
 function alertBox(err) { $('#fps').innerHTML = `<span class="bad">Hata: ${err.message ?? err}</span>` }
 window.__hx = { summary, info: () => info }
