@@ -6,7 +6,7 @@ Son güncelleme: 18 Kasım 2026
 |---|---|---|---|
 | 3 | `felt.ts` → `core` port'u | **Evet** | Senti ile birebir aynı çıktı |
 | 4 | Sekme kaydı + kamera | **Chrome'da evet**, Firefox sekme kaydında hayır, Edge/Safari bekliyor | Chrome 157 (M1): sekme + kamera aynı anda |
-| 2 | FaceLandmarker worker ≥ 10 fps | **M1'de evet**, Intel Mac ölçümü bekliyor | M1 + Figma iframe: 14-15 fps (hedef 15'te tavan), çıkarım 17.5 ms |
+| 2 | FaceLandmarker worker ≥ 10 fps | **Evet (GPU ile)** | Eski Intel Mac (2 çekirdek, Iris 6100) + Figma iframe: GPU medyan 13 fps; CPU medyan 10, p10 6 |
 | 1 | Figma Embed olayları (oturumsuz) | **Evet** (19 Kasım) | Oturumsuz gizli pencerede ekran geçişleri ve tıklamalar (handled true/false) geliyor |
 
 ## Spike 3: core port'u (tamamlandı)
@@ -41,6 +41,23 @@ Son güncelleme: 18 Kasım 2026
 - Yüz bulunan kare: %96.
 - Model yükleme 4.4 sn, ilk ~6 sn kare yok (GPU shader ısınması). Akışta kamera kontrolü ekranı bu süreyi zaten örter.
 - Ana thread: 60 sn'de 29 kare > 50 ms, en uzun boşluk 333 ms. Muhtemelen iframe yüklenmesi ve `createImageBitmap`. Faz 1'de ana thread zamanlaması ekran kaydı ve olay zaman damgaları açısından izlenmeli.
+
+### Ölçüm: eski Intel MacBook, 2 çekirdek, Intel Iris 6100, Chrome 150, Figma iframe açık (19 Kasım)
+
+Bu donanım (Iris 6100, yaklaşık 2015) hedeflenen 2017-2019 aralığından daha eski, yani daha zor bir test.
+
+| | GPU | CPU (zorlanmış) |
+|---|---|---|
+| Medyan fps | **13** | 10 |
+| p10 fps | 10 | 6 |
+| Çıkarım p50 / p95 | 29 / 98 ms | 63 / 221 ms |
+| Yüz bulunan kare | %100 | %100 |
+| Model yükleme | 6.4 sn | 0.7 sn |
+| İlk çıkarım | 3.3 sn | 1.1 sn |
+
+- Başlangıçtaki boş saniyelerin sebebi izin değil, ilk çıkarımdaki GPU ısınması (M1'de ~6 sn sayılmayan süre, burada ilk çıkarım 3.3 sn). İzin + kamera açılışı ayrıca 4.1 sn sürdü ama sayaç bunu saymıyor.
+- GPU ile eşik geçiliyor, ancak zaman zaman 5-7 fps'lik tekil saniyeler var. CPU yedeği 2 çekirdekte yetersiz.
+- Faz 1 kararları: (1) kalite kontrolü ekranı GPU'yu ısıtır ve 5 sn ölçer; medyan < 10 ise kamerasız moda düşer (spec ile uyumlu). (2) `SecondSample.samples` < 5 olan saniyeler `core`'da veri yok sayılır. (3) CPU delegate sadece 4+ çekirdekte denenir.
 
 ## Spike 1: Figma Embed olayları
 
