@@ -1,11 +1,13 @@
 # Faz 0 raporu
 
-Son güncelleme: 18 Kasım 2026
+Son güncelleme: 19 Kasım 2026
+
+**Sonuç: Faz 0 kapandı, dört spike'ın dördü de evet.** Koşullar: Figma dosyası link ile herkese açık paylaşılmalı (ücretli plan); yüz takibi GPU ile; tam deneyim (sekme kaydı + iframe'e kırpma) Chrome/Edge'de.
 
 | # | Spike | Durum | Sonuç |
 |---|---|---|---|
 | 3 | `felt.ts` → `core` port'u | **Evet** | Senti ile birebir aynı çıktı |
-| 4 | Sekme kaydı + kamera | **Chrome'da evet**, Firefox sekme kaydında hayır, Edge/Safari bekliyor | Chrome 157 (M1): sekme + kamera aynı anda |
+| 4 | Sekme kaydı + kamera | **Chrome'da evet**; Safari ve Firefox'ta pencere kaydıyla evet | Sekme kaydı + kırpma yalnızca Chromium'da |
 | 2 | FaceLandmarker worker ≥ 10 fps | **Evet (GPU ile)** | Eski Intel Mac (2 çekirdek, Iris 6100) + Figma iframe: GPU medyan 13 fps; CPU medyan 10, p10 6 |
 | 1 | Figma Embed olayları (oturumsuz) | **Evet** (19 Kasım) | Oturumsuz gizli pencerede ekran geçişleri ve tıklamalar (handled true/false) geliyor |
 
@@ -24,9 +26,10 @@ Son güncelleme: 18 Kasım 2026
 - Sayfa: `apps/spikes/record.html`. `getDisplayMedia` (preferCurrentTab) ve kamera + mikrofon aynı anda 15 sn kaydedilir, iki dosya oynatılır.
 - Headless Chromium: sekme 1280x720 @ 15 fps (412 KB, VP9), kamera (1249 KB, VP9 + Opus), ikisi aynı anda. Region Capture (`CropTarget`) ve Element Capture (`RestrictionTarget`) da mevcut, yani kaydı sadece prototip iframe'ine kırpmak mümkün olabilir.
 - **Chrome 157, M1 (19 Kasım):** sekme 3248x1864 @ 15 fps (15 sn'de 2.2 MB, VP9) ve kamera + mikrofon (4.1 MB, VP9 + Opus) aynı anda kaydedildi. Region/Element Capture mevcut. Not: sekme Retina çözünürlüğünde geliyor; Faz 1'de genişlik ~1280'e sınırlanmalı.
-- **Firefox (19 Kasım):** kamera çalışıyor, sekme kaydı `NotFoundError`. Firefox sekme yakalamayı desteklemiyor (yalnızca pencere/ekran), Region/Element Capture ve CaptureController da yok. macOS'ta Ekran Kaydı izni verilmemişse de aynı hata gelir. macOS Ekran Kaydı izni verilip Firefox yeniden başlatılınca pencere yakalama çalıştı (1440x763 @ 15 fps) ve kamera izni de alındı; ancak MediaRecorder kaydı başlatmadan hata verdi (muhtemelen sesli akışta yalnızca video codec'i belirtildiği için). Recorder yedeği eklendi, tekrar denenecek.
-- Öneri: MVP katılımcı akışı Chrome/Edge ister; Firefox ve Safari desteği Faz 2 tarayıcı matrisine (pencere kaydı ya da kayıtsız mod).
-- Bekleyen: Edge, Safari.
+- **Firefox 160 (19 Kasım):** sekme yakalama yok; pencere yakalama 1440x763 çalışıyor (macOS Ekran Kaydı izni + yeniden başlatma gerekti). Sesli akışta `video/webm;codecs=vp8` belirtilince `NotSupportedError`; varsayılan formatla kayıt çalıştı. Region/Element Capture ve CaptureController yok.
+- **Safari 26.5 (19 Kasım):** sekme yakalama yok, pencere yakalama 1440x875 çalışıyor; sekme ve kamera aynı anda kaydedildi (VP9). Kamera dosyası 15 sn'de 17.9 MB, Chrome'un 4 katı: Faz 1'de `videoBitsPerSecond` sınırlanmalı.
+- **Edge:** test makinesinde kurulu değil. Chromium tabanlı olduğu için Chrome sonucunun geçerli olması beklenir; ilk gerçek katılımcı testinde doğrulanacak.
+- Öneri: MVP katılımcı akışı Chrome/Edge ister. Safari/Firefox'ta pencere kaydı çalıştığı için Faz 2'de yedek mod olarak eklenebilir (kırpma yok, katılımcı doğru pencereyi seçmeli). MediaRecorder'a sesli akışta codec dayatılmamalı.
 
 ## Spike 2: FaceLandmarker fps
 
@@ -73,12 +76,10 @@ Bu donanım (Iris 6100, yaklaşık 2015) hedeflenen 2017-2019 aralığından dah
 - **Teyit, oturumsuz gizli pencere:** gezinmede 5 `PRESENTED_NODE_CHANGED` (geçişlerde `interactionType: ON_CLICK`) ve 6 `MOUSE_PRESS_OR_RELEASE` (4 `handled: true`, 2 `handled: false`) geldi. Ekran geçmişi, geri dönüş ve dead click sinyalleri Figma modunda üretilebilir.
 - Kurulum notu: Figma'nın dosya paylaşımı herkese açık olmalı; bu ücretli plan gerektiriyor ya da şirket admin ayarlarına bağlı olabilir. Ürün aşamasında araştırmacıya "dosyayı link ile paylaş" adımı gösterilmeli.
 
-## Kalan adımlar
+## Faz 1'e taşınan kararlar
 
-1. Figma OAuth app oluştur, client-id'yi al.
-2. Spike 1: oturumsuz (gizli pencere) ve oturumlu tarayıcıda çalıştır, iki JSON'u yükle.
-3. Spike 2: eski laptopta Figma iframe'i yanında açıkken çalıştır, JSON'u yükle (GPU ve CPU ayrı ayrı daha iyi).
-4. Spike 4: Chrome, Edge, Safari, Firefox'ta çalıştır, JSON'ları yükle.
-5. JSON'lar gelince bu rapor her "hayır" için alternatifle kapatılır.
-
-Spike 1 "hayır" çıkarsa önceden düşünülen alternatifler: (a) katılımcıdan Figma girişi istemek, (b) prototipi koda çevirip `embed-sdk` kullanmak, (c) `PRESENTED_NODE_CHANGED` gelip `MOUSE_PRESS_OR_RELEASE` gelmezse: iframe içindeki tıklamalar dışarıdan yakalanamadığı için Figma modunda yalnızca ekran bazlı sinyallerle (tereddüt, geri dönüş, süre) çalışmak; dead/rage click sadece script modunda kalır.
+1. Figma: araştırmacı akışında "dosyayı Anyone with the link ile paylaş" adımı; `LOGIN_SCREEN_SHOWN` gelirse araştırmacıya net hata.
+2. Figma olayları bazen düz metin olarak geliyor; adaptör hem string hem `{type, data}` kabul etmeli, `command` mesajlarını atmalı.
+3. Sensing: module worker'da `forVisionTasks(base, true)`; kalite kontrolü GPU'yu ısıtıp 5 sn ölçer, medyan < 10 fps ise kamerasız mod; `samples` < 5 saniyeler veri yok; CPU yedeği sadece 4+ çekirdek.
+4. Kayıt: sekme genişliği ~1280'e ve bit hızı sınırlanır; Chromium'da `RestrictionTarget` ile prototip iframe'ine kırpma denenir.
+5. Ana thread'de 300 ms'ye varan takılmalar var; olay zaman damgaları `performance.now()` + `timeOrigin` ile alınmalı.
