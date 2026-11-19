@@ -1,7 +1,7 @@
 # Hypothesis & Real Experience (çalışma adı)
 
 Tasarımcının ekran bazlı hipotezini katılımcının gerçek davranışıyla karşılaştıran self-moderated usability test aracı.
-Tasarım kararları: `HANDOFF-hypothesis-experience.md`. Faz 0 durumu: [FAZ0-RAPOR.md](./FAZ0-RAPOR.md).
+Tasarım kararları: [docs/HANDOFF-hypothesis-experience.md](./docs/HANDOFF-hypothesis-experience.md). Faz 0 durumu: [FAZ0-RAPOR.md](./FAZ0-RAPOR.md).
 
 ```
 packages/core/   Saf, deterministik model (Vitest). Senti felt.ts'ten port edildi.
