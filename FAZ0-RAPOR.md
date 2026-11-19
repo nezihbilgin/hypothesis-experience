@@ -5,7 +5,7 @@ Son güncelleme: 18 Kasım 2026
 | # | Spike | Durum | Sonuç |
 |---|---|---|---|
 | 3 | `felt.ts` → `core` port'u | **Evet** | Senti ile birebir aynı çıktı |
-| 4 | Sekme kaydı + kamera | **Chromium'da evet**, Edge/Safari/Firefox bekliyor | Headless Chromium'da ikisi aynı anda kaydediyor |
+| 4 | Sekme kaydı + kamera | **Chrome'da evet**, Firefox sekme kaydında hayır, Edge/Safari bekliyor | Chrome 157 (M1): sekme + kamera aynı anda |
 | 2 | FaceLandmarker worker ≥ 10 fps | **M1'de evet**, Intel Mac ölçümü bekliyor | M1 + Figma iframe: 14-15 fps (hedef 15'te tavan), çıkarım 17.5 ms |
 | 1 | Figma Embed olayları (oturumsuz) | **Evet** (19 Kasım) | Oturumsuz gizli pencerede ekran geçişleri ve tıklamalar (handled true/false) geliyor |
 
@@ -23,7 +23,9 @@ Son güncelleme: 18 Kasım 2026
 
 - Sayfa: `apps/spikes/record.html`. `getDisplayMedia` (preferCurrentTab) ve kamera + mikrofon aynı anda 15 sn kaydedilir, iki dosya oynatılır.
 - Headless Chromium: sekme 1280x720 @ 15 fps (412 KB, VP9), kamera (1249 KB, VP9 + Opus), ikisi aynı anda. Region Capture (`CropTarget`) ve Element Capture (`RestrictionTarget`) da mevcut, yani kaydı sadece prototip iframe'ine kırpmak mümkün olabilir.
-- Bekleyen: Chrome ve Edge'de gerçek izin penceresiyle deneme; Safari ve Firefox notu.
+- **Chrome 157, M1 (19 Kasım):** sekme 3248x1864 @ 15 fps (15 sn'de 2.2 MB, VP9) ve kamera + mikrofon (4.1 MB, VP9 + Opus) aynı anda kaydedildi. Region/Element Capture mevcut. Not: sekme Retina çözünürlüğünde geliyor; Faz 1'de genişlik ~1280'e sınırlanmalı.
+- **Firefox (19 Kasım):** kamera çalışıyor, sekme kaydı `NotFoundError`. Firefox sekme yakalamayı desteklemiyor (yalnızca pencere/ekran), Region/Element Capture ve CaptureController da yok. macOS'ta Ekran Kaydı izni verilmemişse de aynı hata gelir. Sayfaya düz `getDisplayMedia` yedeği eklendi, pencere kaydının çalışıp çalışmadığı tekrar denenecek.
+- Bekleyen: Edge, Safari.
 
 ## Spike 2: FaceLandmarker fps
 

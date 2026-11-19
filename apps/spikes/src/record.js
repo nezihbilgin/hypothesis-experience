@@ -40,12 +40,20 @@ $('#start').onclick = async () => {
   let tab, cam
   try {
     const opts = { video: { displaySurface: 'browser', frameRate: 15 }, audio: false, preferCurrentTab: true, selfBrowserSurface: 'include', surfaceSwitching: 'exclude' }
-    tab = await navigator.mediaDevices.getDisplayMedia(opts)
+    try {
+      tab = await navigator.mediaDevices.getDisplayMedia(opts)
+    } catch (first) {
+      // Firefox has no tab capture and rejects tab-only hints; retry plain so we learn whether window/screen capture works.
+      if (first.name === 'NotAllowedError') throw first
+      result['Sekme hata (ilk deneme)'] = first.name + ': ' + first.message
+      tab = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false })
+      result['Yedek: düz getDisplayMedia'] = true
+    }
     const s = tab.getVideoTracks()[0].getSettings()
     result['Sekme izni'] = true
     result['Seçilen yüzey'] = s.displaySurface ?? 'bilinmiyor'
     result['Sekme çözünürlüğü'] = `${s.width}x${s.height} @ ${s.frameRate ?? '?'} fps`
-  } catch (err) { result['Sekme izni'] = false; result['Sekme hata'] = err.name + ': ' + err.message }
+  } catch (err) { result['Sekme izni'] = false; result['Sekme hata'] = err.name + ': ' + err.message; if (err.name === 'NotFoundError' && /Mac/.test(navigator.platform)) result['İpucu'] = 'macOS: Sistem Ayarları → Gizlilik ve Güvenlik → Ekran Kaydı altında bu tarayıcıya izin ver, tarayıcıyı yeniden başlat.' }
   try {
     cam = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 }, audio: true })
     result['Kamera + mikrofon izni'] = true
