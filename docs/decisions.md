@@ -16,9 +16,9 @@ Kaynak: ürün yönetimi thread'i (Nezih onayı, kapsam dışı listesine 👍) 
 1. Karşılama + görev özeti; tüm metinler katalogdan.
 2. Onay: kamera isteğe bağlı; çalışmada `faceSignals` açıksa yüz sinyalleri için ayrı onay; mikrofon (ses kaydedilmez); ne saklanır, ne saklanmaz.
 3. İzin + kalite kontrolü: 3 sn ısınma + 5 sn ölçüm; medyan < 10 fps ya da yüz yoksa kamerasız mod (kamera hemen bırakılır). Işık ve ortam gürültüsü ipucu.
-4. 30 sn ısınma: nötr okuma metni (78 kelime, katalogda `warmup.text`, PM gözden geçirecek) + sabit konumlu 3 tıklama ekranı.
+4. 30 sn ısınma: nötr okuma metni (78 kelime, katalogda `warmup.text`, PM onayladı); hızlı okuyan ısınmayı kısaltmasın diye Devam 26 sn'den sonra açılır. Ardından her biri ekranın farklı bir yerinde tek düğme olan 4 tıklama ekranı (ilk aksiyon süresi baseline'ı için; PM en az 3, her birinde farklı konum istedi).
 5. Her görev: beklenti puanı → prototip + görev metni + "Bitirdim" → ekran geçişinde soru (önce planlı `probe`, sonra sinyalle tetiklenen; görev başına en fazla 2, oturum başına 6; soru sırasında oturum saati durur) → SEQ.
-6. Soru metni ekranı adıyla bağlam verir: "Az önceki '{ekran}' ekranında…" (katalogda `probe.atTransition`). Cevap yazılı, "Hatırlamıyorum" ve "Geç" var. Soru arayüzünde M3b AI takip soruları için kanca bırakıldı.
+6. Soru metni ekranı adıyla bağlam verir: "Az önceki '{ekran}' ekranında…" (katalogda `probe.atTransition`). Ad, çalışma JSON'undaki ekranın isteğe bağlı `participantName` alanından gelir; Figma frame adı ("Frame 23", "Checkout_v2_final") katılımcıya asla gösterilmez. `participantName` yoksa ekran adı geçmez: "Az önceki ekranda ne düşünüyordun, ne arıyordun?" (`probe.atTransitionNoName`). Cevap yazılı, "Hatırlamıyorum" ve "Geç" var. Soru arayüzünde M3b AI takip soruları için kanca bırakıldı.
 7. Oturum sonu: "en çok zorlandığın görev" sorusu, katılımcıya kendi verisinin özeti (davranış sayısı gösterilmez), oturumu silme, oturum JSON'unu indirme (`hx-session/1`, `core` raporunu içerir).
 
 ### Kapsam dışı (v2 / M3b)

@@ -76,6 +76,10 @@ describe('questions at screen transitions', () => {
 })
 
 describe('text catalog', () => {
+  it('has a question variant that does not name the screen', () => {
+    expect(TEXTS_TR['probe.atTransitionNoName']).not.toMatch(/\{screen\}/)
+    expect(TEXTS_TR['probe.plannedNoName']).not.toMatch(/\{screen\}/)
+  })
   it('defaults to Turkish and fills placeholders', () => {
     const c = buildCatalog()
     expect(text(c, 'task.intro', { index: 1, total: 3 })).toBe('Görev 1 / 3')
@@ -110,7 +114,7 @@ describe('rating scales', () => {
 
 describe('study definition (tasks, settings)', () => {
   const base = { name: 'Çalışma', sourceType: 'figma', sourceUrl: 'https://www.figma.com/proto/x' }
-  const screen = { key: '1:2', name: 'Sepet', behavior: 'flow', expectedSec: [1, 5], probe: 'Ne aradın?' }
+  const screen = { key: '1:2', name: 'Checkout_v2_final', participantName: 'Sepet', behavior: 'flow', expectedSec: [1, 5], probe: 'Ne aradın?' }
   it('supports several tasks, probes, scales, texts and question settings', () => {
     const r = parseStudy({
       ...base,
@@ -123,6 +127,8 @@ describe('study definition (tasks, settings)', () => {
     if (!r.ok) throw new Error(r.errors.join('\n'))
     expect(r.study.tasks.map((t) => t.id)).toEqual(['buy', 'task-2'])
     expect(cardsFromTask(r.study.tasks[0])[0].probe).toBe('Ne aradın?')
+    expect(cardsFromTask(r.study.tasks[0])[0].participantName).toBe('Sepet')
+    expect(cardsFromTask(r.study.tasks[1])[0].participantName).toBe('Sepet')
     expect(r.study.scales.seq.max).toBe(10)
     expect(r.study.scales.expectation).toEqual(defaultScale())
     expect(r.study.texts['task.done']).toBe('Tamamladım')

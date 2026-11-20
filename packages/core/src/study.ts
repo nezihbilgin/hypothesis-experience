@@ -15,6 +15,8 @@ export interface StudyScreen {
   /** Figma node id, route or data-step value. */
   key: string
   name: string
+  /** Shown to participants in questions; when missing, questions do not name the screen. */
+  participantName?: string
   behavior: Behavior
   expectedSec: [number, number]
   successCriterion?: string
@@ -128,9 +130,11 @@ export function parseStudy(input: unknown): ParseResult {
         const successCriterion = optText(s.successCriterion)
         const note = optText(s.note)
         const probe = optText(s.probe)
+        const participantName = optText(s.participantName)
         screens.push({
           key,
           name: sname,
+          ...(participantName ? { participantName } : {}),
           behavior,
           expectedSec: okRange ? [e[0] as number, e[1] as number] : [0, 0],
           ...(successCriterion ? { successCriterion } : {}),
@@ -206,6 +210,7 @@ export function cardsFromTask(task: StudyTask): HypothesisCard[] {
   return task.screens.map((s, i) => ({
     screenKey: s.key,
     screenName: s.name,
+    ...(s.participantName ? { participantName: s.participantName } : {}),
     order: i + 1,
     behavior: s.behavior,
     expectedSec: s.expectedSec,

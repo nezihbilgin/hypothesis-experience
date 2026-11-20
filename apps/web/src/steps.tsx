@@ -87,16 +87,24 @@ export function CameraCheck({ run, next }: { run: SessionRun; next: () => void }
   )
 }
 
-// Warm-up: neutral reading, then 3 single-button screens at fixed positions (first-action latency baseline).
+// Warm-up (>= 30 s): neutral reading (Continue enabled after READ_MIN_SEC so a fast reader cannot cut the baseline
+// short), then 4 single-button screens, one target each in a different part of the screen (first-action latency p95).
+const READ_MIN_SEC = 26
 const CLICK_SPOTS: [number, number][] = [
-  [18, 30],
-  [72, 62],
-  [40, 78]
+  [20, 28],
+  [78, 34],
+  [26, 76],
+  [72, 72]
 ]
 
 export function Warmup({ run, next }: { run: SessionRun; next: () => void }) {
   const t = useT()
-  const [step, setStep] = useState(0) // 0 = reading, 1..3 = click screens, 4 = done
+  const [step, setStep] = useState(0) // 0 = reading, 1..4 = click screens, 5 = done
+  const [canContinue, setCanContinue] = useState(false)
+  useEffect(() => {
+    const id = setTimeout(() => setCanContinue(true), READ_MIN_SEC * 1000)
+    return () => clearTimeout(id)
+  }, [])
   useEffect(() => {
     if (step === 0) run.startWarmup()
     if (step <= CLICK_SPOTS.length) run.warmupEvent('screen', `warmup-${step}`)
@@ -111,7 +119,7 @@ export function Warmup({ run, next }: { run: SessionRun; next: () => void }) {
       <Card>
         <p className="muted">{t('warmup.intro')}</p>
         <p className="reading">{t('warmup.text')}</p>
-        <button className="primary" onClick={click}>
+        <button className="primary" disabled={!canContinue} onClick={click}>
           {t('common.next')}
         </button>
       </Card>
@@ -195,7 +203,7 @@ export function TaskRun({ run, next }: { run: SessionRun; next: (retro: Question
   }, [run])
 
   const card = question ? run.cards().find((c) => c.screenKey === question.screenKey) : undefined
-  const screen = card?.screenName ?? ''
+  const screen = card?.participantName
   return (
     <div className="task">
       <header className="taskbar">
@@ -217,8 +225,8 @@ export function TaskRun({ run, next }: { run: SessionRun; next: (retro: Question
         <div className="overlay">
           <Card>
             <AnswerBox
-              intro={question.source === 'planned' ? t('probe.planned', { screen }) : undefined}
-              prompt={question.source === 'planned' && question.probe ? question.probe : t('probe.atTransition', { screen })}
+              intro={question.source === 'planned' ? (screen ? t('probe.planned', { screen }) : t('probe.plannedNoName')) : undefined}
+              prompt={question.source === 'planned' && question.probe ? question.probe : screen ? t('probe.atTransition', { screen }) : t('probe.atTransitionNoName')}
               onDone={(a) => {
                 run.answer(question, a)
                 setQuestion(null)
@@ -240,12 +248,12 @@ export function Retro({ run, moments, next }: { run: SessionRun; moments: Questi
   }, [i, moments.length, next])
   if (i >= moments.length) return null
   const m = moments[i]
-  const screen = run.cards().find((c) => c.screenKey === m.screenKey)?.screenName ?? ''
+  const screen = run.cards().find((c) => c.screenKey === m.screenKey)?.participantName
   return (
     <Card>
       <AnswerBox
         intro={i === 0 ? t('retro.intro') : undefined}
-        prompt={t('probe.atTransition', { screen })}
+        prompt={screen ? t('probe.atTransition', { screen }) : t('probe.atTransitionNoName')}
         onDone={(a) => {
           run.answer(m, a, false)
           setI(i + 1)

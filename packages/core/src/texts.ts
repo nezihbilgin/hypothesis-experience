@@ -27,7 +27,7 @@ export const TEXTS_TR = {
   'warmup.intro': 'Önce kısa bir ısınma: aşağıdaki metni kendi hızında oku, bitince Devam\'a bas.',
   'warmup.text':
     'Bir kasabada sabahları otobüsler belirli saatlerde kalkar. Duraklardaki küçük panolar bir sonraki aracın ne zaman geleceğini gösterir. Bazı yolcular kitap okur, bazıları pencereden dışarı bakar. Yol boyunca ağaçlar, binalar ve kavşaklar sırayla geçer. Şoför her durakta kapıyı açar; birkaç kişi iner, birkaç kişi biner. Hava açıksa güneş camlardan içeri vurur, bulutluysa ışık daha yumuşak olur. Son durağa varınca otobüs bir süre bekler, sonra aynı yoldan geri döner. Akşam olunca sokak lambaları yanar ve son sefer daha az yolcuyla yapılır.',
-  'warmup.click': 'Şimdi şu düğmeye tıkla.',
+  'warmup.click': 'Şimdi düğmeye tıkla.',
   'warmup.clickButton': 'Buraya tıkla',
   'warmup.done': 'Isınma bitti, görevlere geçebiliriz.',
   'task.intro': 'Görev {index} / {total}',
@@ -39,7 +39,9 @@ export const TEXTS_TR = {
   'rating.seq': 'Bu görev genel olarak ne kadar kolay ya da zordu?',
   'probe.default': 'Bu ekranda ne düşünüyordun, ne arıyordun?',
   'probe.atTransition': "Az önceki '{screen}' ekranında ne düşünüyordun, ne arıyordun?",
+  'probe.atTransitionNoName': 'Az önceki ekranda ne düşünüyordun, ne arıyordun?',
   'probe.planned': "Az önceki '{screen}' ekranıyla ilgili kısa bir soru:",
+  'probe.plannedNoName': 'Az önceki ekranla ilgili kısa bir soru:',
   'probe.dontRemember': 'Hatırlamıyorum',
   'probe.placeholder': 'Aklına geleni yazabilirsin',
   'probe.send': 'Gönder',

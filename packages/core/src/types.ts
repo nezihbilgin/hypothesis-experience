@@ -51,8 +51,10 @@ export const AXIS_LEVEL: Record<AxisLevel, number> = { low: 20, high: 80 }
 
 export interface HypothesisCard {
   screenKey: string
-  /** Display name used in sentences, e.g. "Teslimat". */
+  /** Display name used in researcher sentences, e.g. "Teslimat". */
   screenName: string
+  /** Name shown to participants in questions. Optional: Figma frame names ("Frame 23") must never reach them. */
+  participantName?: string
   order: number
   behavior: Behavior
   expectedSec: [number, number]
