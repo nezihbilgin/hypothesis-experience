@@ -8,6 +8,18 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 
 ---
 
+## 2026-11-20: Platform sırası
+
+Kaynak: ürün yönetimi thread'i, Nezih onayı. Durum: kararlaştırıldı; bugün kodda değişiklik yok.
+
+- Sıra: Figma (şimdi) → canlı web siteleri (embed-sdk, referans gezinti, ekran = `data-step`, durum = otomatik ya da `data-state`) → mobil web → native SDK.
+- Native SDK sadece test sürümlerinde açılır (TestFlight, iç dağıtım, debug); App Store sürümüne asla girmez.
+- Mobil ve native'de kamerasız mod varsayılan; iki cihaz modu (laptop kamerası) öneri olarak sunulur.
+- Native'de soru cevaplama için ses kaydı, dikte ve laptop sayfası kullanıcı testlerinde karşılaştırılacak.
+- Olay şeması platformdan bağımsız kalır (bugünkü v2 şeması: `pointerType`, `viewport`, `orientation`, `streamId`, yetenek bayrakları).
+
+---
+
 ## 2026-11-20: Ekran referans görüntüsü soyutlaması (planlama notu)
 
 Kaynak: PM mimari notu. Durum: planlama; tıklama haritası Nezih onayı bekliyor, sadece koordinat kaydı şimdi uygulandı.
