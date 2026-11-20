@@ -24,6 +24,9 @@ export const BLINK_HIGH = 0.5
 export const BLINK_LOW = 0.35
 /** Blink rate needs >= 15 frames per second (blinks last 100-400 ms). */
 export const BLINK_MIN_FPS = 15
+/** Voice counts as the participant talking only if jawOpen moves at least this much within the second
+ * (or the previous one, for speech crossing a second boundary). Starting value, to be calibrated. */
+export const JAW_MOVE_MIN = 0.08
 /** Trailing window for the blink rate, and the least valid seconds it needs. */
 export const BLINK_WINDOW_SEC = 15
 export const BLINK_MIN_SECONDS = 5
@@ -45,6 +48,7 @@ export class SecondAggregator {
   /** Per completed second: blinks and whether the second had enough fps. */
   private blinkHistory: { sec: number; blinks: number; valid: boolean }[] = []
   private talking = new Map<number, { active: number; total: number }>()
+  private prevJawActive = false
 
   constructor(private readonly emit: (s: SecondSample) => void) {}
 
@@ -69,6 +73,7 @@ export class SecondAggregator {
   flush(): void {
     if (this.sec !== null && this.frames.length) this.close()
     this.prevFace = null
+    this.prevJawActive = false
   }
 
   private close(): void {
@@ -119,13 +124,22 @@ export class SecondAggregator {
     const audio = this.talking.get(sec)
     this.talking.delete(sec)
     for (const k of this.talking.keys()) if (k < sec) this.talking.delete(k)
+    const voice = audio && audio.total ? r3(audio.active / audio.total) : null
+    // Voice is the participant's only if the mouth moves (decisions 2026-11-20: jawOpen confirms talking).
+    const jaw = blendFaced.map((f) => f.jawOpen).filter((v): v is number => v !== undefined)
+    const jawMovement = face && jaw.length >= 2 ? r3(Math.max(...jaw) - Math.min(...jaw)) : null
+    const jawActive = jawMovement !== null && jawMovement >= JAW_MOVE_MIN
+    const talking = voice === null || jawMovement === null ? null : jawActive || this.prevJawActive ? voice : 0
+    this.prevJawActive = jawActive
 
     this.emit({
       t: sec,
       face,
       headSpeedMax: face ? r3(speedMax) : null,
       faceWidthRatio: face ? r3(median(faced.map((f) => f.width!))) : null,
-      talking: audio && audio.total ? r3(audio.active / audio.total) : null,
+      talking,
+      voice,
+      jawMovement,
       samples: fr.length,
       blinkRate,
       browDown: face ? r3(meanOf(brow)) : null,

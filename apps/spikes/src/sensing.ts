@@ -13,7 +13,7 @@ const fmt = (v: unknown): string => (v === null || v === undefined ? '–' : typ
 
 function row(s: SecondSample): void {
   const tr = document.createElement('tr')
-  tr.innerHTML = [s.t, s.samples, s.face ? 'evet' : 'hayır', s.headSpeedMax, s.stillness, s.faceWidthRatio, s.blinkRate, s.browDown, s.talking].map((v) => `<td>${fmt(v)}</td>`).join('')
+  tr.innerHTML = [s.t, s.samples, s.face ? 'evet' : 'hayır', s.headSpeedMax, s.stillness, s.faceWidthRatio, s.blinkRate, s.browDown, s.voice, s.jawMovement, s.talking].map((v) => `<td>${fmt(v)}</td>`).join('')
   $('#rows').prepend(tr)
 }
 
@@ -79,7 +79,7 @@ if (smoke > 0) {
     stop()
     const out = document.createElement('pre')
     out.id = 'smoke'
-    out.textContent = JSON.stringify({ delegate: client?.delegate ?? null, decision, seconds: samples.length, talking: samples.map((x) => x.talking), errors })
+    out.textContent = JSON.stringify({ delegate: client?.delegate ?? null, decision, seconds: samples.length, talking: samples.map((x) => x.talking), voice: samples.map((x) => x.voice), errors })
     document.body.append(out)
   }, 200)
 }

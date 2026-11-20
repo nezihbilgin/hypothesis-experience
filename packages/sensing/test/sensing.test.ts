@@ -44,13 +44,27 @@ describe('second aggregator', () => {
     const out = run(Array.from({ length: 6 }, (_, s) => second(s, 15, (i) => ({ blink: i % 2 ? 0.45 : 0.4 }))).flat())
     expect(out[5].blinkRate).toBe(0)
   })
-  it('adds the talking ratio from VAD frames', () => {
+  const withAudio = (frames: FrameResult[], speech: (i: number) => boolean, seconds: number): SecondSample[] => {
     const out: SecondSample[] = []
-    const agg = new SecondAggregator((s) => out.push(s))
-    for (let i = 0; i < 50; i++) agg.pushAudio(i * 0.02, i < 20)
-    for (const f of second(0, 10)) agg.push(f)
+    const agg = new SecondAggregator((x) => out.push(x))
+    for (let i = 0; i < seconds * 50; i++) agg.pushAudio(i / 50, speech(i))
+    for (const f of frames) agg.push(f)
     agg.flush()
-    expect(out[0].talking).toBe(0.4)
+    return out
+  }
+  it('counts voice as talking only when the jaw moves', () => {
+    const moving = (sec: number) => second(sec, 10, (i) => ({ jawOpen: i % 2 ? 0.3 : 0.05 }))
+    const shut = (sec: number) => second(sec, 10, () => ({ jawOpen: 0.04 }))
+    // 0: talking (voice + jaw). 1: voice continues while the mouth just closed (previous second counts).
+    // 2-3: someone else talks, mouth shut. 4: no face, voice -> unknown.
+    const frames = [...moving(0), ...shut(1), ...shut(2), ...shut(3), ...second(4, 10, () => ({ face: false }))]
+    const out = withAudio(frames, (i) => i % 50 < 20, 5)
+    expect(out.map((x) => x.voice)).toEqual([0.4, 0.4, 0.4, 0.4, 0.4])
+    expect(out.map((x) => x.talking)).toEqual([0.4, 0.4, 0, 0, null])
+    expect(out[0].jawMovement).toBe(0.25)
+  })
+  it('talking is null without a microphone', () => {
+    expect(run(second(0, 10, (i) => ({ jawOpen: i % 2 ? 0.3 : 0.05 })))[0].talking).toBeNull()
   })
   it('output feeds the core model: baseline and report', () => {
     const warm = run(Array.from({ length: 30 }, (_, s) => second(s - 30, 15)).flat())

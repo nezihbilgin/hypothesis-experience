@@ -8,6 +8,15 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 
 ---
 
+## 2026-11-20: Konuşma oranı çene hareketiyle doğrulanır
+
+Kaynak: Nezih'in M1 denemesi (sensing.html). Durum: uygulandı.
+
+- Mikrofon ortamdaki tüm sesi aldığı için ham ses aktivitesi konuşmayı fazla gösterdi. `talking` artık sadece aynı saniyede (ya da bir önceki saniyede) `jawOpen` en az 0.08 oynadıysa sesi sayar; ağız hareketsizse 0, yüz yoksa `null` (doğrulanamaz).
+- Ham değerler ayrıca saklanır: `voice` (mikrofon) ve `jawMovement` (saniye içindeki jawOpen aralığı). 0.08 başlangıç değeri, sonraki denemelerle kalibre edilecek.
+
+---
+
 ## 2026-11-20: sensing paketi ve oturum saati (uygulama notları)
 
 Kaynak: Claude Code (`faz1-core` branch'i). Durum: uygulandı.
