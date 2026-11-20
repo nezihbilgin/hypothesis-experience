@@ -32,6 +32,7 @@ export class SensingClient {
   private audioCtx: AudioContext | null = null
   private timers: number[] = []
   private busy = false
+  private stopped = false
   /** Phase counter: a frame still in flight when a new phase starts carries the old clock's time and is dropped. */
   private phase = 0
   private inflightPhase = -1
@@ -93,6 +94,12 @@ export class SensingClient {
     try {
       const width = this.o.frameWidth ?? 320
       const bitmap = await createImageBitmap(v, { resizeWidth: width, resizeHeight: Math.round((width * v.videoHeight) / Math.max(1, v.videoWidth)) })
+      // stop() may have run while the bitmap was being made: free the frame here instead of leaving it to GC.
+      if (this.stopped || !this.worker) {
+        bitmap.close()
+        this.busy = false
+        return
+      }
       const msg: WorkerIn = { type: 'frame', bitmap, videoMs: performance.now(), t: this.o.clock.at(abs) }
       this.worker.postMessage(msg, [bitmap])
     } catch (err) {
@@ -166,6 +173,7 @@ export class SensingClient {
   }
 
   stop(): void {
+    this.stopped = true
     this.flush()
     for (const id of this.timers) clearInterval(id)
     this.timers = []
@@ -175,6 +183,10 @@ export class SensingClient {
     this.stream = null
     void this.audioCtx?.close()
     this.audioCtx = null
+    if (this.video) {
+      this.video.pause()
+      this.video.srcObject = null
+    }
     this.video = null
   }
 }

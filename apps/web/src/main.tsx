@@ -30,6 +30,17 @@ function Flow({ study, participant }: { study: Study; participant: string }) {
   const run = useMemo(() => new SessionRun(study, participant), [study, participant])
   // ?debug=1 exposes the run for automated end-to-end checks (still nothing leaves the browser).
   if (new URLSearchParams(location.search).has('debug')) (window as unknown as { __hxRun: SessionRun }).__hxRun = run
+  // Release the camera and microphone as soon as the tab is closed, reloaded or navigated away from, also when
+  // the session ends early (the normal flow stops them at the last task). Browsers do this on unload too, but a
+  // page kept in the back/forward cache would otherwise hold them.
+  useEffect(() => {
+    const release = () => run.stopSensing()
+    window.addEventListener('pagehide', release)
+    return () => {
+      window.removeEventListener('pagehide', release)
+      release()
+    }
+  }, [run])
   const [step, setStep] = useState<Step>({ k: 'welcome' })
   run.step = step.k
   const go = useCallback((s: Step) => setStep(s), [])

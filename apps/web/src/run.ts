@@ -368,6 +368,29 @@ export class SessionRun {
     })
   }
 
+  /** "Oturumumu sil": stops the camera/microphone and drops every collected value from this tab's memory.
+   * A file the participant already downloaded is outside the page's reach; the UI text tells them to delete it. */
+  wipe(): void {
+    this.stopSensing()
+    this.phase = 'idle'
+    this.probe = null
+    this.adapter = null
+    this.taskIndex = -1
+    this.protoReady = false
+    this.consent = { camera: false, microphone: false, faceSignals: false, at: '' }
+    this.quality = null
+    this.delegate = null
+    this.warmup = { events: [], samples: [] }
+    this.baseline = computeBaseline([], [])
+    this.tasks = []
+    this.figmaRaw = {}
+    this.hardestTask = null
+    this.asked = { inTask: [], inSession: [] }
+    this.wiped = true
+  }
+
+  wiped = false
+
   toJSON(): unknown {
     return {
       schema: SESSION_SCHEMA,
@@ -405,6 +428,24 @@ if (typeof window !== 'undefined')
     },
     true
   )
+
+/** Saves the session JSON through a short-lived blob URL that is revoked right after the click, so no copy of
+ * the file stays addressable in the page. */
+export function downloadJson(name: string, data: unknown, doc: Document = document): void {
+  const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }))
+  const a = doc.createElement('a')
+  a.href = url
+  a.download = name
+  a.rel = 'noopener'
+  doc.body.appendChild(a)
+  try {
+    a.click()
+  } finally {
+    a.remove()
+    // Revoking in the same task can cancel the download in some browsers; the next tick is enough.
+    setTimeout(() => URL.revokeObjectURL(url), 0)
+  }
+}
 
 function networkSummary(): { origin: string; type: string; count: number }[] {
   const m = new Map<string, number>()

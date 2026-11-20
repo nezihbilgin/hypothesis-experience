@@ -2,7 +2,7 @@
 // (expectation -> task with questions at screen transitions -> SEQ) -> hardest task -> summary.
 import type { QuestionMoment } from '@hx/core'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { figmaEmbedUrl, type QualityResult, type SessionRun } from './run'
+import { downloadJson, figmaEmbedUrl, type QualityResult, type SessionRun } from './run'
 import { AnswerBox, Card, Rating, useT } from './ui'
 
 export function Welcome({ run, next }: { run: SessionRun; next: () => void }) {
@@ -332,12 +332,7 @@ export function Summary({ run }: { run: SessionRun }) {
     )
   const answers = run.tasks.flatMap((x) => x.questions.map((q) => q.answer).filter((a): a is string => !!a))
   if (run.hardestTask?.answer) answers.push(run.hardestTask.answer)
-  const download = () => {
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(new Blob([JSON.stringify(run.toJSON(), null, 2)], { type: 'application/json' }))
-    a.download = `hx-session-${run.participant || 'katilimci'}-${run.startedAt.slice(0, 19).replace(/[:T]/g, '-')}.json`
-    a.click()
-  }
+  const download = () => downloadJson(`hx-session-${run.participant || 'katilimci'}-${run.startedAt.slice(0, 19).replace(/[:T]/g, '-')}.json`, run.toJSON())
   return (
     <Card>
       <h1>{t('session.summary')}</h1>
@@ -368,9 +363,8 @@ export function Summary({ run }: { run: SessionRun }) {
         <button
           onClick={() => {
             if (!confirm(t('session.deleteConfirm'))) return
-            run.tasks = []
-            run.warmup = { events: [], samples: [] }
-            run.hardestTask = null
+            run.wipe()
+            delete (window as unknown as { __hxRun?: SessionRun }).__hxRun
             setDeleted(true)
           }}
         >
