@@ -8,6 +8,17 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 
 ---
 
+## 2026-11-20: Repo public kalır, prototip linkleri repoya girmez
+
+Kaynak: Nezih kararı (ürün yönetimi thread'i). Durum: uygulandı (`faz1-core`).
+
+- Repo şimdilik public kalır, ancak gerçek prototip linkleri ve Figma dosya anahtarları repoya girmez.
+- Gerçek linkler sadece gitignore'daki yerel ayarda ya da URL parametresinde durur: katılımcı uygulamasında `apps/web/src/studies/*.local.json` (yoksa yer tutucu `example.json`) ya da `?study=<url>`; spike sayfalarında `apps/spikes/.env.local` içindeki `VITE_PROTO_URL` ya da `?url=`.
+- Yayınlanan sayfalar link ön doldurmaz.
+- Git geçmişi yeniden yazılmaz; eski commit'lerde link hâlâ duruyor. Gerekirse Nezih linki Figma'da yeniler.
+
+---
+
 ## 2026-11-20: Nezih'in ilk gerçek oturumundan düzeltmeler
 
 Kaynak: Nezih'in Chrome + test Figma prototipi oturumu (kameralı, M1). Durum: uygulandı (`faz1-core`).

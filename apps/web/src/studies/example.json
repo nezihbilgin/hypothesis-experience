@@ -1,7 +1,7 @@
 {
-  "name": "Pilot: test prototipi",
+  "name": "Örnek çalışma",
   "sourceType": "figma",
-  "sourceUrl": "https://www.figma.com/proto/3QmbkTQZoS3UIZ08CDeRQh/Untitled?node-id=2-4145&viewport=1062%2C1243%2C0.23&t=IGj1RdNk6lvjTW0c-0&scaling=min-zoom&content-scaling=fixed&starting-point-node-id=2%3A4145",
+  "sourceUrl": "https://www.figma.com/proto/FILE_KEY/Prototip?node-id=1-2&starting-point-node-id=1%3A2",
   "context": "consumer",
   "faceSignals": true,
   "tasks": [
@@ -10,15 +10,15 @@
       "prompt": "Prototipte istediğin gibi gezin ve ana akışı tamamlamaya çalış.",
       "screens": [
         {
-          "key": "2:4145",
+          "key": "1:2",
           "name": "Açılış",
+          "participantName": "Açılış",
           "behavior": "flow",
           "expectedSec": [
             2,
             15
           ],
-          "probe": "Bu ekranda ilk neye baktın?",
-          "participantName": "Açılış"
+          "probe": "Bu ekranda ilk neye baktın?"
         }
       ]
     }

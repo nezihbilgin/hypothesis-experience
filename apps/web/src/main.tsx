@@ -1,9 +1,12 @@
-// Participant app entry. Study JSON: ?study=<url> (same origin or CORS-enabled), else the bundled example.
+// Participant app entry. Study JSON: ?study=<url> (same origin or CORS-enabled), else a gitignored
+// src/studies/*.local.json (real prototype links stay out of the repo), else the bundled placeholder example.
 // Participant label: ?p=<label>.
 import { parseStudy, type QuestionMoment, type Study } from '@hx/core'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import example from './studies/example.json'
+const localStudies = import.meta.glob('./studies/*.local.json', { eager: true, import: 'default' })
+const localStudy = Object.values(localStudies)[0]
 import { SessionRun } from './run'
 import { CameraCheck, Consent, Hardest, Retro, Seq, Summary, TaskIntro, TaskRun, Warmup, Welcome } from './steps'
 import { TextsCtx } from './ui'
@@ -68,7 +71,7 @@ function App() {
   const [state, setState] = useState<{ study?: Study; errors?: string[] } | null>(null)
   useEffect(() => {
     const url = params.get('study')
-    const load = async (): Promise<unknown> => (url ? (await fetch(url)).json() : example)
+    const load = async (): Promise<unknown> => (url ? (await fetch(url)).json() : localStudy ?? example)
     load()
       .then((json) => {
         const r = parseStudy(json)
