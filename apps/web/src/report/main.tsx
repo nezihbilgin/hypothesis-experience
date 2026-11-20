@@ -56,9 +56,9 @@ function ClickMap({ screenKey, task, images }: { screenKey: string; task: Sessio
     }
     if (drawable.length < pts.length) unmapped.push(`${node} (iç kaydırma alanı): ${pts.length - drawable.length}`)
     const sz = size[node]
-    // Clicks below the exported frame (content scrolled into view, clipped in the frame export) cannot be drawn.
+    // Clicks outside the frame image (outside the design, or scrolled content missing from the export) are listed.
     const outside = sz ? drawable.filter((p) => p.x > sz.w || p.y > sz.h).length : 0
-    if (outside) unmapped.push(`${node} (kaydırılmış içerik, görüntünün dışında): ${outside}`)
+    if (outside) unmapped.push(`${node} (frame dışı): ${outside}`)
     return [
       <figure key={node} className="clickmap">
         <div className="clickmap-frame">
