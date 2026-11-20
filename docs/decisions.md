@@ -8,6 +8,85 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 
 ---
 
+## 2026-11-20: Katılımcıya görünen metinler ve ölçekler araştırmacı tarafından düzenlenebilir (MVP sonrası)
+
+Kaynak: ürün yönetimi thread'i (Nezih, 20 Kasım). Durum: kararlaştırıldı; uygulama MVP sonrası, mimari şimdiden kapı bırakır.
+
+- Beklenti ve SEQ puanlaması araştırmacının inisiyatifinde: ölçek aralığı (örn. 1-7 ya da 1-10) ve uç/ara etiketler düzenlenebilir.
+- Soruların çıkış anları (görev öncesi/sonrası, ekran geçişi, oturum sonu) ve soru metinleri düzenlenebilir.
+- Son kullanıcıya görünen her metin (onay, yönergeler, butonlar, sorular) hem düzenlenebilir hem çok dilli olmalı.
+
+MVP'de yapılacak ucuz hazırlık (şimdi):
+- Katılımcıya görünen tüm metinler kodun içine gömülmez, tek bir metin kataloğunda anahtar → metin olarak durur (varsayılan dil Türkçe).
+- Ölçek, çalışma JSON'unda `{ min, max, labels }` olarak tutulur; varsayılan 1-7. Kod sabit 7'ye dayanmaz.
+- Soru tetikleme noktaları çalışma JSON'unda veri olarak tanımlanır (varsayılanlar önceki girişteki gibi).
+
+---
+
+## 2026-11-20: Yüz sinyali ayarı, 30 sn ısınma, görev bazında zorluk puanı
+
+Kaynak: ürün yönetimi thread'i (Nezih onayı, 20 Kasım). Durum: kararlaştırıldı.
+
+### Yüz sinyalleri (hukuki çerçeve)
+
+- Çalışma bazında "yüz sinyalleri" ayarı. İşyeri ya da eğitim bağlamındaki çalışmalarda varsayılan **kapalı**; araştırmacı açarsa bağlamı onaylar.
+- Katılımcıdan yüz sinyalleri için ayrı, açık onay (kamera zaten opsiyonel).
+- Sorumluluk sözleşmeyle tamamen müşteriye devredilemez (AI Act Madde 5 sağlayıcıyı da bağlar). Koruma ürün tasarımında: duygu çıkarımı yok, kareler cihazdan çıkmaz, sadece sayılar gider. Bunlar müşteri ayarıyla değiştirilemez.
+- İlk dış müşteriden önce tek seferlik, dar kapsamlı hukuki görüş: ham blendshape'in duygu çıkarmadan destekleyici kullanımı Madde 5 ve GDPR Madde 9 açısından.
+- **Yüz verisi ancak vazgeçilmez olduğu gösterilirse kalır:** geriye dönük doğrulamada ve karşılaştırmalı testte her yüz sinyali kapatılarak katkısı ölçülür; katkısı olmayan sinyal çıkar. Kamera tabanlı efor sinyalleri bu kanıt gelene kadar zorunlu değil; kamerasız mod tam bir mod olarak kalır.
+- Nezih'in kendi çalışmalarında katılımcılar şirket çalışanıysa yüz sinyalleri kapalı.
+
+### Isınma görevi
+
+- Süre ~20 sn yerine **30 sn** (nötr okuma + birkaç tıklama).
+- 30 sn'de 5-10 göz kırpma olur; göz kırpma baseline'ı ilk görevin ilk ekranıyla güncellenir. Geriye dönük doğrulamada sadece ısınma ile ısınma + ilk ekran karşılaştırılır.
+
+### Görev sonu: retro yerine zorluk puanı
+
+- Görev sonundaki klipli retro kaldırıldı (sorular ekran geçişinde soruluyor, bkz. önceki giriş).
+- Her görevden **önce** beklenen zorluk (1-7), görevden **hemen sonra** SEQ (1-7). Albert & Dixon beklenen/yaşanan zorluk yöntemi; katılımcının kendi beklenti-deneyim farkı raporda hipotez-davranış farkının yanında gösterilir.
+- Oturum sonunda görevler kısa hatırlatılır ve "en çok zorlandığın görev hangisiydi, neden?" diye tek açık soru sorulur (yazılı).
+
+### Figma
+
+- "Anyone with the link" paylaşımı kabul edildi; alternatif araştırılmayacak.
+
+---
+
+## 2026-11-20: Sorular ekran geçişinde, AI ile derinleştirme; retro için video yerine frame replay
+
+Kaynak: ürün yönetimi thread'i (Nezih onayı, 20 Kasım). Durum: kararlaştırıldı. 20 Kasım tarihli "Retrospektif" bölümünü (madde 5) aşağıdaki noktalarda geçersiz kılar.
+
+**Konumlandırma:** "moderated derinliği, unmoderated ölçekte".
+
+### Soru zamanlaması (hibrit)
+
+- **Planlı soru:** hipotez kartına opsiyonel `probe` alanı (araştırmacının önceden yazdığı soru). Katılımcı o ekrandan **çıkarken** sorulur.
+- **Sinyalle tetiklenen soru:** beklenmedik sapma olursa yine **ekran geçişinde** sorulur, ekranın ortasında asla. Görev başına en fazla 2 soru (planlı + tetiklenen toplam).
+- Soru sırasında oturum saati durur; o ekranın ölçümü soru başlamadan kapanmış olur.
+- Kalan sapmalar görev sonunda kısa retro olarak sorulur. Toplam oturum başına en fazla 6 soru anı.
+
+### AI ile derinleştirme
+
+- Cevaba göre en fazla 2 takip sorusu. AI'a hipotez kartı, gözlenen davranış (sadece olgular) ve katılımcının cevabı verilir.
+- Kurallar: yönlendirmeyen, nötr dil; duygu/niyet çıkarımı yok (İlke 1); katılımcıya sayı gösterilmez; her soruda "geç" seçeneği.
+- MVP'de cevap **yazılı** başlar. Ses + transkripsiyon, sesin cihazdan çıkması için ayrı onay ve AB bölgesi gerektirdiği için sonraki adım.
+- AI soru kalitesi (yönlendirme var mı) M3 pilotunda ayrıca değerlendirilir.
+
+### "O ana götürme": video yerine frame replay
+
+- Retro ve soru anında katılımcıya ekran videosu değil, Figma frame görüntüsü + kaydedilen cursor izi ve tıklama noktaları oynatılır.
+- Sebep: katılımcının ekranından kayıt gerekmez (gizlilik), Safari/Firefox/mobilde çalışır.
+- Ekran videosu sadece araştırmacı raporu için gerekirse opsiyonel kalır; MVP'de nerede saklanacağı ayrıca kararlaştırılacak.
+- Retro/rapor bileşeni bir "oynatma kaynağı" soyutlaması alır (frame replay, ileride video).
+
+### Etkisi
+
+- M2 (geriye dönük doğrulama) etkilenmez.
+- M3'teki retro adımının yerini bu soru motoru alır. `screens.ts` `retroMoments` mantığı "geçişte soru adayı" seçimine dönüşür.
+
+---
+
 ## 2026-11-20: Arayüze özgü model, retrospektif, zaman senkronu, geriye dönük doğrulama
 
 Kaynak: planlama sohbeti (18-19 Kasım). Durum: kararlaştırıldı, kod uyarlaması Nezih onayıyla yapılacak (aşağıda "Kodla uzlaştırma").
