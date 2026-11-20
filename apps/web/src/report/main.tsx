@@ -56,12 +56,15 @@ function ClickMap({ screenKey, task, images }: { screenKey: string; task: Sessio
     }
     if (drawable.length < pts.length) unmapped.push(`${node} (iç kaydırma alanı): ${pts.length - drawable.length}`)
     const sz = size[node]
+    // Clicks below the exported frame (content scrolled into view, clipped in the frame export) cannot be drawn.
+    const outside = sz ? drawable.filter((p) => p.x > sz.w || p.y > sz.h).length : 0
+    if (outside) unmapped.push(`${node} (kaydırılmış içerik, görüntünün dışında): ${outside}`)
     return [
       <figure key={node} className="clickmap">
         <div className="clickmap-frame">
           <img src={img.url} alt={node} onLoad={(e) => setSize((s) => ({ ...s, [node]: { w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight } }))} />
           {sz
-            ? drawable.map((p, i) => <span key={i} className={p.dead ? 'dot dead' : 'dot'} style={{ left: `${(p.x / sz.w) * 100}%`, top: `${(p.y / sz.h) * 100}%` }} />)
+            ? drawable.filter((p) => p.x <= sz.w && p.y <= sz.h).map((p, i) => <span key={i} className={p.dead ? 'dot dead' : 'dot'} style={{ left: `${(p.x / sz.w) * 100}%`, top: `${(p.y / sz.h) * 100}%` }} />)
             : null}
         </div>
         <figcaption>{node === screenKey ? 'Ekran' : `Durum ${node}`} · {drawable.length} tıklama</figcaption>
