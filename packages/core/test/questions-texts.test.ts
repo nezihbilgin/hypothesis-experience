@@ -69,6 +69,20 @@ describe('questions at screen transitions', () => {
     const tight = endOfTaskQuestions({ report: reportAt(20), endedAt: 20, asked, limits: { perTask: 2, endOfTask: 2, perSession: 3 } })
     expect(tight.map((q) => q.screenKey)).toEqual(['d'])
   })
+  it('a screen shared by two tasks: its planned question fires in the task that defines it, not used up earlier', () => {
+    // Task 1 has screen 'a' without a probe; a signal question about 'a' is asked there.
+    const t1Card: HypothesisCard = { screenKey: 'a', screenName: 'Sepet', order: 1, behavior: 'flow', expectedSec: [0, 30] }
+    const r1 = computeScreenReport({ cards: [t1Card], events: [ev(0, 'a', 'screen'), ev(1, 'a', 'dead-click'), ev(2, 'a', 'click'), ev(3, 'b', 'screen')], samples: [], baseline, endSec: 3, cameraEnabled: false })
+    const q1 = questionAtTransition({ card: t1Card, report: r1, leftAt: 3, asked: none })
+    expect(q1?.source).toBe('signal')
+    // Task 2 defines 'a' with a probe: the planned question still fires (new task, same session).
+    const t2Card: HypothesisCard = { ...t1Card, probe: 'Nereden başlayacağını nasıl buldun?' }
+    const r2 = computeScreenReport({ cards: [t2Card], events: [ev(0, 'a', 'screen'), ev(2, 'a', 'click'), ev(3, 'b', 'screen')], samples: [], baseline, endSec: 3, cameraEnabled: false })
+    const q2 = questionAtTransition({ card: t2Card, report: r2, leftAt: 3, asked: { inTask: [], inSession: [q1!] } })
+    expect(q2).toMatchObject({ source: 'planned', probe: 'Nereden başlayacağını nasıl buldun?' })
+    // ...and only once: leaving 'a' again in task 2 does not repeat it.
+    expect(questionAtTransition({ card: t2Card, report: r2, leftAt: 5, asked: { inTask: [q2!], inSession: [q1!, q2!] } })).toBeNull()
+  })
   it('session cap stops transition questions in later tasks', () => {
     const full = Array.from({ length: 6 }, () => ({ screenKey: 'x', askedAt: 0, source: 'signal' as const, replay: [0, 1] as [number, number] }))
     expect(questionAtTransition({ card: cards[0], report: reportAt(2), leftAt: 2, asked: { inTask: [], inSession: full } })).toBeNull()
