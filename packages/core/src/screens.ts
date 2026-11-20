@@ -12,6 +12,7 @@ import {
   type AxisCurves,
   type AxisScores,
   type Baseline,
+  type Capabilities,
   type CurvePoint,
   type HypothesisCard,
   type InteractionEvent,
@@ -104,12 +105,16 @@ export interface ScreenSessionInput {
   cameraEnabled: boolean
   /** Study setting + participant consent for face signals (blink, brow, stillness, lean-in). Default off. */
   faceSignals?: boolean
+  /** What the setup can measure. Missing = desktop defaults (hover yes, camera = cameraEnabled, no screen video). */
+  capabilities?: Partial<Capabilities>
 }
 
 const r1 = (n: number): number => Math.round(n * 10) / 10
 
 export function computeScreenReport(input: ScreenSessionInput): ScreenReport {
-  const { cards, baseline, cameraEnabled } = input
+  const { cards, baseline } = input
+  const caps: Capabilities = { hasHover: true, hasScreenVideo: false, ...input.capabilities, hasCamera: input.cameraEnabled && input.capabilities?.hasCamera !== false }
+  const cameraEnabled = caps.hasCamera
   const faceOn = cameraEnabled && input.faceSignals === true
   const events = [...input.events].sort((a, b) => a.t - b.t)
   const end = Math.max(1, Math.ceil(input.endSec))
@@ -259,6 +264,7 @@ export function computeScreenReport(input: ScreenSessionInput): ScreenReport {
   for (let t = 0; t < end; t++) if (play.has(t)) covered++
 
   return {
+    signals: { camera: cameraEnabled, face: faceOn, hover: caps.hasHover, screenVideo: caps.hasScreenVideo },
     baseline,
     expected: expectedCurvesFrom(cards, visits, end),
     observed: stepCurves(stats, visits, end),

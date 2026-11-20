@@ -2,10 +2,17 @@
 // Faz 0 findings: some messages arrive as a bare string (e.g. "LOGIN_SCREEN_SHOWN"), others as { type, data };
 // Figma's internal frame plumbing ({ command: ... } without type) is not an Embed API event and is dropped.
 // Pure and deterministic: the app passes the message data (event.data, origin already checked) and a timestamp.
-import { RageClickDetector } from '../signals'
-import type { InteractionEvent } from '../types'
+import { RageClickDetector, SCHEMA_VERSION } from '../signals'
+import type { InteractionEvent, PointerKind, Viewport } from '../types'
 
-export const SCHEMA_VERSION = 1
+/** Device context the app knows (Figma does not report it); stamped on every event. */
+export interface FigmaContext {
+  pointerType?: PointerKind
+  viewport?: Viewport
+  orientation?: 'portrait' | 'landscape'
+  streamId?: string
+}
+
 
 export type FigmaStatus = 'loaded' | 'login-required' | 'password-required'
 
@@ -34,6 +41,8 @@ export class FigmaAdapter {
   /** Node id of the frame currently presented, null before the first PRESENTED_NODE_CHANGED. */
   screenKey: string | null = null
   private rage = new RageClickDetector()
+
+  constructor(public context: FigmaContext = {}) {}
 
   /** t: seconds from task start. */
   push(raw: unknown, t: number): FigmaPushResult {
@@ -66,13 +75,13 @@ export class FigmaAdapter {
       if (typeof data.handled === 'boolean') payload.handled = data.handled
       const events = [this.ev(t, 'click', payload)]
       if (data.handled === false) events.push(this.ev(t, 'dead-click', { x, y, ...(target ? { targetNodeId: target } : {}) }))
-      if (this.rage.push({ t, x, y })) events.push(this.ev(t, 'rage-click', { x, y }))
+      if (this.rage.push({ t, x, y, ...(this.context.pointerType ? { pointerType: this.context.pointerType } : {}) })) events.push(this.ev(t, 'rage-click', { x, y }))
       return { events }
     }
     return { events: [] }
   }
 
   private ev(t: number, type: InteractionEvent['type'], payload: Record<string, unknown>): InteractionEvent {
-    return { t, screenKey: this.screenKey!, type, payload, v: SCHEMA_VERSION }
+    return { t, screenKey: this.screenKey!, type, payload, v: SCHEMA_VERSION, ...this.context }
   }
 }

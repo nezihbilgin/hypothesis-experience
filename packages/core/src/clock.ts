@@ -51,3 +51,15 @@ export class SessionClock {
 
 /** Absolute milliseconds shared across windows/workers: performance.timeOrigin + performance.now(). */
 export const absoluteNow = (perf: { timeOrigin: number; now(): number }): number => perf.timeOrigin + perf.now()
+
+/**
+ * Moves a stream's timestamps onto the session clock (per-stream offset, decisions 2026-11-20 item 6).
+ * Items whose streamId has no StreamInfo are returned unchanged (offset 0).
+ */
+export function alignToSession<T extends { t: number; streamId?: string }>(items: T[], streams: { streamId: string; offsetSec: number }[]): T[] {
+  const off = new Map(streams.map((s) => [s.streamId, s.offsetSec]))
+  return items.map((x) => {
+    const o = x.streamId !== undefined ? off.get(x.streamId) ?? 0 : 0
+    return o ? { ...x, t: Math.round((x.t + o) * 1000) / 1000 } : x
+  })
+}

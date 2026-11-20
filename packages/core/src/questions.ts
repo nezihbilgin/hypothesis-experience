@@ -2,7 +2,7 @@
 // - Planned question: the card's `probe`, asked when the participant leaves that screen.
 // - Signal-triggered question: an unexpected mismatch, also asked at the screen transition, never mid-screen.
 // - At most `perTask` transition questions per task; remaining mismatches go to a short end-of-task retro;
-//   at most `perSession` question moments per session.
+//   at most `perSession` question moments per session. The end-of-task retro is off by default (endOfTask: 0).
 // The participant sees no numbers: question wording comes from the text catalog; `mismatch.text` is for the researcher.
 // Pure: the app calls these with a report computed on the data so far (computeScreenReport with endSec = now).
 import type { HypothesisCard, Mismatch, ScreenReport } from './types'
@@ -13,7 +13,8 @@ export interface QuestionLimits {
   endOfTask: number
   perSession: number
 }
-export const DEFAULT_QUESTION_LIMITS: QuestionLimits = { perTask: 2, endOfTask: 2, perSession: 6 }
+/** End-of-task retro is off by default (decisions 2026-11-20): task end asks only SEQ. A study can turn it on. */
+export const DEFAULT_QUESTION_LIMITS: QuestionLimits = { perTask: 2, endOfTask: 0, perSession: 6 }
 
 export interface QuestionMoment {
   screenKey: string

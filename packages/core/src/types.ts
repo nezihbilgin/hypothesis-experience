@@ -6,6 +6,8 @@
 /** One second of camera/mic behaviour, produced by the sensing worker. t = seconds from task start (negative = warm-up). */
 export interface SecondSample {
   t: number
+  /** Which camera/mic stream produced this second (e.g. "laptop-cam"); see StreamInfo. */
+  streamId?: string
   /** Screen shown for most of this second (filled by the app, not by sensing). */
   screenKey?: string
   /** Face tracked for most of this second. */
@@ -62,14 +64,22 @@ export interface HypothesisCard {
 
 export type InteractionType =
   | 'screen' // payload: { from?: string }
-  | 'click' // payload: { x, y, selector? }
+  | 'click' // payload: { x, y, selector? }. A tap on a touch screen is also 'click' (pointerType tells them apart).
   | 'dead-click'
   | 'rage-click'
   | 'input-edit'
   | 'input-delete'
-  | 'scroll'
+  | 'scroll' // payload: { y, dy }
+  | 'pointer-move' // payload: { x, y }; throttled, hovering pointers only (mouse/pen)
   | 'visibility' // payload: { hidden: boolean }
   | 'js-error'
+
+export type PointerKind = 'mouse' | 'touch' | 'pen'
+
+export interface Viewport {
+  w: number
+  h: number
+}
 
 export interface InteractionEvent {
   t: number
@@ -77,6 +87,34 @@ export interface InteractionEvent {
   type: InteractionType
   payload?: Record<string, unknown>
   v?: number
+  /** Input that produced the event (clicks, taps, moves). */
+  pointerType?: PointerKind
+  /** CSS pixel size of the prototype/page when the event happened. */
+  viewport?: Viewport
+  orientation?: 'portrait' | 'landscape'
+  /** Which device/stream sent the event (e.g. "laptop", "phone"); see StreamInfo. */
+  streamId?: string
+}
+
+/**
+ * What the participant's setup can measure (mobile-ready, decisions 2026-11-20). A signal the setup cannot
+ * measure is excluded from the report, never read as "calm".
+ */
+export interface Capabilities {
+  /** A hovering pointer exists (mouse/trackpad). Touch-only devices: false, so no hover/cursor signals. */
+  hasHover: boolean
+  /** Camera on and passed the quality check. */
+  hasCamera: boolean
+  /** A screen recording exists for the researcher (replay can use video instead of frames). */
+  hasScreenVideo: boolean
+}
+
+/** One recorded stream and its clock offset (seconds to add to its own timestamps to reach the session clock). */
+export interface StreamInfo {
+  streamId: string
+  deviceId?: string
+  kind: 'interaction' | 'camera' | 'microphone' | 'screen'
+  offsetSec: number
 }
 
 /** Baseline learned from the warm-up task (Principle 2). Camera fields are 0 when there was no usable data. */
@@ -147,6 +185,8 @@ export interface AxisCurves {
 }
 
 export interface ScreenReport {
+  /** Signals that were measurable in this session; the rest were excluded, not counted as calm. */
+  signals: { camera: boolean; face: boolean; hover: boolean; screenVideo: boolean }
   baseline: Baseline
   expected: AxisCurves
   observed: AxisCurves

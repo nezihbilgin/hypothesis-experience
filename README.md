@@ -21,6 +21,7 @@ packages/sensing/  Tarayıcıda yüz ve ses ölçümü -> SecondSample (kareler 
   src/frames.ts      kare sonuçları -> saniyelik ölçüm, göz kırpma (saf, test edilir)
   src/vad.ts         enerji tabanlı ses aktivitesi
   src/client.ts      kamera + mikrofon + worker denetleyicisi
+packages/embed-sdk/  Prototip sayfasına eklenen tek <script>: olaylar -> postMessage (interaction_event v2)
 apps/spikes/     Faz 0 spike'ları ve Faz 1 sensing deneme sayfası (Vite, çok sayfalı)
 ```
 

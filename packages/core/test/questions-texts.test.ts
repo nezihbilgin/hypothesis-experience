@@ -59,10 +59,11 @@ describe('questions at screen transitions', () => {
     const qb = questionAtTransition({ card: cards[1], report: reportAt(6), leftAt: 6, asked: none })
     expect(questionAtTransition({ card: cards[1], report: reportAt(10), leftAt: 10, asked: push(none, qb) })).toBeNull()
   })
-  it('end-of-task retro takes the largest remaining mismatches within the session budget', () => {
+  it('end-of-task retro is off by default; when on, takes the largest remaining mismatches within the session budget', () => {
     let asked = push(none, questionAtTransition({ card: cards[0], report: reportAt(2), leftAt: 2, asked: none }))
     asked = push(asked, questionAtTransition({ card: cards[1], report: reportAt(6), leftAt: 6, asked }))
-    const retro = endOfTaskQuestions({ report: reportAt(20), endedAt: 20, asked })
+    expect(endOfTaskQuestions({ report: reportAt(20), endedAt: 20, asked })).toEqual([]) // off by default
+    const retro = endOfTaskQuestions({ report: reportAt(20), endedAt: 20, asked, limits: { perTask: 2, endOfTask: 2, perSession: 6 } })
     expect(retro.map((q) => [q.screenKey, q.mismatch!.kind])).toEqual([['c', 'effort-mismatch'], ['d', 'unexpected-friction']])
     expect(retro.every((q) => q.source === 'end-of-task')).toBe(true)
     const tight = endOfTaskQuestions({ report: reportAt(20), endedAt: 20, asked, limits: { perTask: 2, endOfTask: 2, perSession: 3 } })
@@ -125,7 +126,7 @@ describe('study definition (tasks, settings)', () => {
     expect(r.study.scales.seq.max).toBe(10)
     expect(r.study.scales.expectation).toEqual(defaultScale())
     expect(r.study.texts['task.done']).toBe('Tamamladım')
-    expect(r.study.questions).toMatchObject({ endOfTask: false, preTaskRating: true, limits: { perTask: 1, endOfTask: 2, perSession: 6 } })
+    expect(r.study.questions).toMatchObject({ endOfTask: false, preTaskRating: true, limits: { perTask: 1, endOfTask: 0, perSession: 6 } })
     expect(r.study.faceSignals).toBe(true)
   })
   it('face signals default off for workplace and education studies', () => {

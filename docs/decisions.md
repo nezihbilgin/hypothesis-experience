@@ -8,6 +8,23 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 
 ---
 
+## 2026-11-20: Görev sonu retro varsayılan kapalı; olay şeması mobile hazır
+
+Kaynak: ürün yönetimi thread'i (`faz1-core` incelemesi), Nezih onayı. Durum: uygulandı (`faz1-core`).
+
+### Görev sonu retro
+- Varsayılan kapalı: `questions.endOfTask` false, `limits.endOfTask` 0. Özellik ve çalışma JSON'undaki ayar duruyor; araştırmacı açabilir.
+- Görev sonunda sadece SEQ, oturum sonunda "en çok zorlandığın görev" sorusu.
+
+### Mobile hazır olay şeması
+- `interaction_event` şema sürümü 2: `pointerType` (`mouse` | `touch` | `pen`), `viewport` ({w, h}), `orientation`, `streamId`. Tıklama ve dokunma aynı olay tipi (`click`); ayrımı `pointerType` yapar. Yeni tip: `pointer-move` (sadece fare/kalem, kısıtlanmış sıklıkta).
+- `SecondSample` da `streamId` taşır. Zaman modelinde akış bazında fark: `StreamInfo { streamId, deviceId, kind, offsetSec }` ve `alignToSession`.
+- Yetenek bayrakları (`Capabilities`: `hasHover`, `hasCamera`, `hasScreenVideo`) `core`'a girer. Ölçülemeyen sinyal hesaptan çıkarılır, "sakin" sayılmaz; rapor hangi sinyallerin ölçüldüğünü `signals` alanında gösterir.
+- Rage click dokunmayı da kapsar: dokunmada "aynı bölge" yarıçapı 60 px (farede 40 px).
+- `packages/embed-sdk`: prototip sayfasına eklenen tek `<script>` (`data-parent-origin` zorunlu, mesajlar sadece o origin'e). Aynı şemaya yazar; form değerleri, metin ve tuş vuruşları gönderilmez. Zaman damgası mutlak (`timeOrigin + now`), uygulama oturum saatine çevirir (`fromEmbedMessage`). Figma adaptörü de cihaz bağlamını (`pointerType`, `viewport`, `orientation`, `streamId`) her olaya ekler.
+
+---
+
 ## 2026-11-20: Konuşma için ses-dudak uyumu
 
 Kaynak: Nezih ile sensing denemeleri. Durum: uygulandı (eşik kalibre edilecek).

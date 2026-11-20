@@ -13,7 +13,7 @@ Planı ya da mimariyi değiştiren her kararı `docs/decisions.md` dosyasına ta
 Durum (20 Kasım 2026): Faz 1 sürüyor. `faz1-core` branch'inde `core` 20 Kasım kararlarına uyarlandı: iki eksen (efor, sürtünme),
 `effort-mismatch`, yüz sinyalleri çalışma ayarına bağlı, ekran geçişinde soru motoru, metin kataloğu ve düzenlenebilir ölçekler.
 `sensing` paketi de hazır (worker, saniye toplayıcı, göz kırpma, VAD, kalite ölçümü; deneme sayfası `apps/spikes/sensing.html`).
-Sıradaki: `embed-sdk` ve participant akışı (`apps/web`).
+`embed-sdk` hazır (tek dosyalık script, mobile hazır olay şeması v2). Sıradaki: participant akışı (`apps/web`).
 
 Kurallar:
 - İlke 1: raporda ve kodda duygu/niyet çıkarımı yok, sadece gözlemlenen davranış. Duygu/ifade sınıflandırma skoru kullanılmaz; ham kas hareketi blendshape'leri (göz kırpma, kaş) sadece destekleyici sinyal olarak kullanılabilir (decisions 2026-11-20).
@@ -24,7 +24,7 @@ Kurallar:
 
 Komutlar:
 - `npm install`
-- `npm test` (core ve sensing testleri), `npm run typecheck`
+- `npm test` (core, sensing ve embed-sdk testleri), `npm run typecheck`, `npm run embed` (embed-sdk'yı `packages/embed-sdk/dist/hx-embed.js` olarak derler)
 - `npm run spikes:dev` (spike sayfaları, http://localhost:5173), `npm run spikes` (build + preview, :4173)
 
 Yayın: `main`'e push edilince GitHub Actions test eder ve `apps/spikes`'ı https://nezihbilgin.github.io/hypothesis-experience/ adresine yayınlar.

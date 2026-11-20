@@ -97,7 +97,7 @@ describe('figma adapter', () => {
       '3 1:3 click', '3 1:3 dead-click', '3.2 1:3 click', '3.2 1:3 dead-click', '3.4 1:3 click', '3.4 1:3 dead-click', '3.4 1:3 rage-click'
     ])
     expect(out[2].payload).toEqual({ from: '1:2', interactionType: 'ON_CLICK' })
-    expect(out.every((e) => e.v === 1)).toBe(true)
+    expect(out.every((e) => e.v === 2)).toBe(true)
   })
   it('a click before any screen event uses the node it reports', () => {
     const a = new FigmaAdapter()

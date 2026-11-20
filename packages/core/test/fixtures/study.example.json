@@ -72,11 +72,11 @@
     "preTaskRating": true,
     "postTaskRating": true,
     "atTransitions": true,
-    "endOfTask": true,
+    "endOfTask": false,
     "sessionEnd": true,
     "limits": {
       "perTask": 2,
-      "endOfTask": 2,
+      "endOfTask": 0,
       "perSession": 6
     }
   },

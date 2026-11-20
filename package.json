@@ -7,9 +7,10 @@
   ],
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc --noEmit -p packages/core && tsc --noEmit -p packages/sensing",
+    "typecheck": "tsc --noEmit -p packages/core && tsc --noEmit -p packages/sensing && tsc --noEmit -p packages/embed-sdk",
     "spikes": "npm run build -w @hx/spikes && npm run preview -w @hx/spikes",
-    "spikes:dev": "npm run dev -w @hx/spikes"
+    "spikes:dev": "npm run dev -w @hx/spikes",
+    "embed": "npm run build -w @hx/embed-sdk"
   },
   "devDependencies": {
     "@types/node": "^22",

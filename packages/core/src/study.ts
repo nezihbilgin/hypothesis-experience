@@ -37,7 +37,7 @@ export interface QuestionPoints {
   postTaskRating: boolean
   /** Planned and signal-triggered questions at screen transitions. */
   atTransitions: boolean
-  /** Short retro of remaining mismatches after each task. */
+  /** Short retro of remaining mismatches after each task. Off by default; needs limits.endOfTask > 0 too. */
   endOfTask: boolean
   /** "Hardest task" open question at the end of the session. */
   sessionEnd: boolean
@@ -159,9 +159,9 @@ export function parseStudy(input: unknown): ParseResult {
   }
   const scales = { expectation: scale('expectation', 'Beklenti ölçeği'), seq: scale('seq', 'SEQ ölçeği') }
   const q = isObj(o.questions) ? o.questions : {}
-  const flag = (k: string): boolean => {
+  const flag = (k: string, dflt = true): boolean => {
     if (q[k] !== undefined && typeof q[k] !== 'boolean') errors.push(`questions.${k} true ya da false olmalı.`)
-    return q[k] !== false
+    return typeof q[k] === 'boolean' ? (q[k] as boolean) : dflt
   }
   const lim = isObj(q.limits) ? q.limits : {}
   const limit = (k: keyof QuestionLimits): number => {
@@ -177,7 +177,7 @@ export function parseStudy(input: unknown): ParseResult {
     preTaskRating: flag('preTaskRating'),
     postTaskRating: flag('postTaskRating'),
     atTransitions: flag('atTransitions'),
-    endOfTask: flag('endOfTask'),
+    endOfTask: flag('endOfTask', false),
     sessionEnd: flag('sessionEnd'),
     limits: { perTask: limit('perTask'), endOfTask: limit('endOfTask'), perSession: limit('perSession') }
   }
