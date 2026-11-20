@@ -16,7 +16,12 @@ packages/core/   Saf, deterministik model (Vitest). Senti felt.ts'ten port edild
   src/aggregate.ts   görev bazında özet (ekran başına sapma sayısı, beklenen/yaşanan zorluk)
   src/compat/        Senti uyumluluk modeli (sadece regresyon testi için)
   test/              regresyon (docs/evidence), Senti'nin birim testleri, ekran modeli testleri
-apps/spikes/     Faz 0 tarayıcı spike'ları (Vite, çok sayfalı)
+packages/sensing/  Tarayıcıda yüz ve ses ölçümü -> SecondSample (kareler cihazdan çıkmaz)
+  src/worker.ts      MediaPipe FaceLandmarker worker'ı (blendshape açık)
+  src/frames.ts      kare sonuçları -> saniyelik ölçüm, göz kırpma (saf, test edilir)
+  src/vad.ts         enerji tabanlı ses aktivitesi
+  src/client.ts      kamera + mikrofon + worker denetleyicisi
+apps/spikes/     Faz 0 spike'ları ve Faz 1 sensing deneme sayfası (Vite, çok sayfalı)
 ```
 
 ## Çalıştırma

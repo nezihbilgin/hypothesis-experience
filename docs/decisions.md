@@ -8,6 +8,21 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 
 ---
 
+## 2026-11-20: sensing paketi ve oturum saati (uygulama notları)
+
+Kaynak: Claude Code (`faz1-core` branch'i). Durum: uygulandı.
+
+- `packages/sensing`: worker (MediaPipe FaceLandmarker, blendshape açık) her kare için sadece sayı döndürür; kare worker'da kapatılır. Ana thread'deki `SensingClient` kameradan en fazla 15 fps, 320 px genişliğe küçültülmüş kare gönderir, aynı anda tek kare işlenir.
+- Saniye toplayıcı (`frames.ts`, saf): kare sayısı, yüz (karelerin yarısından fazlası), baş hızı (yüz genişliği/sn), hareketsizlik (0.2 yüz genişliği/sn altındaki aralıkların oranı), yüz genişliği medyanı, kaş ortalaması, konuşma oranı.
+- Göz kırpma: göz kapanma skoru 0.5'i geçip 0.35'in altına inince bir kırpma. Dakikadaki oran son 15 sn'nin ≥ 15 kareli saniyelerinden hesaplanır, en az 5 geçerli saniye ister; yoksa `null`.
+- Ses: enerji tabanlı VAD (uyarlanan gürültü tabanının 3 katı, 8 karelik tutma). Ses hiçbir yere bağlanmaz ya da kaydedilmez.
+- CPU delegate sadece GPU başarısız olursa ve 4+ çekirdekte denenir.
+- Oturum saati (`core/clock.ts`): `performance.timeOrigin + performance.now()`, görev başında sıfır, soru sırasında durur; duruşta sensing kare ve ses almaz.
+- Kalite kontrolü (`sensing/quality.ts`): ilk 3 sn GPU ısınması sayılmaz, sonraki 5 sn'nin kare sayısı ve yüz bulunan saniye oranı `core`'daki karara verilir.
+- Deneme sayfası: `apps/spikes/sensing.html` (gerçek kamerayla 60 sn ölçüm, JSON indirme).
+
+---
+
 ## 2026-11-20: core iki eksenli modele geçti (uygulama notları)
 
 Kaynak: Claude Code (`faz1-core` branch'i). Durum: uygulandı. 20 Kasım tarihli girişlerin `core` karşılığı ve uygulamada verilen küçük kararlar.
