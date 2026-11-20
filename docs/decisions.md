@@ -8,6 +8,18 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 
 ---
 
+## 2026-11-20: Çalışma düzeyinde ekranlar, beklenen yol, yönelim süresi, soru dili
+
+Kaynak: ürün yönetimi thread'i (PM kararları, Nezih'in v2 oturumu geri bildirimi). Durum: uygulandı (`faz1-core`).
+
+- **Çalışma düzeyinde ekranlar:** ekranlar (kart, `aliases`, `participantName`) çalışma JSON'unda bir kez, en üstte `screens` altında tanımlanabilir. Her görev `expectedPath` (beklenen ekran sırası), `targetScreen` ve isteğe bağlı `startScreen` taşır. Planlı sorular (görev, ekran) çiftine bağlıdır: görevde `probes` (ekran → soru). Aynı ekran başka bir görevde farklı bir amaca hizmet ediyorsa görevde `overrides` (ekran → `behavior`, `expectedSec`, `name`, `participantName`). Eski görev başına `screens` biçimi de kabul edilir.
+- **Beklenen yol dışı:** bir görevin `expectedPath`'inde olmayan ekranlar da kendi kartlarıyla ölçülür. İlk ziyaret sürtünme eksenine eklenir (+40) ve "beklenen yolun dışındaki bu ekrana geldi" cümlesi üretir; raporda ayrıca `offPathScreens` listesi var. Yol dışı ekrandan yola dönmek "geri dönüş" sayılmaz.
+- **Yönelim süresi:** görevin ilk ekranında ilk aksiyona kadar geçen süre varsayılan olarak tereddüt ve efor sapmasından çıkarılır ve raporda ayrıca `orientationSec` olarak verilir (görev metninin netliği hakkında bilgi). `excludeOrientation: false` ile kapatılabilir.
+- **Soru dili:** varsayılan katalog metinleri başarı ya da anlama varsaymaz. "Ne arıyordun?" uygun; oturum sonu sorusu "Varsa, en çok zorlandığın görev hangisiydi ve neden?" oldu. Planlı sorular PM tarafından varsayımsız yeniden yazıldı (çalışma dosyasında).
+- **Dikte:** uygulama içinde konuşma tanıma yok (tarayıcınınki sesi sunucuya gönderir). Cevap kutusunun altında katalogdan ipucu: "İstersen klavyenin dikte özelliğiyle konuşarak yazabilirsin."
+
+---
+
 ## 2026-11-20: Sorun ekilmiş prototiple doğrulama; oturum sağlığı bloğu
 
 Kaynak: ürün yönetimi thread'i, Nezih onayı ("ikisi de makul"). Durum: kararlaştırıldı; sağlık bloğu uygulandı (`faz1-core`).

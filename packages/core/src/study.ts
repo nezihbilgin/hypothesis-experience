@@ -23,15 +23,20 @@ export interface StudyScreen {
   expectedSec: [number, number]
   successCriterion?: string
   note?: string
-  /** Planned question asked when leaving this screen. */
+  /** Planned question asked when leaving this screen (in the new format: per task, from task.probes). */
   probe?: string
+  /** Not on this task's expectedPath (new format); visiting it counts as leaving the expected path. */
+  offPath?: boolean
 }
 
 export interface StudyTask {
   id: string
   prompt: string
-  /** In the order the researcher expects them; order is used to detect going back. */
+  /** In the order the researcher expects them; order is used to detect going back. In the new format: the
+   * expectedPath screens first, then every other study screen with offPath: true. */
   screens: StudyScreen[]
+  /** New format: the expected screen order for this task. */
+  expectedPath?: string[]
   /** Figma: node id the prototype starts from for this task (a flow's starting point), e.g. "26:7221".
    * Without it the link's own starting point is used. */
   startScreen?: string
@@ -103,6 +108,61 @@ export function parseStudy(input: unknown): ParseResult {
   if (o.faceSignals !== undefined && typeof o.faceSignals !== 'boolean') errors.push('faceSignals true ya da false olmalı.')
   const faceSignals = typeof o.faceSignals === 'boolean' ? o.faceSignals : !(SENSITIVE_CONTEXTS as readonly string[]).includes(context)
 
+  // Screens: parsed the same way at study level (new format) or per task (old format).
+  const parseScreens = (list: unknown, tAt: string): StudyScreen[] => {
+    const screens: StudyScreen[] = []
+    if (!Array.isArray(list) || list.length === 0) {
+      errors.push(`${tAt}En az bir ekran (screens) tanımlanmalı.`)
+      return screens
+    }
+    const seen = new Set<string>()
+    list.forEach((raw, i) => {
+      const s = isObj(raw) ? raw : {}
+      const at = `${tAt}Ekran ${i + 1}`
+      const key = typeof s.key === 'string' ? s.key.trim() : ''
+      const sname = optText(s.name) ?? key
+      if (!key) errors.push(`${at}: key boş olamaz.`)
+      else if (seen.has(key)) errors.push(`${at}: "${key}" anahtarı iki kez kullanılmış.`)
+      seen.add(key)
+      const behavior = s.behavior as Behavior
+      if (!BEHAVIORS.includes(behavior)) errors.push(`${at} (${sname || '?'}): behavior "flow", "read" ya da "decide" olmalı.`)
+      const e = s.expectedSec
+      const okRange = Array.isArray(e) && e.length === 2 && e.every((x) => typeof x === 'number' && Number.isFinite(x) && x >= 0) && (e[0] as number) <= (e[1] as number)
+      if (!okRange) errors.push(`${at} (${sname || '?'}): expectedSec [min, max] saniye olmalı, min ≤ max.`)
+      const successCriterion = optText(s.successCriterion)
+      const note = optText(s.note)
+      const probe = optText(s.probe)
+      const participantName = optText(s.participantName)
+      let aliases: string[] | undefined
+      if (s.aliases !== undefined) {
+        if (!Array.isArray(s.aliases) || !s.aliases.every((a) => typeof a === 'string' && a.trim())) errors.push(`${at} (${sname || '?'}): aliases metin listesi olmalı.`)
+        else {
+          aliases = (s.aliases as string[]).map((a) => a.trim())
+          for (const a of aliases) {
+            if (seen.has(a)) errors.push(`${at}: "${a}" anahtarı iki kez kullanılmış.`)
+            seen.add(a)
+          }
+        }
+      }
+      screens.push({
+        key,
+        name: sname,
+        ...(participantName ? { participantName } : {}),
+        ...(aliases?.length ? { aliases } : {}),
+        behavior,
+        expectedSec: okRange ? [e[0] as number, e[1] as number] : [0, 0],
+        ...(successCriterion ? { successCriterion } : {}),
+        ...(note ? { note } : {}),
+        ...(probe ? { probe } : {})
+      })
+    })
+    return screens
+  }
+
+  // New format: screens once at study level, each task has an expectedPath; off-path screens keep their cards.
+  const studyLevel = Array.isArray(o.tasks) && o.screens !== undefined
+  const studyScreens = studyLevel ? parseScreens(o.screens, 'Çalışma: ') : []
+
   // Tasks (or single-task shorthand)
   const rawTasks: unknown[] = Array.isArray(o.tasks) ? o.tasks : o.screens !== undefined || o.taskPrompt !== undefined ? [{ id: 'task-1', prompt: o.taskPrompt, screens: o.screens }] : []
   if (!rawTasks.length) errors.push('En az bir görev (tasks) tanımlanmalı.')
@@ -117,56 +177,50 @@ export function parseStudy(input: unknown): ParseResult {
     taskIds.add(id)
     const prompt = optText(t.prompt)
     if (!prompt) errors.push(multi ? `${tAt}prompt boş olamaz.` : 'Görev metni (taskPrompt) boş olamaz.')
-    const screens: StudyScreen[] = []
-    if (!Array.isArray(t.screens) || t.screens.length === 0) errors.push(`${tAt}En az bir ekran (screens) tanımlanmalı.`)
-    else {
-      const seen = new Set<string>()
-      t.screens.forEach((raw, i) => {
-        const s = isObj(raw) ? raw : {}
-        const at = `${tAt}Ekran ${i + 1}`
-        const key = typeof s.key === 'string' ? s.key.trim() : ''
-        const sname = optText(s.name) ?? key
-        if (!key) errors.push(`${at}: key boş olamaz.`)
-        else if (seen.has(key)) errors.push(`${at}: "${key}" anahtarı iki kez kullanılmış.`)
-        seen.add(key)
-        const behavior = s.behavior as Behavior
-        if (!BEHAVIORS.includes(behavior)) errors.push(`${at} (${sname || '?'}): behavior "flow", "read" ya da "decide" olmalı.`)
-        const e = s.expectedSec
-        const okRange = Array.isArray(e) && e.length === 2 && e.every((x) => typeof x === 'number' && Number.isFinite(x) && x >= 0) && (e[0] as number) <= (e[1] as number)
-        if (!okRange) errors.push(`${at} (${sname || '?'}): expectedSec [min, max] saniye olmalı, min ≤ max.`)
-        const successCriterion = optText(s.successCriterion)
-        const note = optText(s.note)
-        const probe = optText(s.probe)
-        const participantName = optText(s.participantName)
-        let aliases: string[] | undefined
-        if (s.aliases !== undefined) {
-          if (!Array.isArray(s.aliases) || !s.aliases.every((a) => typeof a === 'string' && a.trim())) errors.push(`${at} (${sname || '?'}): aliases metin listesi olmalı.`)
-          else {
-            aliases = (s.aliases as string[]).map((a) => a.trim())
-            for (const a of aliases) {
-              if (seen.has(a)) errors.push(`${at}: "${a}" anahtarı iki kez kullanılmış.`)
-              seen.add(a)
-            }
-          }
+    let screens: StudyScreen[]
+    let expectedPath: string[] | undefined
+    if (studyLevel) {
+      const known = new Set(studyScreens.map((x) => x.key))
+      const path = Array.isArray(t.expectedPath) ? (t.expectedPath as unknown[]).filter((k): k is string => typeof k === 'string' && !!k.trim()).map((k) => k.trim()) : []
+      if (!path.length) errors.push(`${tAt}expectedPath en az bir ekran anahtarı içermeli.`)
+      for (const k of path) if (!known.has(k)) errors.push(`${tAt}expectedPath içindeki "${k}" tanımlı ekranlardan biri değil.`)
+      const probes = isObj(t.probes) ? (t.probes as Record<string, unknown>) : {}
+      if (t.probes !== undefined && !isObj(t.probes)) errors.push(`${tAt}probes bir nesne olmalı (ekran anahtarı → soru).`)
+      for (const k of Object.keys(probes)) if (!known.has(k)) errors.push(`${tAt}probes içindeki "${k}" tanımlı ekranlardan biri değil.`)
+      // Optional per-task card overrides: the same screen can serve another purpose in another task.
+      const overrides = isObj(t.overrides) ? (t.overrides as Record<string, unknown>) : {}
+      if (t.overrides !== undefined && !isObj(t.overrides)) errors.push(`${tAt}overrides bir nesne olmalı (ekran anahtarı → kart alanları).`)
+      for (const [k, v] of Object.entries(overrides)) {
+        if (!known.has(k)) errors.push(`${tAt}overrides içindeki "${k}" tanımlı ekranlardan biri değil.`)
+        const ov = isObj(v) ? v : {}
+        if (ov.behavior !== undefined && !BEHAVIORS.includes(ov.behavior as Behavior)) errors.push(`${tAt}overrides "${k}": behavior "flow", "read" ya da "decide" olmalı.`)
+        const e = ov.expectedSec
+        if (e !== undefined && !(Array.isArray(e) && e.length === 2 && e.every((x) => typeof x === 'number' && x >= 0) && (e[0] as number) <= (e[1] as number))) errors.push(`${tAt}overrides "${k}": expectedSec [min, max] saniye olmalı, min ≤ max.`)
+      }
+      const withProbe = (x: StudyScreen): StudyScreen => {
+        const { probe: _ignored, ...rest } = x
+        void _ignored
+        const pr = optText(probes[x.key])
+        const ov = isObj(overrides[x.key]) ? (overrides[x.key] as Record<string, unknown>) : {}
+        return {
+          ...rest,
+          ...(BEHAVIORS.includes(ov.behavior as Behavior) ? { behavior: ov.behavior as Behavior } : {}),
+          ...(Array.isArray(ov.expectedSec) ? { expectedSec: [ov.expectedSec[0] as number, ov.expectedSec[1] as number] as [number, number] } : {}),
+          ...(optText(ov.name) ? { name: optText(ov.name)! } : {}),
+          ...(optText(ov.participantName) ? { participantName: optText(ov.participantName)! } : {}),
+          ...(pr ? { probe: pr } : {})
         }
-        screens.push({
-          key,
-          name: sname,
-          ...(participantName ? { participantName } : {}),
-          ...(aliases?.length ? { aliases } : {}),
-          behavior,
-          expectedSec: okRange ? [e[0] as number, e[1] as number] : [0, 0],
-          ...(successCriterion ? { successCriterion } : {}),
-          ...(note ? { note } : {}),
-          ...(probe ? { probe } : {})
-        })
-      })
-    }
+      }
+      const onPath = path.map((k) => studyScreens.find((x) => x.key === k)).filter((x): x is StudyScreen => !!x).map(withProbe)
+      const off = studyScreens.filter((x) => !path.includes(x.key)).map((x) => ({ ...withProbe(x), offPath: true }))
+      screens = [...onPath, ...off]
+      expectedPath = path
+    } else screens = parseScreens(t.screens, tAt)
     const startScreen = optText(t.startScreen)
     if (startScreen && !/^I?\d+:\d+$/.test(startScreen)) errors.push(`${tAt}startScreen bir Figma node id olmalı, örn. "26:7221".`)
     const targetScreen = optText(t.targetScreen)
     if (targetScreen && screens.length && !screens.some((x) => x.key === targetScreen || x.aliases?.includes(targetScreen))) errors.push(`${tAt}targetScreen "${targetScreen}" tanımlı ekranlardan biri olmalı.`)
-    tasks.push({ id, prompt: prompt ?? '', screens, ...(startScreen ? { startScreen } : {}), ...(targetScreen ? { targetScreen } : {}) })
+    tasks.push({ id, prompt: prompt ?? '', screens, ...(expectedPath ? { expectedPath } : {}), ...(startScreen ? { startScreen } : {}), ...(targetScreen ? { targetScreen } : {}) })
   })
 
   // Texts, scales, question points
@@ -235,6 +289,7 @@ export function cardsFromTask(task: StudyTask): HypothesisCard[] {
     screenName: s.name,
     ...(s.participantName ? { participantName: s.participantName } : {}),
     ...(s.aliases ? { aliases: s.aliases } : {}),
+    ...(s.offPath ? { offPath: true } : {}),
     order: i + 1,
     behavior: s.behavior,
     expectedSec: s.expectedSec,

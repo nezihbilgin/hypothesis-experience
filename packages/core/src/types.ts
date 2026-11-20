@@ -64,6 +64,8 @@ export interface HypothesisCard {
   probe?: string
   /** Other node ids that are state variants of this screen (Figma: one node per state). Same logical screen. */
   aliases?: string[]
+  /** Not on the task's expected path: a visit adds to friction ("beklenen yol dışı"). */
+  offPath?: boolean
 }
 
 export type InteractionType =
@@ -158,6 +160,8 @@ export interface ScreenStats {
   observed: AxisScores
   /** Face signals that moved against the baseline here (empty when face signals are off). Never shown as text. */
   faceSupport: ('blink-drop' | 'stillness' | 'lean-in' | 'brow')[]
+  /** Screen not on the task's expected path (visited = left the expected path). */
+  offPath?: boolean
 }
 
 export interface Mismatch {
@@ -199,4 +203,8 @@ export interface ScreenReport {
   mismatches: Mismatch[]
   /** Fraction of task seconds with usable camera data (0 when the camera is off). */
   cameraCoverage: number
+  /** Seconds from the task's first screen to the first action (task-text clarity), excluded from hesitation. */
+  orientationSec: number | null
+  /** Visited screens that are not on the task's expected path ("beklenen yol dışı"). */
+  offPathScreens: string[]
 }

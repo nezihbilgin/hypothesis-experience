@@ -45,3 +45,5 @@ button.glow { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 35%, transp
 dl dt { font-weight: 600; margin-top: 12px; }
 dl dd { margin: 4px 0 0; }
 @media (max-width: 600px) { .card { margin: 16px; padding: 20px; } .scale { flex-wrap: wrap; } .opt { flex: 0 0 calc(25% - 6px); } }
+
+.small { font-size: 0.82rem; margin: 6px 0 0; }

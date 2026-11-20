@@ -176,6 +176,56 @@ describe('screen aliases (Figma state variants)', () => {
   })
 })
 
+describe('study-level screens, expected path, off-path visits, orientation', () => {
+  const study = {
+    name: 'x', sourceType: 'figma', sourceUrl: 'https://www.figma.com/proto/x',
+    screens: [
+      { key: 'home', name: 'Home', participantName: 'Ana sayfa', behavior: 'flow', expectedSec: [0, 30] },
+      { key: 'detail', name: 'Detail', behavior: 'read', expectedSec: [0, 60] },
+      { key: 'orders', name: 'Orders', behavior: 'flow', expectedSec: [0, 30], aliases: ['orders-2'] }
+    ],
+    tasks: [
+      { id: 'buy', prompt: 'Satın al', expectedPath: ['home', 'detail'], probes: { home: 'Ana sayfada aklından ne geçti?' } },
+      { id: 'activate', prompt: 'Aç', expectedPath: ['home', 'orders'], targetScreen: 'orders-2', probes: { home: 'Siparişleri nerede aramayı bekledin?' }, overrides: { orders: { behavior: 'decide', expectedSec: [5, 20] } } }
+    ]
+  }
+  it('parses study-level screens; each task gets path screens first, the rest off-path, probes per task', () => {
+    const r = parseStudy(study)
+    if (!r.ok) throw new Error(r.errors.join('\n'))
+    const c1 = cardsFromTask(r.study.tasks[0])
+    expect(c1.map((c) => [c.screenKey, c.order, !!c.offPath])).toEqual([['home', 1, false], ['detail', 2, false], ['orders', 3, true]])
+    expect(c1[0].probe).toBe('Ana sayfada aklından ne geçti?')
+    expect(cardsFromTask(r.study.tasks[1])[0].probe).toBe('Siparişleri nerede aramayı bekledin?')
+    expect(r.study.tasks[1].expectedPath).toEqual(['home', 'orders'])
+    expect(cardsFromTask(r.study.tasks[1])[1]).toMatchObject({ screenKey: 'orders', behavior: 'decide', expectedSec: [5, 20] })
+    expect(c1[2]).toMatchObject({ screenKey: 'orders', behavior: 'flow' })
+  })
+  it('rejects unknown keys in expectedPath and probes', () => {
+    const r = parseStudy({ ...study, tasks: [{ id: 'a', prompt: 'p', expectedPath: ['home', 'nope'], probes: { zzz: 'q' } }] })
+    expect(r.ok ? [] : r.errors).toEqual(['Görev 1: expectedPath içindeki "nope" tanımlı ekranlardan biri değil.', 'Görev 1: probes içindeki "zzz" tanımlı ekranlardan biri değil.'])
+  })
+  it('an off-path visit adds friction and is listed separately; going back from it is not a "back"', () => {
+    const r0 = parseStudy(study)
+    if (!r0.ok) throw new Error()
+    const cards = cardsFromTask(r0.study.tasks[0])
+    const events = [ev(0, 'home', 'screen'), ev(6, 'home', 'click'), ev(7, 'orders', 'screen'), ev(8, 'orders', 'click'), ev(9, 'home', 'screen'), ev(10, 'home', 'click'), ev(11, 'detail', 'screen'), ev(30, 'detail', 'click')]
+    const r = computeScreenReport({ cards, events, samples: [], baseline: computeBaseline([], []), endSec: 31, cameraEnabled: false })
+    expect(r.offPathScreens).toEqual(['orders'])
+    const orders = r.screens.find((x) => x.screenKey === 'orders')!
+    expect(orders).toMatchObject({ offPath: true, backs: 0, observed: { friction: 40 } })
+    expect(r.mismatches.find((m) => m.screenKey === 'orders')?.text).toBe('Orders: akıcı bekledin, katılımcı beklenen yolun dışındaki bu ekrana geldi.')
+  })
+  it('the first screen pause is orientation, not hesitation (default), and can be switched off', () => {
+    const cards: HypothesisCard[] = [{ screenKey: 'home', screenName: 'Home', order: 1, behavior: 'flow', expectedSec: [0, 60] }, { screenKey: 'next', screenName: 'Next', order: 2, behavior: 'flow', expectedSec: [0, 60] }]
+    const events = [ev(0, 'home', 'screen'), ev(15, 'home', 'click'), ev(16, 'next', 'screen'), ev(17, 'next', 'click')]
+    const base = { cards, events, samples: [], baseline: computeBaseline([], []), endSec: 20, cameraEnabled: false }
+    const r = computeScreenReport(base)
+    expect(r.orientationSec).toBe(15)
+    expect(r.mismatches).toEqual([])
+    expect(computeScreenReport({ ...base, excludeOrientation: false }).mismatches.map((m) => m.kind)).toEqual(['effort-mismatch'])
+  })
+})
+
 describe('camera quality', () => {
   it('uses the median of the last 5 seconds', () => {
     expect(cameraQuality({ fpsPerSecond: [2, 3, 13, 12, 6, 14, 13], faceRatio: 0.95 })).toEqual({ cameraEnabled: true, blinkEnabled: false, reason: 'ok', medianFps: 13 })

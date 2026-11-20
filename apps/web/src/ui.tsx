@@ -57,6 +57,8 @@ export function AnswerBox({
       {intro ? <p className="intro">{intro}</p> : null}
       <p className="q">{prompt}</p>
       <textarea value={value} onChange={(e) => setValue(e.target.value)} placeholder={t('probe.placeholder')} rows={4} autoFocus />
+      {/* No in-app speech recognition: the browser's would send audio to a server (decisions 2026-11-20). */}
+      <p className="muted small">{t('probe.dictationHint')}</p>
       <div className="row">
         <button type="button" className="primary" disabled={!value.trim()} onClick={() => onDone({ answer: value })}>
           {t('probe.send')}

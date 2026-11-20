@@ -136,7 +136,13 @@ export interface ScreenSessionInput {
   faceSignals?: boolean
   /** What the setup can measure. Missing = desktop defaults (hover yes, camera = cameraEnabled, no screen video). */
   capabilities?: Partial<Capabilities>
+  /** The pause before the first action on the task's first screen is orientation (reading the task, looking
+   * around), not hesitation: excluded from hesitation and effort, reported as orientationSec. Default true. */
+  excludeOrientation?: boolean
 }
+
+/** Friction added for visiting a screen that is not on the task's expected path (first visit). */
+export const OFF_PATH_FRICTION = 40
 
 const r1 = (n: number): number => Math.round(n * 10) / 10
 
@@ -170,6 +176,8 @@ export function computeScreenReport(input: ScreenSessionInput): ScreenReport {
 
   const stats: ScreenStats[] = []
   const found: Mismatch[] = []
+  const firstScreen = visits[0]?.screenKey
+  let orientationSec: number | null = null
   for (const card of cards) {
     const vs = visits.filter((v) => v.screenKey === card.screenKey)
     if (!vs.length) continue
@@ -177,12 +185,15 @@ export function computeScreenReport(input: ScreenSessionInput): ScreenReport {
     const evs = events.filter((e) => e.screenKey === card.screenKey && inV(e.t))
     const first = evs.find((e) => MEANINGFUL.includes(e.type))
     const firstActionSec = first ? first.t - vs[0].start : null
-    const pauseSec = firstActionSec ?? vs[0].end - vs[0].start
+    const rawPause = firstActionSec ?? vs[0].end - vs[0].start
+    const orienting = input.excludeOrientation !== false && card.screenKey === firstScreen
+    if (orienting) orientationSec = r1(rawPause)
+    const pauseSec = orienting ? 0 : rawPause
     const hesitation = pauseSec > hesThr
     const backAt: number[] = []
     for (const v of vs) {
       const next = visits.find((x) => x.start === v.end)
-      if (next && (order.get(next.screenKey) ?? Infinity) < card.order) backAt.push(v.end)
+      if (!card.offPath && next && (order.get(next.screenKey) ?? Infinity) < card.order) backAt.push(v.end)
     }
     const deads = evs.filter((e) => e.type === 'dead-click')
     const rages = evs.filter((e) => e.type === 'rage-click')
@@ -230,7 +241,7 @@ export function computeScreenReport(input: ScreenSessionInput): ScreenReport {
     const pauseComp = clamp(pauseSec / (2 * hesThr), 0, 1)
     const faceMean = comps.length ? mean(comps) : null
     const effort = Math.round(100 * (faceMean === null ? pauseComp : 0.6 * pauseComp + 0.4 * faceMean))
-    const interactionFriction = clamp(25 * backAt.length + 20 * deads.length + 35 * rages.length, 0, 100)
+    const interactionFriction = clamp(25 * backAt.length + 20 * deads.length + 35 * rages.length + (card.offPath ? OFF_PATH_FRICTION : 0), 0, 100)
     if (interactionFriction > 0 && browUp) support.push('brow')
     const friction = Math.round(clamp(interactionFriction + (interactionFriction > 0 && browUp ? 10 : 0), 0, 100))
 
@@ -245,7 +256,8 @@ export function computeScreenReport(input: ScreenSessionInput): ScreenReport {
       rageClicks: rages.length,
       awaySec,
       observed: { effort, friction },
-      faceSupport: support
+      faceSupport: support,
+      ...(card.offPath ? { offPath: true } : {})
     }
     stats.push(st)
 
@@ -272,8 +284,8 @@ export function computeScreenReport(input: ScreenSessionInput): ScreenReport {
     }
     const hasFriction = interactionFriction > 0
     if (hasFriction) {
-      const at = Math.min(...[...deads, ...rages].map((e) => e.t), ...backAt)
-      add('unexpected-friction', at, 1 + backAt.length + deads.length + 2 * rages.length + (browUp ? 0.5 : 0))
+      const at = Math.min(...[...deads, ...rages].map((e) => e.t), ...backAt, ...(card.offPath ? [vs[0].start] : []))
+      add('unexpected-friction', at, 1 + backAt.length + deads.length + 2 * rages.length + (card.offPath ? 1 : 0) + (browUp ? 0.5 : 0))
     }
     if (exp.effort === 'high' && durationSec < minS && !hasFriction && !hesitation) {
       add('effort-mismatch', vs[0].start, (minS - durationSec) / Math.max(1, minS) + (faceMean === null ? 0 : 0.5 * (1 - faceMean)), 'low')
@@ -299,7 +311,9 @@ export function computeScreenReport(input: ScreenSessionInput): ScreenReport {
     observed: stepCurves(stats, visits, end),
     screens: stats,
     mismatches,
-    cameraCoverage: Math.round((covered / end) * 100) / 100
+    cameraCoverage: Math.round((covered / end) * 100) / 100,
+    orientationSec,
+    offPathScreens: stats.filter((s) => s.offPath).map((s) => s.screenKey)
   }
 }
 
@@ -346,6 +360,7 @@ export function describe(m: Pick<Mismatch, 'kind' | 'direction'>, card: Hypothes
   const name = card.screenName
   if (m.kind === 'unexpected-friction') {
     const parts: string[] = []
+    if (st.offPath) parts.push('beklenen yolun dışındaki bu ekrana geldi')
     if (st.backs) parts.push(`${times(st.backs)} geri döndü`)
     if (st.deadClicks) parts.push(`${times(st.deadClicks)} tepkisiz bir yere tıkladı`)
     if (st.rageClicks) parts.push(`${times(st.rageClicks)} aynı yere art arda tıkladı`)
