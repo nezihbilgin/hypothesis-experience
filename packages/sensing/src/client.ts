@@ -33,6 +33,7 @@ export class SensingClient {
   private timers: number[] = []
   private busy = false
   private agg: SecondAggregator
+  private vad: EnergyVad | null = null
   delegate: 'GPU' | 'CPU' | null = null
 
   constructor(private readonly o: SensingOptions) {
@@ -108,6 +109,7 @@ export class SensingClient {
     src.connect(an) // not connected to destination: nothing is played or recorded
     const buf = new Float32Array(an.fftSize)
     const vad = new EnergyVad()
+    this.vad = vad
     this.timers.push(
       window.setInterval(() => {
         if (!this.o.clock.started || this.o.clock.paused) return
@@ -123,6 +125,34 @@ export class SensingClient {
   /** Close the open second, e.g. before a question pauses the clock or at task end. */
   flush(): void {
     this.agg.flush()
+  }
+
+  /** Start a new phase (warm-up, next task): closes the open second and starts a fresh aggregator, so seconds
+   * restart from the clock's new zero. Call right before SessionClock.start(). */
+  newPhase(): void {
+    this.agg.flush()
+    this.agg = new SecondAggregator(this.o.onSample)
+  }
+
+  /** Room background loudness (VAD noise floor, RMS 0..1), for the "quiet place" hint. null without a microphone. */
+  get ambientRms(): number | null {
+    return this.vad ? this.vad.floor : null
+  }
+
+  /** Mean brightness 0..1 of the current camera frame (tiny canvas, stays in this tab), for the lighting hint. */
+  brightness(): number | null {
+    const v = this.video
+    if (!v || v.readyState < 2) return null
+    const c = document.createElement('canvas')
+    c.width = 32
+    c.height = 24
+    const ctx = c.getContext('2d', { willReadFrequently: true })
+    if (!ctx) return null
+    ctx.drawImage(v, 0, 0, c.width, c.height)
+    const d = ctx.getImageData(0, 0, c.width, c.height).data
+    let sum = 0
+    for (let i = 0; i < d.length; i += 4) sum += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]
+    return Math.round((sum / (d.length / 4) / 255) * 1000) / 1000
   }
 
   /** Microphone track, for the calibration page's optional audio file. Never used by the product flow. */

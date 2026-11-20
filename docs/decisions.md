@@ -8,6 +8,35 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 
 ---
 
+## 2026-11-20: Katılımcı akışı v1 kapsamı
+
+Kaynak: ürün yönetimi thread'i (Nezih onayı, kapsam dışı listesine 👍) ve Claude Code. Durum: kararlaştırıldı, v1 `faz1-core`'da uygulandı (`apps/web`).
+
+### Kapsam (M3a: Chrome/Edge, masaüstü, Figma ya da script'li demo, çalışma JSON'u)
+1. Karşılama + görev özeti; tüm metinler katalogdan.
+2. Onay: kamera isteğe bağlı; çalışmada `faceSignals` açıksa yüz sinyalleri için ayrı onay; mikrofon (ses kaydedilmez); ne saklanır, ne saklanmaz.
+3. İzin + kalite kontrolü: 3 sn ısınma + 5 sn ölçüm; medyan < 10 fps ya da yüz yoksa kamerasız mod (kamera hemen bırakılır). Işık ve ortam gürültüsü ipucu.
+4. 30 sn ısınma: nötr okuma metni (78 kelime, katalogda `warmup.text`, PM gözden geçirecek) + sabit konumlu 3 tıklama ekranı.
+5. Her görev: beklenti puanı → prototip + görev metni + "Bitirdim" → ekran geçişinde soru (önce planlı `probe`, sonra sinyalle tetiklenen; görev başına en fazla 2, oturum başına 6; soru sırasında oturum saati durur) → SEQ.
+6. Soru metni ekranı adıyla bağlam verir: "Az önceki '{ekran}' ekranında…" (katalogda `probe.atTransition`). Cevap yazılı, "Hatırlamıyorum" ve "Geç" var. Soru arayüzünde M3b AI takip soruları için kanca bırakıldı.
+7. Oturum sonu: "en çok zorlandığın görev" sorusu, katılımcıya kendi verisinin özeti (davranış sayısı gösterilmez), oturumu silme, oturum JSON'unu indirme (`hx-session/1`, `core` raporunu içerir).
+
+### Kapsam dışı (v2 / M3b)
+- Ekran kaydı (`getDisplayMedia`) yok.
+- Frame replay ve AI takip soruları v2'de (M3b).
+- İlk pilotlarda Supabase yok; oturum JSON'u indirilir.
+- Sesli cevap yok, sadece yazılı.
+
+### Kabul kriterleri (iki kademe)
+- **v1 "bitti":** Nezih test Figma prototipiyle Chrome'da tam bir oturumu bir kez kameralı, bir kez kamerasız tamamlar; indirilen oturum JSON'u `core`'dan geçip sapmalı bir rapor verir; sadece saniyelik sayılar ve olaylar saklanır; kare ya da ses cihazdan çıkmaz.
+- **M3 pilot kapısı (5 katılımcılı çalışmadan önce):** 2 iç pilot oturum yardımsız uçtan uca, her biri ≤ 20 dk; kamerasız yol uçtan uca (kamera reddi, düşük fps); ağ sekmesinde kare ya da ses yok; tüm katılımcı metinleri katalogdan ve katılımcı sayı görmüyor; soru sınırları ve saat durması test edilmiş; eski Intel Mac'te ≥ 10 fps ya da kamerasız moda düşüş; soru cevaplarının ≥ %75'i anlamlı ("Hatırlamıyorum" değil). Video olmadığı için 200 ms senkron kriteri kaldırıldı.
+
+### Uygulama notları
+- Uçtan uca deneme (headless Chrome, sahte kamera, script'li yerel prototip + embed-sdk): kameralı seçimde sahte kamerada yüz olmadığı için kamerasız moda düşüş, kamerasız seçim, iki geçiş sorusu (planlı + sinyalli), soru sınırı, SEQ ve özet doğrulandı. Gerçek yüzle kameralı yol Nezih'in denemesinde doğrulanacak.
+- Headless Chrome'da Figma embed bir "interstitial" sayfası gösterdi ve olay gelmedi; Faz 0'da gerçek Chrome'da `localhost:4173` üzerinde çalışmıştı. Bu yüzden `npm run web` önizlemesi 4173 portunu kullanır (spike önizlemesiyle aynı anda çalıştırılmaz).
+
+---
+
 ## 2026-11-20: Görev sonu retro varsayılan kapalı; olay şeması mobile hazır
 
 Kaynak: ürün yönetimi thread'i (`faz1-core` incelemesi), Nezih onayı. Durum: uygulandı (`faz1-core`).
