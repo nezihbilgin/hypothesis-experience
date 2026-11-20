@@ -108,6 +108,15 @@ describe('figma adapter', () => {
     a.push({ type: 'MOUSE_PRESS_OR_RELEASE', data: { handled: false, mousePosition: { x: 500, y: 40 } } }, 1.2)
     expect(a.push({ type: 'MOUSE_PRESS_OR_RELEASE', data: { handled: false, mousePosition: { x: 20, y: 600 } } }, 1.4).events.some((e) => e.type === 'rage-click')).toBe(false)
   })
+  it('without a position, rage click needs the same target element', () => {
+    const a = new FigmaAdapter()
+    a.push({ type: 'PRESENTED_NODE_CHANGED', data: { presentedNodeId: '1:2' } }, 0)
+    const click = (t: number, target: string) => a.push({ type: 'MOUSE_PRESS_OR_RELEASE', data: { handled: false, targetNodeId: target } }, t).events
+    expect([click(1, 'a'), click(1.2, 'b'), click(1.4, 'c')].flat().some((e) => e.type === 'rage-click')).toBe(false)
+    const ev = [click(3, 'x'), click(3.2, 'x'), click(3.4, 'x')].flat()
+    expect(ev.filter((e) => e.type === 'rage-click').length).toBe(1)
+    expect(ev[0].payload).toEqual({ targetNodeId: 'x', handled: false })
+  })
   it('a click before any screen event uses the node it reports', () => {
     const a = new FigmaAdapter()
     expect(a.push({ type: 'MOUSE_PRESS_OR_RELEASE', data: { handled: true } }, 0).events).toEqual([])

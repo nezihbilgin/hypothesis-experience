@@ -90,6 +90,8 @@ export class SessionRun {
   warmup = { events: [] as InteractionEvent[], samples: [] as SecondSample[] }
   baseline: Baseline = computeBaseline([], [])
   tasks: TaskRecord[] = []
+  /** First few raw Figma messages per type (ids and numbers only), to check the embed payload format. */
+  figmaRaw: Record<string, unknown[]> = {}
   hardestTask: { answer: string | null; dontRemember: boolean; skipped: boolean } | null = null
   asked: AskedSoFar = { inTask: [], inSession: [] }
   private phase: 'idle' | 'quality' | 'warmup' | 'task' = 'idle'
@@ -220,8 +222,8 @@ export class SessionRun {
   private markReady(): void {
     if (this.protoReady) return
     this.protoReady = true
-    this.task.samples = []
-    this.sensing?.newPhase()
+    this.sensing?.newPhase() // flushes the loading-time second first...
+    this.task.samples = [] // ...so it is cleared here, not appended after
     this.clock.start()
   }
 
@@ -237,6 +239,8 @@ export class SessionRun {
         this.markReady()
         ready = true
       }
+      const type = typeof e.data === 'string' ? e.data : (e.data as { type?: unknown })?.type
+      if (typeof type === 'string' && (this.figmaRaw[type]?.length ?? 0) < 3) (this.figmaRaw[type] ??= []).push(e.data)
       const r = this.adapter.push(e.data, this.clock.at(absoluteNow(performance)))
       if (r.status === 'login-required' || r.status === 'password-required') {
         this.task.blocked = r.status
@@ -333,6 +337,7 @@ export class SessionRun {
       warmup: this.warmup,
       baseline: this.baseline,
       tasks: this.tasks,
+      figmaRaw: this.figmaRaw,
       hardestTask: this.hardestTask
     }
   }

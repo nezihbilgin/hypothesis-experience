@@ -16,6 +16,8 @@ Kaynak: Nezih'in Chrome + test Figma prototipi oturumu (kameralı, M1). Durum: u
 - **Faz geçişinde kaybolan saniyeler:** yeni faz (ısınma, görev) başlarken worker'da işlenmekte olan bir kare eski saatin zamanını taşıyordu; toplayıcı yeni saniyeleri "geç kalmış" sayıp ilk 9 sn (ısınma) ve 51 sn'yi (görev) attı. Sensing artık bir faz sayacı tutuyor; eski faza ait kare atılıyor.
 - **Figma tıklama konumu:** konum `data.mousePosition {x, y}` içinde geliyormuş; adaptör `x, y` okuduğu için her tıklama (0, 0) göründü ve art arda tıklama fazla sayıldı. Düzeltildi.
 - **Göz kırpma:** ekrana aşağı bakarken göz kapanma skoru 0.4-0.5 civarında kaldığı için sabit 0.5/0.35 eşikleri hiç kırpma saymadı. Eşik artık kişinin son 3 sn'lik açık göz seviyesine göre: seviye + 0.3 üstüne çıkıp seviye + 0.12'ye inen bir kırpma.
+- **Göz kırpma, ikinci oturum:** kırpma sayımı çalıştı (dakikada 4-20), ama aşağı bakınca skor kalıcı yükselip "kapalı" durumda takılı kaldı ve 35 sn hiç kırpma sayılmadı. 0.6 sn'den uzun "kapanma" artık bakış değişimi sayılıyor: kırpma sayılmaz, açık göz seviyesi yeniden öğrenilir.
+- **Figma tıklama konumu, ikinci oturum:** `mousePosition` de gelmedi; Figma bu kurulumda tıklama konumu göndermiyor olabilir. Konum yoksa art arda tıklama "aynı hedef öğeye 1 sn içinde 3+ tıklama" olarak sayılıyor ve konum (0, 0) yazılmıyor. Oturum dosyasına her Figma mesaj tipinden ilk 3 ham örnek (`figmaRaw`, sadece kimlik ve sayılar) ekleniyor; biçim oradan kesinleşecek.
 - **Görev saati prototip hazır olunca başlar:** Figma'nın ilk ekranı yaklaşık 25 sn'de geldi; bu süre ölçüme girmesin diye görev saati ilk ekran olayında sıfırlanır.
 - **Isınma:** okuma ekranı ilk aksiyon süresi hesabından çıkarıldı; sadece 4 tıklama ekranı sayılır.
 

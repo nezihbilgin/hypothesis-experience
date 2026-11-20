@@ -17,6 +17,8 @@ export interface ClickPoint {
   x: number
   y: number
   pointerType?: 'mouse' | 'touch' | 'pen'
+  /** When the source gives no position (x = y = NaN), "same area" falls back to the same target element. */
+  target?: string
 }
 
 /**
@@ -30,7 +32,10 @@ export class RageClickDetector {
   /** Returns true when this click completes a rage-click burst. */
   push(c: ClickPoint): boolean {
     const first = this.burst[0]
-    const sameBurst = first !== undefined && c.t - first.t <= RAGE_WINDOW_MS / 1000 && Math.hypot(c.x - first.x, c.y - first.y) <= (c.pointerType === 'touch' ? RAGE_RADIUS_TOUCH_PX : RAGE_RADIUS_PX)
+    const noPos = !Number.isFinite(c.x) || !Number.isFinite(c.y) || first === undefined || !Number.isFinite(first.x) || !Number.isFinite(first.y)
+    const sameArea =
+      first !== undefined && (noPos ? c.target !== undefined && c.target === first.target : Math.hypot(c.x - first.x, c.y - first.y) <= (c.pointerType === 'touch' ? RAGE_RADIUS_TOUCH_PX : RAGE_RADIUS_PX))
+    const sameBurst = first !== undefined && c.t - first.t <= RAGE_WINDOW_MS / 1000 && sameArea
     if (!sameBurst) {
       this.burst = [c]
       this.fired = false

@@ -27,6 +27,8 @@ export const STILL_SPEED = 0.2
 export const BLINK_RISE = 0.3
 export const BLINK_FALL = 0.12
 const BLINK_LEVEL_FRAMES = 45
+/** Blinks last 100-400 ms; a longer "closure" is a gaze shift and resets the open-eye level. */
+const BLINK_MAX_SEC = 0.6
 /** Blink rate needs >= 15 frames per second (blinks last 100-400 ms). */
 export const BLINK_MIN_FPS = 15
 /** Voice counts as the participant talking only if the lips move within the second (or the previous one, for speech
@@ -93,6 +95,7 @@ export class SecondAggregator {
   private frames: FrameResult[] = []
   private prevFace: FrameResult | null = null
   private eyeClosed = false
+  private closedSince = 0
   private eyeLevel: number[] = []
   /** Per completed second: blinks and whether the second had enough fps. */
   private blinkHistory: { sec: number; blinks: number; valid: boolean }[] = []
@@ -166,10 +169,17 @@ export class SecondAggregator {
         this.eyeLevel.push(f.blink)
         if (this.eyeLevel.length > BLINK_LEVEL_FRAMES) this.eyeLevel.shift()
       }
-      if (!this.eyeClosed && f.blink >= Math.min(0.95, level + BLINK_RISE)) this.eyeClosed = true
-      else if (this.eyeClosed && f.blink <= level + BLINK_FALL) {
+      if (!this.eyeClosed && f.blink >= Math.min(0.95, level + BLINK_RISE)) {
+        this.eyeClosed = true
+        this.closedSince = f.t
+      } else if (this.eyeClosed && f.blink <= level + BLINK_FALL) {
         this.eyeClosed = false
         blinks++
+      } else if (this.eyeClosed && f.t - this.closedSince > BLINK_MAX_SEC) {
+        // Longer than a blink: a gaze shift (e.g. looking down) or closed eyes. Not a blink; start tracking the
+        // new open-eye level instead of waiting for the old one forever.
+        this.eyeClosed = false
+        this.eyeLevel = [f.blink]
       }
     }
     const valid = fr.length >= BLINK_MIN_FPS && face

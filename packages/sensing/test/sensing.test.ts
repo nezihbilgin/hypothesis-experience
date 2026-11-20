@@ -45,6 +45,13 @@ describe('second aggregator', () => {
     const out = run(Array.from({ length: 6 }, (_, s) => blinking(s)).flat())
     expect(out[5].blinkRate).toBe(60)
   })
+  it('a gaze shift (score jumps and stays high) is not a blink and does not block later blinks', () => {
+    // 3 s looking ahead (0.1), then looks down for good (0.5) and blinks once a second there (0.95).
+    const ahead = Array.from({ length: 3 }, (_, s) => second(s, 15, () => ({ blink: 0.1 }))).flat()
+    const down = Array.from({ length: 8 }, (_, s) => second(s + 3, 15, (i) => ({ blink: i === 7 || i === 8 ? 0.95 : 0.5 }))).flat()
+    const out = run([...ahead, ...down])
+    expect(out[10].blinkRate).toBeGreaterThanOrEqual(30) // 7 blinks over the 11-s window
+  })
   it('a half-closed eye flicker between thresholds is not a blink', () => {
     const out = run(Array.from({ length: 6 }, (_, s) => second(s, 15, (i) => ({ blink: i % 2 ? 0.45 : 0.4 }))).flat())
     expect(out[5].blinkRate).toBe(0)

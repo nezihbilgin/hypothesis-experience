@@ -69,15 +69,20 @@ export class FigmaAdapter {
       if (!this.screenKey) return { events: [] }
       // Figma sends the click position as data.mousePosition {x, y} (frame coordinates); older/other payloads x, y.
       const mp = data.mousePosition && typeof data.mousePosition === 'object' ? (data.mousePosition as Record<string, unknown>) : {}
-      const x = num(mp.x) ?? num(data.x) ?? 0
-      const y = num(mp.y) ?? num(data.y) ?? 0
-      const payload: Record<string, unknown> = { x, y }
+      const px = num(mp.x) ?? num(data.x)
+      const py = num(mp.y) ?? num(data.y)
+      const hasPos = px !== undefined && py !== undefined
+      const x = px ?? 0
+      const y = py ?? 0
+      const payload: Record<string, unknown> = hasPos ? { x, y } : {}
       const target = str(data.targetNodeId)
       if (target) payload.targetNodeId = target
       if (typeof data.handled === 'boolean') payload.handled = data.handled
       const events = [this.ev(t, 'click', payload)]
-      if (data.handled === false) events.push(this.ev(t, 'dead-click', { x, y, ...(target ? { targetNodeId: target } : {}) }))
-      if (this.rage.push({ t, x, y, ...(this.context.pointerType ? { pointerType: this.context.pointerType } : {}) })) events.push(this.ev(t, 'rage-click', { x, y }))
+      const pos = hasPos ? { x, y } : {}
+      if (data.handled === false) events.push(this.ev(t, 'dead-click', { ...pos, ...(target ? { targetNodeId: target } : {}) }))
+      const click = { t, x: hasPos ? x : NaN, y: hasPos ? y : NaN, ...(target ? { target } : {}), ...(this.context.pointerType ? { pointerType: this.context.pointerType } : {}) }
+      if (this.rage.push(click)) events.push(this.ev(t, 'rage-click', { ...pos, ...(target ? { targetNodeId: target } : {}) }))
       return { events }
     }
     return { events: [] }
