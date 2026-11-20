@@ -30,6 +30,8 @@ export interface StudyTask {
   prompt: string
   /** In the order the researcher expects them; order is used to detect going back. */
   screens: StudyScreen[]
+  /** Screen key that means the task goal was reached. The app highlights "Done" there; it never auto-finishes. */
+  targetScreen?: string
 }
 
 export interface QuestionPoints {
@@ -143,7 +145,9 @@ export function parseStudy(input: unknown): ParseResult {
         })
       })
     }
-    tasks.push({ id, prompt: prompt ?? '', screens })
+    const targetScreen = optText(t.targetScreen)
+    if (targetScreen && screens.length && !screens.some((x) => x.key === targetScreen)) errors.push(`${tAt}targetScreen "${targetScreen}" tanımlı ekranlardan biri olmalı.`)
+    tasks.push({ id, prompt: prompt ?? '', screens, ...(targetScreen ? { targetScreen } : {}) })
   })
 
   // Texts, scales, question points

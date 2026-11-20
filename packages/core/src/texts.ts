@@ -33,6 +33,8 @@ export const TEXTS_TR = {
   'task.intro': 'Görev {index} / {total}',
   'task.start': 'Göreve başla',
   'task.done': 'Bitirdim',
+  'task.doneHint': "Görevi bitirdiğini düşündüğünde Bitirdim'e bas.",
+  'task.reachedHint': "Görev tamamlanmış görünüyor. Hazır olduğunda Bitirdim'e bas.",
   'task.loading': 'Prototip yükleniyor…',
   'task.blocked': 'Prototip açılamadı. Lütfen araştırmacıya haber ver.',
   'rating.expectation': 'Bu görevin ne kadar kolay ya da zor olacağını düşünüyorsun?',

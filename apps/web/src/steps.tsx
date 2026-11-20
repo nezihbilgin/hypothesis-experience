@@ -181,6 +181,8 @@ export function TaskRun({ run, next }: { run: SessionRun; next: (retro: Question
   const [question, setQuestion] = useState<QuestionMoment | null>(null)
   const [blocked, setBlocked] = useState<string | null>(null)
   const [loaded, setLoaded] = useState(false)
+  const [reached, setReached] = useState(false)
+  const hasTarget = !!run.study.tasks.find((x) => x.id === run.task.id)?.targetScreen
   const src = useMemo(() => (run.study.sourceType === 'figma' ? figmaEmbedUrl(run.study.sourceUrl, location.hostname) : run.study.sourceUrl), [run])
   const started = useRef(false)
 
@@ -188,6 +190,7 @@ export function TaskRun({ run, next }: { run: SessionRun; next: (retro: Question
     const onMessage = (e: MessageEvent) => {
       const r = run.handleMessage(e)
       if (r.ready) setLoaded(true)
+      if (r.reachedTarget) setReached(true)
       if (r.blocked) setBlocked(r.blocked)
       if (r.question) {
         run.pauseForQuestion()
@@ -208,9 +211,12 @@ export function TaskRun({ run, next }: { run: SessionRun; next: (retro: Question
   const screen = card?.participantName
   return (
     <div className="task">
-      <header className="taskbar">
-        <span className="task-prompt">{run.task.prompt}</span>
-        <button className="primary" disabled={!!question} onClick={() => next(run.finishTask())}>
+      <header className={reached ? 'taskbar reached' : 'taskbar'}>
+        <span className="task-prompt">
+          {run.task.prompt}
+          <span className="task-hint">{reached ? t('task.reachedHint') : hasTarget ? '' : t('task.doneHint')}</span>
+        </span>
+        <button className={reached ? 'primary glow' : 'primary'} disabled={!!question} onClick={() => next(run.finishTask())}>
           {t('task.done')}
         </button>
       </header>

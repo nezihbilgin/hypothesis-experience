@@ -135,6 +135,12 @@ describe('study definition (tasks, settings)', () => {
     expect(r.study.questions).toMatchObject({ endOfTask: false, preTaskRating: true, limits: { perTask: 1, endOfTask: 0, perSession: 6 } })
     expect(r.study.faceSignals).toBe(true)
   })
+  it('accepts a target screen only if it is one of the task screens', () => {
+    const ok = parseStudy({ ...base, tasks: [{ prompt: 'x', screens: [screen], targetScreen: '1:2' }] })
+    expect(ok.ok && ok.study.tasks[0].targetScreen).toBe('1:2')
+    const bad = parseStudy({ ...base, tasks: [{ prompt: 'x', screens: [screen], targetScreen: '9:9' }] })
+    expect(bad.ok ? [] : bad.errors).toEqual(['Görev 1: targetScreen "9:9" tanımlı ekranlardan biri olmalı.'])
+  })
   it('face signals default off for workplace and education studies', () => {
     for (const context of ['workplace', 'education']) {
       const r = parseStudy({ ...base, context, taskPrompt: 'x', screens: [screen] })

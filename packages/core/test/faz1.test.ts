@@ -108,6 +108,12 @@ describe('figma adapter', () => {
     a.push({ type: 'MOUSE_PRESS_OR_RELEASE', data: { handled: false, mousePosition: { x: 500, y: 40 } } }, 1.2)
     expect(a.push({ type: 'MOUSE_PRESS_OR_RELEASE', data: { handled: false, mousePosition: { x: 20, y: 600 } } }, 1.4).events.some((e) => e.type === 'rage-click')).toBe(false)
   })
+  it('falls back to the nearest scrolling frame position + offset', () => {
+    const a = new FigmaAdapter()
+    a.push({ type: 'PRESENTED_NODE_CHANGED', data: { presentedNodeId: '1:2' } }, 0)
+    const ev = a.push({ type: 'MOUSE_PRESS_OR_RELEASE', data: { handled: true, nearestScrollingFrameMousePosition: { x: 100, y: 50 }, nearestScrollingFrameOffset: { x: 0, y: 400 } } }, 1).events
+    expect(ev[0].payload).toMatchObject({ x: 100, y: 450 })
+  })
   it('without a position, rage click needs the same target element', () => {
     const a = new FigmaAdapter()
     a.push({ type: 'PRESENTED_NODE_CHANGED', data: { presentedNodeId: '1:2' } }, 0)

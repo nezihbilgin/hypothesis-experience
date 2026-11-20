@@ -68,9 +68,15 @@ export class FigmaAdapter {
       if (!this.screenKey) this.screenKey = str(data.presentedNodeId) ?? null
       if (!this.screenKey) return { events: [] }
       // Figma sends the click position as data.mousePosition {x, y} (frame coordinates); older/other payloads x, y.
-      const mp = data.mousePosition && typeof data.mousePosition === 'object' ? (data.mousePosition as Record<string, unknown>) : {}
-      const px = num(mp.x) ?? num(data.x)
-      const py = num(mp.y) ?? num(data.y)
+      const obj = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' ? (v as Record<string, unknown>) : {})
+      const mp = obj(data.mousePosition)
+      // Fallback: position inside the nearest scrolling frame + that frame's scroll offset.
+      const sp = obj(data.nearestScrollingFrameMousePosition)
+      const so = obj(data.nearestScrollingFrameOffset)
+      const sx = num(sp.x) !== undefined ? num(sp.x)! + (num(so.x) ?? 0) : undefined
+      const sy = num(sp.y) !== undefined ? num(sp.y)! + (num(so.y) ?? 0) : undefined
+      const px = num(mp.x) ?? num(data.x) ?? sx
+      const py = num(mp.y) ?? num(data.y) ?? sy
       const hasPos = px !== undefined && py !== undefined
       const x = px ?? 0
       const y = py ?? 0

@@ -56,6 +56,8 @@ export interface TaskRecord {
   questions: QuestionRecord[]
   endSec: number | null
   report: ScreenReport | null
+  /** Session time the target screen was first reached (null if never or no target defined). */
+  reachedTargetAt: number | null
   /** Screens seen that the study JSON does not define (helps the researcher fill in node ids). */
   unknownScreens: string[]
   blocked: string | null
@@ -200,7 +202,7 @@ export class SessionRun {
   prepareTask(i: number): TaskRecord {
     this.taskIndex = i
     const t = this.study.tasks[i]
-    const rec: TaskRecord = { id: t.id, prompt: t.prompt, expectation: null, seq: null, events: [], samples: [], questions: [], endSec: null, report: null, unknownScreens: [], blocked: null }
+    const rec: TaskRecord = { id: t.id, prompt: t.prompt, expectation: null, seq: null, events: [], samples: [], questions: [], endSec: null, report: null, reachedTargetAt: null, unknownScreens: [], blocked: null }
     this.tasks[i] = rec
     this.asked = { inTask: [], inSession: this.asked.inSession }
     return rec
@@ -228,7 +230,7 @@ export class SessionRun {
   }
 
   /** Intake of a postMessage from the prototype iframe. Returns a question to ask now, or a blocking error. */
-  handleMessage(e: MessageEvent): { question?: QuestionMoment; blocked?: string; ready?: boolean } {
+  handleMessage(e: MessageEvent): { question?: QuestionMoment; blocked?: string; ready?: boolean; reachedTarget?: boolean } {
     if (this.phase !== 'task' || this.clock.paused) return {}
     const events: InteractionEvent[] = []
     const src = this.study.sourceType
@@ -260,12 +262,15 @@ export class SessionRun {
     for (const ev of events) {
       this.task.events.push(ev)
       if (ev.type !== 'screen') continue
+      const target = this.study.tasks[this.taskIndex].targetScreen
+      if (target && ev.screenKey === target && this.task.reachedTargetAt === null) this.task.reachedTargetAt = ev.t
       const known = this.cards().some((c) => c.screenKey === ev.screenKey)
       if (!known && !this.task.unknownScreens.includes(ev.screenKey)) this.task.unknownScreens.push(ev.screenKey)
       const from = ev.payload?.from
       if (typeof from === 'string' && this.study.questions.atTransitions && !question) question = this.transitionQuestion(from, ev.t) ?? undefined
     }
-    return { ...(question ? { question } : {}), ...(ready ? { ready } : {}) }
+    const reachedTarget = this.task.reachedTargetAt !== null
+    return { ...(question ? { question } : {}), ...(ready ? { ready } : {}), ...(reachedTarget ? { reachedTarget } : {}) }
   }
 
   private reportUntil(endSec: number): ScreenReport {
@@ -338,6 +343,9 @@ export class SessionRun {
       baseline: this.baseline,
       tasks: this.tasks,
       figmaRaw: this.figmaRaw,
+      // Evidence for "nothing leaves the device": every request this page made (iframe internals not included),
+      // grouped by origin and type. A fetch/xhr/beacon entry here would be an upload.
+      network: networkSummary(),
       hardestTask: this.hardestTask
     }
   }
@@ -353,3 +361,18 @@ if (typeof window !== 'undefined')
     },
     true
   )
+
+function networkSummary(): { origin: string; type: string; count: number }[] {
+  const m = new Map<string, number>()
+  for (const e of performance.getEntriesByType('resource') as PerformanceResourceTiming[]) {
+    let origin = 'other'
+    try {
+      origin = new URL(e.name).origin
+    } catch {
+      /* data: or blob: */
+    }
+    const k = `${origin}|${e.initiatorType}`
+    m.set(k, (m.get(k) ?? 0) + 1)
+  }
+  return [...m].map(([k, count]) => ({ origin: k.split('|')[0], type: k.split('|')[1], count }))
+}
