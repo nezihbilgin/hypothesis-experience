@@ -190,3 +190,11 @@ describe('task summary with ratings', () => {
     expect(sum.screens[1]).toMatchObject({ screenName: 'Teslimat', withMismatch: 3, byKind: { 'unexpected-friction': 3 } })
   })
 })
+
+describe('session delete copy', () => {
+  // Deleting can only clear the tab; a downloaded file stays on the participant's computer until they remove it.
+  it('tells the participant to delete a downloaded file themselves', () => {
+    expect(TEXTS_TR['session.deleted']).toMatch(/İndirilenler/)
+    expect(TEXTS_TR['session.deleteConfirm']).toMatch(/kamera/)
+  })
+})
