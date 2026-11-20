@@ -41,7 +41,7 @@ describe('screen report (two axes)', () => {
     expect(texts).toEqual([
       'Teslimat: akıcı bekledin, katılımcı ilk aksiyondan önce 14 sn durdu.',
       'Teslimat: en fazla 10 sn bekledin, 19 sn sürdü.',
-      'Teslimat: akıcı bekledin, katılımcı iki kez geri döndü.',
+      'Teslimat: akıcı bekledin, katılımcı iki kez geri döndü ve iki kez bir önceki ekranla arasında gidip geldi.',
       "Plan seçimi: karar bekledin, katılımcı 3 sn'de geçti.",
       'Onay: en fazla 10 sn bekledin, 27 sn sürdü.',
       'Onay: katılımcı 8 sn ekrandan uzaklaştı.'
@@ -49,7 +49,8 @@ describe('screen report (two axes)', () => {
   })
   it('separates effort from friction', () => {
     const del = r.screens.find((x) => x.screenKey === 'delivery')!
-    expect(del.observed).toEqual({ effort: 100, friction: 50 })
+    expect(del.observed).toEqual({ effort: 100, friction: 90 })
+    expect(r.loops).toEqual([{ screens: ['cart', 'delivery'], count: 2 }])
     const em = r.mismatches.filter((m) => m.kind === 'effort-mismatch')
     expect(em.map((m) => [m.screenKey, m.direction])).toEqual([['delivery', 'high'], ['plan', 'low']])
     expect(em[1].expected).toEqual({ effort: 80, friction: 20 })
@@ -69,7 +70,7 @@ describe('screen report (two axes)', () => {
     expect(r.expected.friction[30].level).toBe(20)
   })
   it('observed curves step with the screen scores', () => {
-    expect(r.observed.friction[5].level).toBe(50)
+    expect(r.observed.friction[5].level).toBe(90)
     expect(r.observed.friction[0].level).toBe(0)
   })
   it('replay window is 5 s around the anchor', () => {

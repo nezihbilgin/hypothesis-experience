@@ -8,6 +8,20 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 
 ---
 
+## 2026-11-20: Ölçüm seti genişledi (rage, loop, drop-off, görev başarısı, misclick)
+
+Kaynak: Nezih'in isteği, PM kapsamı (ürün yönetimi thread'i). Durum: uygulandı (`faz1-core`).
+
+- **Rage click:** ekran başına sayı olarak raporda (`ScreenStats.rageClicks`, çalışma özetinde toplam).
+- **Loop:** bir görevde aynı iki mantıksal ekran arasında 2+ gidip gelme (A→B→A→B = 1, A→B→A→B→A→B = 2; çakışmasız sayılır). Sürtünme girdisi (+20/loop), B ekranına (geriye doğru terk edilen ekran) yazılır; geri dönüş sayısından ayrı raporlanır (`report.loops`, `ScreenStats.loops`).
+- **Misclick oranı:** tepkisiz tıklama / tüm tıklama, ekran başına (`misclickRate`).
+- **Görev sonucu:** `direct` (beklenen yoldan hedefe), `indirect` (hedefe yol dışı ekranlardan geçerek), `failed` (hedefe ulaşmadan Bitirdim), `dropped` (görev bitmedi). Son ekran ve zaman kaydedilir; çalışma özetinde sonuç dağılımı ve ekran başına drop-off hunisi (`droppedHere`). Not: v1'de oturum dosyası sadece özet ekranında indirildiği için sekmesi kapanan bir oturumun dosyası oluşmuyor; drop-off'un tam ölçümü sunucuya kayıt (Supabase) gelince mümkün.
+- **Görev süresi ve yönelim süresi:** görev başına raporda; çalışma özetinde medyanları.
+- **Süre aşımı:** görevin ilk ekranında yönelim süresi düşülerek hesaplanır; cümle düşülmüş süreyi kullanır, yönelim ayrı satırda raporlanır (PM).
+- Isı haritası ve yol (sankey) analizi frame görüntülerine bağlı, frame replay ile gelecek; o zamana kadar tıklama koordinatları doğru kaydediliyor.
+
+---
+
 ## 2026-11-20: Çalışma düzeyinde ekranlar, beklenen yol, yönelim süresi, soru dili
 
 Kaynak: ürün yönetimi thread'i (PM kararları, Nezih'in v2 oturumu geri bildirimi). Durum: uygulandı (`faz1-core`).

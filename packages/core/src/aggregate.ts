@@ -3,6 +3,7 @@
 // the participants' own expected-vs-experienced difficulty (Albert & Dixon), normalised so any scale compares.
 import { mean, median } from './engine'
 import { normalizeRating, type RatingScale } from './texts'
+import type { TaskOutcome, TaskResult } from './outcome'
 import type { AxisScores, HypothesisCard, MismatchKind, ScreenReport } from './types'
 
 const KINDS: MismatchKind[] = ['unexpected-friction', 'effort-mismatch', 'disengagement', 'over-time']
@@ -16,6 +17,9 @@ export interface ParticipantReport {
   participant: string
   report: ScreenReport
   ratings?: TaskRatings
+  outcome?: TaskOutcome
+  /** Task seconds (Done or last seen). */
+  taskSec?: number | null
 }
 
 export interface ScreenSummary {
@@ -29,6 +33,16 @@ export interface ScreenSummary {
   byKind: Record<MismatchKind, number>
   medianDurationSec: number | null
   medianObserved: AxisScores | null
+  /** Rage clicks summed over participants. */
+  rageClicks: number
+  /** Unresponsive clicks / all clicks, over all participants (null without clicks). */
+  misclickRate: number | null
+  /** Participants who looped (A→B→A→B) with this screen as B. */
+  loops: number
+  /** Participants who were off the expected path here. */
+  offPath: number
+  /** Participants whose task was dropped while on this screen (drop-off funnel). */
+  droppedHere: number
 }
 
 export interface RatingSummary {
@@ -45,6 +59,10 @@ export interface TaskSummary {
   participants: number
   screens: ScreenSummary[]
   ratings: RatingSummary
+  /** Participants per task result (only those with an outcome). */
+  results: Record<TaskResult, number>
+  medianTaskSec: number | null
+  medianOrientationSec: number | null
 }
 
 export function summarizeTask(cards: HypothesisCard[], reports: ParticipantReport[], scales?: { expectation: RatingScale; seq: RatingScale }): TaskSummary {
@@ -56,9 +74,20 @@ export function summarizeTask(cards: HypothesisCard[], reports: ParticipantRepor
       const effort: number[] = []
       const friction: number[] = []
       let withMismatch = 0
+      let rageClicks = 0
+      let clicks = 0
+      let deads = 0
+      let loops = 0
+      let offPath = 0
+      const droppedHere = reports.filter((p) => p.outcome?.result === 'dropped' && p.outcome.lastScreen === card.screenKey).length
       for (const { report } of reports) {
         const st = report.screens.find((s) => s.screenKey === card.screenKey)
         if (!st) continue
+        rageClicks += st.rageClicks
+        clicks += st.clicks ?? 0
+        deads += st.deadClicks
+        if (st.loops) loops++
+        if (st.offPath) offPath++
         durations.push(st.durationSec)
         effort.push(st.observed.effort)
         friction.push(st.observed.friction)
@@ -73,7 +102,12 @@ export function summarizeTask(cards: HypothesisCard[], reports: ParticipantRepor
         withMismatch,
         byKind,
         medianDurationSec: durations.length ? median(durations) : null,
-        medianObserved: durations.length ? { effort: median(effort), friction: median(friction) } : null
+        medianObserved: durations.length ? { effort: median(effort), friction: median(friction) } : null,
+        rageClicks,
+        misclickRate: clicks ? Math.round((deads / clicks) * 100) / 100 : null,
+        loops,
+        offPath,
+        droppedHere
       }
     })
 
@@ -89,9 +123,16 @@ export function summarizeTask(cards: HypothesisCard[], reports: ParticipantRepor
       if (e !== null && s !== null) gaps.push(s - e)
     }
   const r2 = (n: number): number => Math.round(n * 100) / 100
+  const results: Record<TaskResult, number> = { direct: 0, indirect: 0, failed: 0, dropped: 0 }
+  for (const p of reports) if (p.outcome?.result) results[p.outcome.result]++
+  const taskSecs = reports.map((p) => p.taskSec).filter((v): v is number => typeof v === 'number')
+  const orient = reports.map((p) => p.report.orientationSec).filter((v): v is number => typeof v === 'number')
   return {
     participants: reports.length,
     screens,
+    results,
+    medianTaskSec: taskSecs.length ? median(taskSecs) : null,
+    medianOrientationSec: orient.length ? median(orient) : null,
     ratings: {
       n: gaps.length,
       expectation: exp.length ? r2(mean(exp)) : null,

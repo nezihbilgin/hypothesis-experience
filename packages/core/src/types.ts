@@ -155,6 +155,15 @@ export interface ScreenStats {
   backs: number
   deadClicks: number
   rageClicks: number
+  /** All clicks on this screen. */
+  clicks: number
+  /** Unresponsive clicks / all clicks (null without clicks). */
+  misclickRate: number | null
+  /** Loops attributed to this screen (A→B→A→B: counted on B, the screen left backwards). */
+  loops: number
+  /** Task's first screen only: orientation seconds and the screen time without it (used for over-time). */
+  orientationSec?: number
+  timedSec?: number
   awaySec: number
   /** Observed levels 0..100. Effort is interaction-based, face signals only add when enabled. */
   observed: AxisScores
@@ -207,4 +216,6 @@ export interface ScreenReport {
   orientationSec: number | null
   /** Visited screens that are not on the task's expected path ("beklenen yol dışı"). */
   offPathScreens: string[]
+  /** Back-and-forth loops between two logical screens, reported separately from backs. */
+  loops: { screens: [string, string]; count: number }[]
 }

@@ -4,6 +4,7 @@ import {
   FigmaAdapter,
   RageClickDetector,
   aliasMap,
+  taskOutcome,
   cameraQuality,
   cardsFromTask,
   computeBaseline,
@@ -223,6 +224,52 @@ describe('study-level screens, expected path, off-path visits, orientation', () 
     expect(r.orientationSec).toBe(15)
     expect(r.mismatches).toEqual([])
     expect(computeScreenReport({ ...base, excludeOrientation: false }).mismatches.map((m) => m.kind)).toEqual(['effort-mismatch'])
+  })
+})
+
+describe('metric set: loops, misclicks, outcome, orientation in over-time, funnel', () => {
+  const cards: HypothesisCard[] = [
+    { screenKey: 'a', screenName: 'A', order: 1, behavior: 'flow', expectedSec: [0, 10] },
+    { screenKey: 'b', screenName: 'B', order: 2, behavior: 'flow', expectedSec: [0, 60] },
+    { screenKey: 'x', screenName: 'X', order: 3, behavior: 'flow', expectedSec: [0, 60], offPath: true },
+    { screenKey: 't', screenName: 'T', order: 4, behavior: 'read', expectedSec: [0, 60], aliases: ['t-done'] }
+  ]
+  const base = { cards, samples: [], baseline: computeBaseline([], []), cameraEnabled: false }
+  it('A→B→A→B is one loop, counted on B; misclick rate per screen', () => {
+    const events = [ev(0, 'a', 'screen'), ev(1, 'a', 'click'), ev(2, 'b', 'screen'), ev(3, 'b', 'dead-click'), ev(3, 'b', 'click'), ev(4, 'b', 'click'), ev(5, 'a', 'screen'), ev(6, 'b', 'screen'), ev(7, 'b', 'click')]
+    const r = computeScreenReport({ ...base, events, endSec: 8 })
+    expect(r.loops).toEqual([{ screens: ['a', 'b'], count: 1 }])
+    expect(r.screens.find((s) => s.screenKey === 'b')).toMatchObject({ loops: 1, clicks: 3, deadClicks: 1, misclickRate: 0.33 })
+  })
+  it('over-time on the first screen uses the time after orientation', () => {
+    const events = [ev(0, 'a', 'screen'), ev(8, 'a', 'click'), ev(15, 'b', 'screen'), ev(16, 'b', 'click')]
+    const r = computeScreenReport({ ...base, events, endSec: 20 })
+    expect(r.orientationSec).toBe(8)
+    expect(r.screens[0]).toMatchObject({ orientationSec: 8, timedSec: 7 })
+    expect(r.mismatches.some((m) => m.kind === 'over-time')).toBe(false) // 15 s on screen, 7 s after orientation, max 10
+    const r2 = computeScreenReport({ ...base, events: [ev(0, 'a', 'screen'), ev(2, 'a', 'click'), ev(15, 'b', 'screen')], endSec: 20 })
+    expect(r2.mismatches.find((m) => m.kind === 'over-time')?.text).toBe('A: en fazla 10 sn bekledin, 13 sn sürdü.')
+  })
+  it('task outcome: direct, indirect, failed, dropped (with last screen)', () => {
+    const path = [ev(0, 'a', 'screen'), ev(1, 'b', 'screen'), ev(2, 't', 'screen'), ev(3, 't-done', 'screen')]
+    const o = (events: InteractionEvent[], finished = true) => taskOutcome({ cards, events, targetScreen: 't-done', finished, endSec: 5 })
+    expect(o(path).result).toBe('direct')
+    expect(o([ev(0, 'a', 'screen'), ev(1, 'x', 'screen'), ev(2, 't', 'screen'), ev(3, 't-done', 'screen')])).toMatchObject({ result: 'indirect', offPathVisited: ['x'] })
+    expect(o(path.slice(0, 3)).result).toBe('failed') // reached t but not the "done" state
+    expect(o(path.slice(0, 2), false)).toMatchObject({ result: 'dropped', lastScreen: 'b' })
+  })
+  it('task summary: results, drop-off funnel, rage and misclicks per screen, median orientation', () => {
+    const run = (events: InteractionEvent[], finished: boolean) => {
+      const report = computeScreenReport({ ...base, events, endSec: 10 })
+      return { participant: 'p', report, outcome: taskOutcome({ cards, events, targetScreen: 't', finished, endSec: 10 }), taskSec: 10 }
+    }
+    const sum = summarizeTask(cards, [
+      run([ev(0, 'a', 'screen'), ev(2, 'a', 'click'), ev(3, 'b', 'screen'), ev(4, 't', 'screen')], true),
+      run([ev(0, 'a', 'screen'), ev(4, 'a', 'click'), ev(5, 'b', 'screen'), ev(6, 'b', 'rage-click'), ev(6, 'b', 'dead-click'), ev(6, 'b', 'click')], false)
+    ])
+    expect(sum.results).toEqual({ direct: 1, indirect: 0, failed: 0, dropped: 1 })
+    expect(sum.screens.find((s) => s.screenKey === 'b')).toMatchObject({ droppedHere: 1, rageClicks: 1, misclickRate: 1 })
+    expect(sum.medianOrientationSec).toBe(2)
   })
 })
 

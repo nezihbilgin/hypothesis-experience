@@ -12,6 +12,8 @@ import {
   fromEmbedMessage,
   questionAtTransition,
   sessionHealth,
+  taskOutcome,
+  type TaskOutcome,
   type AskedSoFar,
   type Baseline,
   type Capabilities,
@@ -58,6 +60,8 @@ export interface TaskRecord {
   questions: QuestionRecord[]
   endSec: number | null
   report: ScreenReport | null
+  /** direct / indirect / failed / dropped, last screen and end time (metric set, decisions 2026-11-20). */
+  outcome?: TaskOutcome
   /** Session time the target screen was first reached (null if never or no target defined). */
   reachedTargetAt: number | null
   /** Screens seen that the study JSON does not define (helps the researcher fill in node ids). */
@@ -329,8 +333,14 @@ export class SessionRun {
       this.baseline = computeBaseline(this.warmup.samples, this.warmup.events, firstScreen)
     }
     this.task.report = this.reportUntil(endSec)
+    this.task.outcome = this.outcomeOf(this.taskIndex, true)
     if (!this.study.questions.endOfTask) return []
     return endOfTaskQuestions({ report: this.task.report, endedAt: endSec, asked: this.asked, limits: this.study.questions.limits })
+  }
+
+  private outcomeOf(i: number, finished: boolean): TaskOutcome {
+    const t = this.tasks[i]
+    return taskOutcome({ cards: this.cards(i), events: t.events, targetScreen: this.study.tasks[i].targetScreen, finished, endSec: t.endSec })
   }
 
   stopSensing(): void {
@@ -374,7 +384,8 @@ export class SessionRun {
       delegate: this.delegate,
       warmup: this.warmup,
       baseline: this.baseline,
-      tasks: this.tasks,
+      // A task without an outcome never ended: dropped (with its last screen for the drop-off funnel).
+      tasks: this.tasks.map((t, i) => (t && !t.outcome ? { ...t, outcome: this.outcomeOf(i, false) } : t)),
       figmaRaw: this.figmaRaw,
       // Evidence for "nothing leaves the device": every request this page made (iframe internals not included),
       // grouped by origin and type. A fetch/xhr/beacon entry here would be an upload.
