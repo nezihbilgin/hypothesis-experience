@@ -105,6 +105,11 @@ export class FigmaAdapter {
       const target = str(data.targetNodeId)
       if (target) payload.targetNodeId = target
       if (typeof data.handled === 'boolean') payload.handled = data.handled
+      // For the click map: which state node was on screen, and which frame the position is relative to.
+      const presented = str(data.presentedNodeId) ?? this.node
+      if (presented && presented !== this.screenKey) payload.node = presented
+      const frameId = str(data.nearestScrollingFrameId)
+      if (hasPos && frameId) payload.frameId = frameId
       const events = [this.ev(t, 'click', payload)]
       const pos = hasPos ? { x, y } : {}
       if (data.handled === false) events.push(this.ev(t, 'dead-click', { ...pos, ...(target ? { targetNodeId: target } : {}) }))

@@ -8,6 +8,18 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 
 ---
 
+## 2026-11-20: Tıklama haritası ve dışa aktarma (M3)
+
+Kaynak: Nezih onayı ("evet eklensin, dışa aktar, güvenlik önemli"), PM kapsamı. Durum: uygulandı (`faz1-core`); Figma görüntüleri Nezih'in bilgisayarına indirilince harita dolacak.
+
+- Araştırmacı raporu: `apps/web/report.html` (yerel). Oturum dosyaları tarayıcıda açılır, hiçbir yere gönderilmez. En üstte sağlık bloğu ve bayraklar; görev başına sonuç, görev ve yönelim süresi, beklenti → SEQ, sapma cümleleri, sorular ve cevaplar, ekran metrikleri (süre, efor, sürtünme, geri, loop, misclick, rage, yol dışı); birden fazla oturumda çalışma özeti (sonuç dağılımı, ekran başına drop-off hunisi).
+- Raporlar dosyadaki ham olaylardan güncel modelle ve güncel çalışma dosyasıyla yeniden hesaplanır; eski oturum dosyaları da aynı şekilde okunur.
+- Statik tıklama haritası "ekran referans görüntüsü" soyutlaması üzerinde: Figma sağlayıcısı gitignore'daki `frames.local/<node>.png` görüntülerini kullanır (1x; Figma frame koordinatları doğrudan piksellere oturur). Her tıklama, tıklandığı andaki durum node'unun görüntüsüne çizilir (`payload.node`); konumu iç kaydırma alanına göre olan ya da görüntüsü olmayan tıklamalar haritaya çizilmez, "görüntüsü olmayan durum" altında sayılır.
+- Dışa aktarma: metrik CSV'si (katılımcı × görev × ekran satırları) ve tarayıcının "PDF olarak kaydet" özelliğiyle yazdırılabilir görünüm.
+- Şirket ekranları (frame görüntüleri) ve indirme script'i gitignore'da: `frames.local/`, `*.local.sh`.
+
+---
+
 ## 2026-11-20: Platform sırası
 
 Kaynak: ürün yönetimi thread'i, Nezih onayı. Durum: kararlaştırıldı; bugün kodda değişiklik yok.

@@ -162,6 +162,8 @@ describe('screen aliases (Figma state variants)', () => {
     ]
     expect(out.map((e) => `${e.type}:${e.screenKey}`)).toEqual(['screen:amount', 'state:amount', 'state:amount', 'screen:cards'])
     expect(out[3].payload).toMatchObject({ from: 'amount', node: 'cards-all' })
+    const click = a.push({ type: 'MOUSE_PRESS_OR_RELEASE', data: { handled: true, presentedNodeId: 'cards-all', nearestScrollingFrameId: 'cards-all', nearestScrollingFrameMousePosition: { x: 10, y: 20 } } }, 7).events[0]
+    expect(click).toMatchObject({ screenKey: 'cards', payload: { x: 10, y: 20, node: 'cards-all', frameId: 'cards-all' } })
   })
   it('the report keeps one visit per logical screen even from raw node events', () => {
     const raw: InteractionEvent[] = [ev(0, 'amount', 'screen'), ev(1, 'amount', 'click'), ev(3, 'amount-2', 'screen'), ev(5, 'amount-3', 'screen'), ev(9, 'cards', 'screen')]

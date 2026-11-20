@@ -5,3 +5,7 @@ dist
 # Real prototype links stay local (decisions 2026-11-20)
 .env.local
 *.local.json
+
+# Figma frame images of company prototypes (click map) and their download script. Never commit.
+frames.local/
+*.local.sh
