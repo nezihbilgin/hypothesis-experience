@@ -4,13 +4,13 @@ import {
   FigmaAdapter,
   RageClickDetector,
   cameraQuality,
-  cardsFromStudy,
+  cardsFromTask,
   computeBaseline,
   computeScreenReport,
   normalizeFigmaMessage,
   parseStudy,
   shouldTryCpuDelegate,
-  summarizeStudy,
+  summarizeTask,
   type HypothesisCard,
   type InteractionEvent,
   type SecondSample
@@ -37,10 +37,12 @@ describe('low-sample seconds are no data', () => {
     expect(r.mismatches.find((m) => m.kind === 'disengagement')?.text).toBe('Form: katılımcı 7 sn ekrandan uzaklaştı.')
     expect(r.cameraCoverage).toBe(1)
   })
-  it('a low-sample head spike adds nothing to the curve', () => {
+  it('a low-sample head spike changes nothing but coverage', () => {
     const quiet = computeScreenReport({ cards, events, samples: Array.from({ length: 20 }, (_, i) => s(i)), baseline, endSec: 20, cameraEnabled: true })
     const spiky = computeScreenReport({ cards, events, samples: Array.from({ length: 20 }, (_, i) => s(i, i === 8 ? { headSpeedMax: 9, samples: 4 } : {})), baseline, endSec: 20, cameraEnabled: true })
-    expect(spiky.realCurve).toEqual(quiet.realCurve)
+    expect(spiky.screens).toEqual(quiet.screens)
+    expect(spiky.mismatches).toEqual(quiet.mismatches)
+    expect(spiky.cameraCoverage).toBe(0.95)
   })
   it('baseline ignores low-sample warm-up seconds', () => {
     const b = computeBaseline([...Array.from({ length: 10 }, (_, i) => s(i - 20)), s(-5, { headSpeedMax: 50, samples: 2 })], [])
@@ -112,7 +114,7 @@ describe('figma adapter', () => {
     feed({ type: 'PRESENTED_NODE_CHANGED', data: { presentedNodeId: '1:3' } }, 3.1)
     const parsed = parseStudy(example)
     if (!parsed.ok) throw new Error(parsed.errors.join())
-    const cards = cardsFromStudy(parsed.study)
+    const cards = cardsFromTask(parsed.study.tasks[0])
     const baseline = computeBaseline([], [])
     const r = computeScreenReport({ cards, events, samples: [], baseline, endSec: 6, cameraEnabled: false })
     expect(r.mismatches.find((m) => m.screenKey === '1:2')?.text).toBe('Sepet: akıcı bekledin, katılımcı üç kez tepkisiz bir yere tıkladı ve bir kez aynı yere art arda tıkladı.')
@@ -121,7 +123,8 @@ describe('figma adapter', () => {
 
 describe('camera quality', () => {
   it('uses the median of the last 5 seconds', () => {
-    expect(cameraQuality({ fpsPerSecond: [2, 3, 13, 12, 6, 14, 13], faceRatio: 0.95 })).toEqual({ cameraEnabled: true, reason: 'ok', medianFps: 13 })
+    expect(cameraQuality({ fpsPerSecond: [2, 3, 13, 12, 6, 14, 13], faceRatio: 0.95 })).toEqual({ cameraEnabled: true, blinkEnabled: false, reason: 'ok', medianFps: 13 })
+    expect(cameraQuality({ fpsPerSecond: [15, 15, 16, 14, 15], faceRatio: 0.95 }).blinkEnabled).toBe(true)
   })
   it('falls back to camera-less mode on low fps or no face', () => {
     expect(cameraQuality({ fpsPerSecond: [9, 8, 12, 7, 9], faceRatio: 1 })).toMatchObject({ cameraEnabled: false, reason: 'low-fps', medianFps: 9 })
@@ -144,7 +147,8 @@ describe('study definition', () => {
     expect(r.ok).toBe(true)
     if (!r.ok) return
     expect(r.study.orgId).toBe('default')
-    const cards = cardsFromStudy(r.study)
+    expect(r.study.tasks.length).toBe(1)
+    const cards = cardsFromTask(r.study.tasks[0])
     expect(cards.map((c) => [c.screenKey, c.order, c.behavior])).toEqual([['1:2', 1, 'flow'], ['1:3', 2, 'flow'], ['1:4', 3, 'decide'], ['1:5', 4, 'read']])
     expect(cards[2].successCriterion).toBe('Aylık plan seçilir')
   })
@@ -181,7 +185,7 @@ describe('study summary', () => {
   const p3 = run([ev(0, 'a', 'screen'), ev(1, 'a', 'click')], 4) // never reached Onay
 
   it('counts participants per screen and kind', () => {
-    const sum = summarizeStudy(cards, [{ participant: 'P1', report: p1 }, { participant: 'P2', report: p2 }, { participant: 'P3', report: p3 }])
+    const sum = summarizeTask(cards, [{ participant: 'P1', report: p1 }, { participant: 'P2', report: p2 }, { participant: 'P3', report: p3 }])
     expect(sum.participants).toBe(3)
     expect(sum.screens[0]).toMatchObject({ screenName: 'Sepet', reached: 3, withMismatch: 1, byKind: { 'unexpected-friction': 1 } })
     expect(sum.screens[1]).toMatchObject({ screenName: 'Onay', reached: 2, withMismatch: 1, byKind: { 'over-time': 1 }, medianDurationSec: 3 })

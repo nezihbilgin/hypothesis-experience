@@ -8,6 +8,23 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 
 ---
 
+## 2026-11-20: core iki eksenli modele geçti (uygulama notları)
+
+Kaynak: Claude Code (`faz1-core` branch'i). Durum: uygulandı. 20 Kasım tarihli girişlerin `core` karşılığı ve uygulamada verilen küçük kararlar.
+
+- Ürün modeli (`screens.ts`) artık efor ve sürtünme olarak iki eksen üretiyor; Senti'nin impuls/EMA eğrisi ve ani baş hareketi (startle) ürün modelinden çıktı, sadece `compat/` regresyonunda duruyor. Konuşma oranı da ürün modelinde kullanılmıyor (think-aloud konuşması karıştırır).
+- **İlk aksiyona kadar geçen süre efor ekseninde.** `flow` kartında kişisel eşiği aşan duraksama `effort-mismatch` (yön: `high`); `read`/`decide` kartında duraksama beklenen efor, sapma değil. Sürtünme ekseni sadece etkileşim olayları: geri dönüş, tepkisiz tıklama, art arda tıklama.
+- `effort-mismatch` (yön: `low`): `read`/`decide` kartında süre `expectedSec[0]` altında, sürtünme ve duraksama yok.
+- `unexpected-friction` artık her kart tipinde üretiliyor (önce sadece `flow`).
+- Yüz sinyalleri (göz kırpma, hareketsizlik, ekrana yaklaşma, kaş) `faceSignals` açıksa okunur, varsayılan kapalı. Sapma üretmezler: efor skoruna %40 ağırlıkla katılır ve sapmanın şiddetini artırırlar. Kaş sadece etkileşim sürtünmesi varsa sayılır. Göz kırpma saniyesi 15 kareden azsa yok sayılır.
+- Gözlenen skorlar 0-100, ekran ziyareti boyunca sabit (basamaklı eğri). Başlangıç eşikleri (göz kırpma düşüşü %25, hareketsizlik +0.15, yaklaşma +%10, kaş +0.1, sürtünme ağırlıkları 25/20/35) geriye dönük doğrulamada kalibre edilecek.
+- Her sapmanın bir `at` anı ve `replay` aralığı (`at` ± 5 sn) var: sürtünmede ilk sürtünme olayı, duraksamada eşiğin aşıldığı an, süre aşımında beklenen üst sınırın dolduğu an, kopmada ilk kayıp saniye.
+- Soru motoru (`questions.ts`): ekrandan çıkışta önce planlı `probe` (ekran başına bir kez), yoksa o ekranın en şiddetli sapması (süre aşımı hariç). Varsayılan sınırlar görev başına 2 geçiş sorusu, görev sonunda 2, oturum başına 6; çalışma JSON'unda değiştirilebilir.
+- Metin kataloğu (`texts.ts`, Türkçe varsayılan) ve ölçekler `{min, max, labels}`: en fazla 11 seçenek; raporda puanlar 0-1'e normalize edilip karşılaştırılıyor. Araştırmacı rapor cümleleri katalog dışında, katılımcıya gösterilmez.
+- Çalışma JSON'u birden fazla görev alıyor (`tasks`); eski tek görevli biçim (`taskPrompt` + `screens`) tek görev olarak kabul ediliyor. `context` `workplace` ya da `education` ise `faceSignals` varsayılanı kapalı.
+
+---
+
 ## 2026-11-20: Katılımcıya görünen metinler ve ölçekler araştırmacı tarafından düzenlenebilir (MVP sonrası)
 
 Kaynak: ürün yönetimi thread'i (Nezih, 20 Kasım). Durum: kararlaştırıldı; uygulama MVP sonrası, mimari şimdiden kapı bırakır.

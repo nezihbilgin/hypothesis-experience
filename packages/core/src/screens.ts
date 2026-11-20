@@ -1,11 +1,16 @@
-// Screen-window model: the product port of Senti's felt.ts.
-// Senti compared an intended curve with felt tension in time windows. Here each *screen* is a window, the
-// expectation comes from a hypothesis card, and interaction signals are primary (camera/mic secondary).
+// Screen-window model: the product model built on Senti's felt.ts ideas, adapted to interfaces (decisions 2026-11-20).
+// - Each screen is a window; the expectation comes from a hypothesis card on two axes: effort and friction.
+// - Rates and durations inside a screen, not Senti's 4 s impulse decay (that stays only in compat/).
+// - Interaction signals decide mismatches. Face signals (blink, brow, stillness, lean-in) are optional per study,
+//   never create a mismatch on their own and only raise its severity. Camera-less mode is a complete mode.
 // Principle 1: sentences describe observed behaviour only, never emotion or intent.
 // Principle 2: thresholds come from the participant's own warm-up distribution.
-import { bucket, clamp, impulseCurve, mean, median, mergeSameKind, percentile, personalThreshold, runs } from './engine'
+import { bucket, clamp, mean, median, mergeSameKind, percentile, personalThreshold, runs } from './engine'
 import {
-  BEHAVIOR_LEVEL,
+  AXIS_LEVEL,
+  BEHAVIOR_EXPECT,
+  type AxisCurves,
+  type AxisScores,
   type Baseline,
   type CurvePoint,
   type HypothesisCard,
@@ -18,13 +23,18 @@ import {
 } from './types'
 
 export const HESITATION_FLOOR_SEC = 3
-export const STARTLE_FLOOR = 1.0
 export const AWAY_MIN_SEC = 2
 /** Seconds with fewer processed frames than this carry no camera data (Faz 0: old GPUs dip to 5-7 fps). */
 export const MIN_SAMPLES = 5
-const DECAY_SEC = 4
-const EMA_ALPHA = 0.3
+/** Blink rate needs >= 15 fps; below that only the blink signal is off (decisions 2026-11-20, item 4). */
+export const MIN_BLINK_SAMPLES = 15
+export const REPLAY_PAD_SEC = 5
 const MEANINGFUL: InteractionEvent['type'][] = ['click', 'dead-click', 'rage-click', 'input-edit', 'input-delete']
+// Starting values, to be calibrated on retrospective validation and the first 5 sessions.
+const BLINK_DROP_MIN = 0.25
+const STILLNESS_RISE_MIN = 0.15
+const LEAN_IN_MIN = 0.1
+const BROW_RISE_MIN = 0.1
 
 // ---- Baseline ----------------------------------------------------------------------------------------
 /** Keep one sample per second and drop seconds below MIN_SAMPLES: they are "no data", not "away". */
@@ -34,13 +44,24 @@ export function usableSeconds(samples: SecondSample[]): Map<number, SecondSample
   return m
 }
 
-export function computeBaseline(warmupSamples: SecondSample[], warmupEvents: InteractionEvent[]): Baseline {
+const blinkOf = (s: SecondSample): number | null => (s.samples >= MIN_BLINK_SAMPLES && s.blinkRate != null ? s.blinkRate : null)
+const nums = (a: (number | null | undefined)[]): number[] => a.filter((v): v is number => v != null && Number.isFinite(v))
+
+/**
+ * Baseline from the 30 s warm-up (neutral reading + a few clicks). `firstScreenSamples` (the first screen of the
+ * first task) only extends the blink baseline: 30 s holds just 5-10 blinks.
+ */
+export function computeBaseline(warmupSamples: SecondSample[], warmupEvents: InteractionEvent[], firstScreenSamples: SecondSample[] = []): Baseline {
   const faced = [...usableSeconds(warmupSamples).values()].filter((s) => s.face)
+  const blinkSrc = [...faced, ...[...usableSeconds(firstScreenSamples).values()].filter((s) => s.face)]
   return {
-    headSpeedP95: percentile(faced.map((s) => s.headSpeedMax).filter((v): v is number => v !== null), 0.95),
-    talkingMean: mean(faced.map((s) => s.talking).filter((v): v is number => v !== null)),
-    faceWidthMedian: median(faced.map((s) => s.faceWidthRatio).filter((v): v is number => v != null)),
+    headSpeedP95: percentile(nums(faced.map((s) => s.headSpeedMax)), 0.95),
+    talkingMean: mean(nums(faced.map((s) => s.talking))),
+    faceWidthMedian: median(nums(faced.map((s) => s.faceWidthRatio))),
     firstActionP95: percentile(firstActionLatencies(warmupEvents), 0.95),
+    blinkRateMedian: median(nums(blinkSrc.map(blinkOf))),
+    browDownMedian: median(nums(faced.map((s) => s.browDown))),
+    stillnessMedian: median(nums(faced.map((s) => s.stillness))),
     seconds: faced.length
   }
 }
@@ -79,20 +100,25 @@ export interface ScreenSessionInput {
   samples: SecondSample[]
   baseline: Baseline
   endSec: number
+  /** Camera on and passed the quality check: enables face-lost disengagement. */
   cameraEnabled: boolean
+  /** Study setting + participant consent for face signals (blink, brow, stillness, lean-in). Default off. */
+  faceSignals?: boolean
 }
+
+const r1 = (n: number): number => Math.round(n * 10) / 10
 
 export function computeScreenReport(input: ScreenSessionInput): ScreenReport {
   const { cards, baseline, cameraEnabled } = input
+  const faceOn = cameraEnabled && input.faceSignals === true
   const events = [...input.events].sort((a, b) => a.t - b.t)
   const end = Math.max(1, Math.ceil(input.endSec))
   const visits = visitsFrom(events, input.endSec)
   const order = new Map(cards.map((c) => [c.screenKey, c.order]))
   const play = usableSeconds(cameraEnabled ? input.samples : [])
   const hesThr = personalThreshold(HESITATION_FLOOR_SEC, baseline.firstActionP95)
-  const headThr = personalThreshold(STARTLE_FLOOR, baseline.headSpeedP95)
 
-  // Per-second signals
+  // Away seconds: face lost (camera) or tab hidden (always).
   const away = new Array<boolean>(end).fill(false)
   for (let t = 0; t < end; t++) {
     const s = play.get(t)
@@ -108,16 +134,8 @@ export function computeScreenReport(input: ScreenSessionInput): ScreenReport {
   }
   const awayRuns = runs(away, AWAY_MIN_SEC)
 
-  const impulse = new Array<number>(end).fill(0)
-  const bump = (t: number, v: number): void => {
-    const k = Math.floor(t)
-    if (k >= 0 && k < end) impulse[k] = Math.max(impulse[k], v)
-  }
-  for (const e of events) {
-    if (e.type === 'dead-click') bump(e.t, 0.6)
-    if (e.type === 'rage-click') bump(e.t, 1)
-  }
   const stats: ScreenStats[] = []
+  const found: Mismatch[] = []
   for (const card of cards) {
     const vs = visits.filter((v) => v.screenKey === card.screenKey)
     if (!vs.length) continue
@@ -125,121 +143,184 @@ export function computeScreenReport(input: ScreenSessionInput): ScreenReport {
     const evs = events.filter((e) => e.screenKey === card.screenKey && inV(e.t))
     const first = evs.find((e) => MEANINGFUL.includes(e.type))
     const firstActionSec = first ? first.t - vs[0].start : null
-    const hesitation = (firstActionSec ?? vs[0].end - vs[0].start) > hesThr
-    if (hesitation) bump(vs[0].start + hesThr, 0.5)
-    let backs = 0
+    const pauseSec = firstActionSec ?? vs[0].end - vs[0].start
+    const hesitation = pauseSec > hesThr
+    const backAt: number[] = []
     for (const v of vs) {
       const next = visits.find((x) => x.start === v.end)
-      if (next && (order.get(next.screenKey) ?? Infinity) < card.order) {
-        backs++
-        bump(v.end, 0.7)
+      if (next && (order.get(next.screenKey) ?? Infinity) < card.order) backAt.push(v.end)
+    }
+    const deads = evs.filter((e) => e.type === 'dead-click')
+    const rages = evs.filter((e) => e.type === 'rage-click')
+    let awaySec = 0
+    let awayStart: number | null = null
+    for (const r of awayRuns)
+      for (let t = r.start; t <= r.end; t++)
+        if (inV(t)) {
+          awaySec++
+          awayStart ??= t
+        }
+    const durationSec = r1(vs.reduce((a, v) => a + (v.end - v.start), 0))
+
+    // Face support (only with face signals on): screen values against the participant's baseline.
+    const faced: SecondSample[] = []
+    if (faceOn) for (const v of vs) for (let t = Math.floor(v.start); t < Math.ceil(v.end); t++) {
+      const s = play.get(t)
+      if (s?.face) faced.push(s)
+    }
+    const support: ScreenStats['faceSupport'] = []
+    const comps: number[] = []
+    if (faced.length) {
+      const blink = nums(faced.map(blinkOf))
+      if (blink.length && baseline.blinkRateMedian > 0) {
+        const drop = clamp((baseline.blinkRateMedian - mean(blink)) / baseline.blinkRateMedian, 0, 1)
+        comps.push(drop)
+        if (drop >= BLINK_DROP_MIN) support.push('blink-drop')
+      }
+      const still = nums(faced.map((s) => s.stillness))
+      if (still.length) {
+        const rise = clamp((mean(still) - baseline.stillnessMedian) / Math.max(0.05, 1 - baseline.stillnessMedian), 0, 1)
+        comps.push(rise)
+        if (rise >= STILLNESS_RISE_MIN) support.push('stillness')
+      }
+      const fw = nums(faced.map((s) => s.faceWidthRatio))
+      if (fw.length && baseline.faceWidthMedian > 0) {
+        const lean = mean(fw) / baseline.faceWidthMedian - 1
+        comps.push(clamp(lean / 0.25, 0, 1))
+        if (lean >= LEAN_IN_MIN) support.push('lean-in')
       }
     }
-    let awaySec = 0
-    for (const r of awayRuns) for (let t = r.start; t <= r.end; t++) if (inV(t)) awaySec++
-    stats.push({
-      screenKey: card.screenKey,
-      durationSec: Math.round(vs.reduce((a, v) => a + (v.end - v.start), 0) * 10) / 10,
-      visits: vs.map(({ start, end }) => ({ start, end })),
-      firstActionSec: firstActionSec === null ? null : Math.round(firstActionSec * 10) / 10,
-      hesitation,
-      backs,
-      deadClicks: evs.filter((e) => e.type === 'dead-click').length,
-      rageClicks: evs.filter((e) => e.type === 'rage-click').length,
-      awaySec
-    })
-  }
-  // Camera startle adds a weaker impulse (secondary signal).
-  for (let t = 0; t < end; t++) {
-    const s = play.get(t)
-    if (s?.face && s.headSpeedMax !== null && s.headSpeedMax > headThr) impulse[t] = Math.max(impulse[t], 0.4 * clamp((s.headSpeedMax - headThr) / (4 * headThr), 0, 1))
-  }
-  const levels = impulseCurve({
-    len: end,
-    impulse,
-    peak: 80,
-    decaySec: DECAY_SEC,
-    alpha: EMA_ALPHA,
-    state: (t) => (away[t] ? 'away' : 'data'),
-    add: (t) => {
-      const s = play.get(t)
-      return s?.face && baseline.talkingMean < 0.3 && (s.talking ?? 0) >= 0.5 ? 10 : 0
-    }
-  })
-  const realCurve: CurvePoint[] = levels.map((level, t) => ({ t, level }))
-  const expectedCurve = expectedCurveFrom(cards, visits, end)
+    const brow = faced.length ? nums(faced.map((s) => s.browDown)) : []
+    const browUp = brow.length > 0 && mean(brow) - baseline.browDownMedian >= BROW_RISE_MIN
 
-  // Mismatches
-  const found: Mismatch[] = []
-  for (const st of stats) {
-    const card = cards.find((c) => c.screenKey === st.screenKey)!
-    const [minS, maxS] = card.expectedSec
-    let felt = 0
-    for (const v of st.visits) for (let t = Math.floor(v.start); t < Math.ceil(v.end) && t < end; t++) felt = Math.max(felt, levels[t])
-    const base = { screenKey: st.screenKey, start: st.visits[0].start, end: st.visits[st.visits.length - 1].end, expected: BEHAVIOR_LEVEL[card.behavior], felt: Math.round(felt) }
-    const add = (kind: MismatchKind, severity: number): void => {
-      found.push({ ...base, kind, severity, text: describe(kind, card, st) })
+    const pauseComp = clamp(pauseSec / (2 * hesThr), 0, 1)
+    const faceMean = comps.length ? mean(comps) : null
+    const effort = Math.round(100 * (faceMean === null ? pauseComp : 0.6 * pauseComp + 0.4 * faceMean))
+    const interactionFriction = clamp(25 * backAt.length + 20 * deads.length + 35 * rages.length, 0, 100)
+    if (interactionFriction > 0 && browUp) support.push('brow')
+    const friction = Math.round(clamp(interactionFriction + (interactionFriction > 0 && browUp ? 10 : 0), 0, 100))
+
+    const st: ScreenStats = {
+      screenKey: card.screenKey,
+      durationSec,
+      visits: vs.map(({ start, end }) => ({ start, end })),
+      firstActionSec: firstActionSec === null ? null : r1(firstActionSec),
+      hesitation,
+      backs: backAt.length,
+      deadClicks: deads.length,
+      rageClicks: rages.length,
+      awaySec,
+      observed: { effort, friction },
+      faceSupport: support
     }
-    const friction = st.hesitation || st.backs > 0 || st.deadClicks > 0 || st.rageClicks > 0
-    if (card.behavior === 'flow' && friction) add('unexpected-friction', 1 + st.backs + st.deadClicks + 2 * st.rageClicks + (st.hesitation ? 1 : 0))
-    if (card.behavior === 'decide' && st.durationSec < minS && !friction) add('missed-decision', (minS - st.durationSec) / Math.max(1, minS))
-    if (st.awaySec >= AWAY_MIN_SEC) add('disengagement', st.awaySec / 4)
-    if (st.durationSec > maxS) add('over-time', (st.durationSec - maxS) / Math.max(1, maxS))
+    stats.push(st)
+
+    // Mismatches: interaction/time decides, face support only raises severity.
+    const exp = BEHAVIOR_EXPECT[card.behavior]
+    const expected: AxisScores = { effort: AXIS_LEVEL[exp.effort], friction: AXIS_LEVEL[exp.friction] }
+    const [minS, maxS] = card.expectedSec
+    const span = { start: vs[0].start, end: vs[vs.length - 1].end }
+    const add = (kind: MismatchKind, at: number, severity: number, direction?: 'low' | 'high'): void => {
+      const m: Mismatch = {
+        screenKey: card.screenKey,
+        kind,
+        ...(direction ? { direction } : {}),
+        ...span,
+        at: r1(at),
+        replay: [r1(Math.max(0, at - REPLAY_PAD_SEC)), r1(at + REPLAY_PAD_SEC)],
+        expected,
+        observed: { effort, friction },
+        severity: Math.round(severity * 100) / 100,
+        text: ''
+      }
+      m.text = describe(m, card, st)
+      found.push(m)
+    }
+    const hasFriction = interactionFriction > 0
+    if (hasFriction) {
+      const at = Math.min(...[...deads, ...rages].map((e) => e.t), ...backAt)
+      add('unexpected-friction', at, 1 + backAt.length + deads.length + 2 * rages.length + (browUp ? 0.5 : 0))
+    }
+    if (exp.effort === 'high' && durationSec < minS && !hasFriction && !hesitation) {
+      add('effort-mismatch', vs[0].start, (minS - durationSec) / Math.max(1, minS) + (faceMean === null ? 0 : 0.5 * (1 - faceMean)), 'low')
+    }
+    if (exp.effort === 'low' && hesitation) {
+      add('effort-mismatch', vs[0].start + hesThr, 1 + (pauseSec - hesThr) / hesThr + (faceMean ?? 0), 'high')
+    }
+    if (awaySec >= AWAY_MIN_SEC) add('disengagement', awayStart ?? span.start, awaySec / 4)
+    if (durationSec > maxS) add('over-time', crossTime(vs, maxS), (durationSec - maxS) / Math.max(1, maxS))
   }
-  const mismatches = mergeSameKind(found, (m) => `${m.kind}|${m.screenKey}`, (a, b) => {
-    a.felt = Math.max(a.felt, b.felt)
+
+  const mismatches = mergeSameKind(found, (m) => `${m.kind}|${m.direction ?? ''}|${m.screenKey}`, (a, b) => {
     a.severity = Math.max(a.severity, b.severity)
-  }).sort((a, b) => a.start - b.start)
+  }).sort((a, b) => a.start - b.start || a.at - b.at)
 
   let covered = 0
   for (let t = 0; t < end; t++) if (play.has(t)) covered++
-  const cameraCoverage = Math.round((covered / end) * 100) / 100
 
-  return { baseline, expectedCurve, realCurve, screens: stats, mismatches, cameraCoverage }
+  return {
+    baseline,
+    expected: expectedCurvesFrom(cards, visits, end),
+    observed: stepCurves(stats, visits, end),
+    screens: stats,
+    mismatches,
+    cameraCoverage: Math.round((covered / end) * 100) / 100
+  }
 }
 
-/** Expected curve generated from cards (no hand drawing): each visit holds its card's level. */
-export function expectedCurveFrom(cards: HypothesisCard[], visits: Visit[], len: number): CurvePoint[] {
+/** Moment when cumulative time on the screen passes `sec`. */
+function crossTime(vs: { start: number; end: number }[], sec: number): number {
+  let acc = 0
+  for (const v of vs) {
+    if (acc + (v.end - v.start) >= sec) return v.start + (sec - acc)
+    acc += v.end - v.start
+  }
+  return vs[vs.length - 1].end
+}
+
+const curveFrom = (visits: Visit[], len: number, level: (screenKey: string) => number | undefined): CurvePoint[] => {
   const out: CurvePoint[] = []
   for (let t = 0; t < len; t++) {
     const v = visits.find((x) => t >= Math.floor(x.start) && t < x.end)
-    const c = v && cards.find((x) => x.screenKey === v.screenKey)
-    out.push({ t, level: c ? BEHAVIOR_LEVEL[c.behavior] : 0 })
+    out.push({ t, level: (v && level(v.screenKey)) ?? 0 })
   }
   return out
 }
 
-/** The 3-4 largest mismatches for the retrospective, each as a <= 10 s clip range. */
-export function retroMoments(r: ScreenReport, n = 4, clipSec = 10): (Mismatch & { clip: [number, number] })[] {
-  return [...r.mismatches]
-    .sort((a, b) => b.severity - a.severity || a.start - b.start)
-    .slice(0, n)
-    .map((m) => {
-      const mid = m.kind === 'over-time' ? m.end - clipSec / 2 : m.start + Math.min(clipSec, m.end - m.start) / 2
-      const s = Math.max(0, mid - clipSec / 2)
-      return { ...m, clip: [Math.round(s * 10) / 10, Math.round((s + clipSec) * 10) / 10] as [number, number] }
-    })
-    .sort((a, b) => a.start - b.start)
+/** Expected curves generated from cards (no hand drawing): each visit holds its card's expected axis levels. */
+export function expectedCurvesFrom(cards: HypothesisCard[], visits: Visit[], len: number): AxisCurves {
+  const exp = (k: string) => cards.find((c) => c.screenKey === k)
+  return {
+    effort: curveFrom(visits, len, (k) => { const c = exp(k); return c && AXIS_LEVEL[BEHAVIOR_EXPECT[c.behavior].effort] }),
+    friction: curveFrom(visits, len, (k) => { const c = exp(k); return c && AXIS_LEVEL[BEHAVIOR_EXPECT[c.behavior].friction] })
+  }
 }
 
-// ---- Sentences (Turkish, behaviour only) ---------------------------------------------------------------
+function stepCurves(stats: ScreenStats[], visits: Visit[], len: number): AxisCurves {
+  const by = new Map(stats.map((s) => [s.screenKey, s.observed]))
+  return { effort: curveFrom(visits, len, (k) => by.get(k)?.effort), friction: curveFrom(visits, len, (k) => by.get(k)?.friction) }
+}
+
+// ---- Sentences (researcher report, Turkish, behaviour only) --------------------------------------------
 const TIMES = ['', 'bir kez', 'iki kez', 'üç kez', 'dört kez', 'beş kez']
 const times = (n: number): string => TIMES[n] ?? `${n} kez`
 const sec = (n: number): string => `${Math.round(n)} sn`
 const EXPECT: Record<HypothesisCard['behavior'], string> = { flow: 'akıcı bekledin', read: 'dikkatli okuma bekledin', decide: 'karar bekledin' }
 
-export function describe(kind: MismatchKind, card: HypothesisCard, st: ScreenStats): string {
+export function describe(m: Pick<Mismatch, 'kind' | 'direction'>, card: HypothesisCard, st: ScreenStats): string {
   const name = card.screenName
-  if (kind === 'unexpected-friction') {
+  if (m.kind === 'unexpected-friction') {
     const parts: string[] = []
-    if (st.hesitation) parts.push(`${sec(st.firstActionSec ?? st.visits[0].end - st.visits[0].start)} durdu`)
     if (st.backs) parts.push(`${times(st.backs)} geri döndü`)
     if (st.deadClicks) parts.push(`${times(st.deadClicks)} tepkisiz bir yere tıkladı`)
     if (st.rageClicks) parts.push(`${times(st.rageClicks)} aynı yere art arda tıkladı`)
-    return `${name}: ${EXPECT.flow}, katılımcı ${joinTr(parts)}.`
+    return `${name}: ${EXPECT[card.behavior]}, katılımcı ${joinTr(parts)}.`
   }
-  if (kind === 'missed-decision') return `${name}: ${EXPECT.decide}, katılımcı ${sec(st.durationSec)}'de geçti.`
-  if (kind === 'disengagement') return `${name}: katılımcı ${sec(st.awaySec)} ekrandan uzaklaştı.`
+  if (m.kind === 'effort-mismatch') {
+    if (m.direction === 'high') return `${name}: ${EXPECT.flow}, katılımcı ilk aksiyondan önce ${sec(st.firstActionSec ?? st.visits[0].end - st.visits[0].start)} durdu.`
+    return `${name}: ${EXPECT[card.behavior]}, katılımcı ${sec(st.durationSec)}'de geçti.`
+  }
+  if (m.kind === 'disengagement') return `${name}: katılımcı ${sec(st.awaySec)} ekrandan uzaklaştı.`
   return `${name}: en fazla ${sec(card.expectedSec[1])} bekledin, ${sec(st.durationSec)} sürdü.`
 }
 

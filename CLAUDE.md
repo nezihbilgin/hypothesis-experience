@@ -10,9 +10,9 @@ tarayıcıda çalışan self-moderated usability test aracı. Sahibi Nezih; Tür
 
 Planı ya da mimariyi değiştiren her kararı `docs/decisions.md` dosyasına tarihli bir giriş olarak ekle (en üste). Planlama sohbeti de aynı dosyaya yazıyor.
 
-Durum (20 Kasım 2026): Faz 0 kapandı, Faz 1 başladı. `faz1-core` branch'inde `core`'a çalışma JSON'u, Figma adaptörü, rage click,
-kalite kontrolü kararı, az örnekli saniye kuralı ve çalışma özeti eklendi. Sıradaki: `docs/decisions.md` 2026-11-20 "Kodla uzlaştırma" listesi
-(Nezih onayıyla), sonra `sensing` paketi.
+Durum (20 Kasım 2026): Faz 1 sürüyor. `faz1-core` branch'inde `core` 20 Kasım kararlarına uyarlandı: iki eksen (efor, sürtünme),
+`effort-mismatch`, yüz sinyalleri çalışma ayarına bağlı, ekran geçişinde soru motoru, metin kataloğu ve düzenlenebilir ölçekler.
+Sıradaki: `sensing` paketi (worker, SecondSample, göz kırpma ≥ 15 fps, kalite ölçümü).
 
 Kurallar:
 - İlke 1: raporda ve kodda duygu/niyet çıkarımı yok, sadece gözlemlenen davranış. Duygu/ifade sınıflandırma skoru kullanılmaz; ham kas hareketi blendshape'leri (göz kırpma, kaş) sadece destekleyici sinyal olarak kullanılabilir (decisions 2026-11-20).

@@ -3,6 +3,8 @@
 // fallback was too slow on 2 cores. Thresholds below are starting values, to be calibrated on the first sessions.
 
 export const MIN_MEDIAN_FPS = 10
+/** Blink detection needs >= 15 fps (blinks last 100-400 ms); below it only blink is off (decisions 2026-11-20). */
+export const MIN_BLINK_FPS = 15
 export const MIN_FACE_RATIO = 0.7
 export const QUALITY_WINDOW_SEC = 5
 export const DARK_BRIGHTNESS = 0.25
@@ -21,6 +23,8 @@ export type QualityReason = 'ok' | 'low-fps' | 'no-face' | 'no-frames'
 
 export interface QualityDecision {
   cameraEnabled: boolean
+  /** Blink signal usable (camera on and median >= 15 fps). Other camera signals do not depend on it. */
+  blinkEnabled: boolean
   reason: QualityReason
   medianFps: number
   /** Advice for the participant, independent of the decision. */
@@ -33,7 +37,7 @@ export function cameraQuality(p: QualityProbe): QualityDecision {
   const medianFps = sorted.length ? (sorted.length % 2 ? sorted[(sorted.length - 1) / 2] : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2) : 0
   const hint = p.brightness !== undefined && p.brightness < DARK_BRIGHTNESS ? ('dark' as const) : undefined
   const reason: QualityReason = !win.length || medianFps === 0 ? 'no-frames' : medianFps < MIN_MEDIAN_FPS ? 'low-fps' : p.faceRatio < MIN_FACE_RATIO ? 'no-face' : 'ok'
-  return { cameraEnabled: reason === 'ok', reason, medianFps, ...(hint ? { hint } : {}) }
+  return { cameraEnabled: reason === 'ok', blinkEnabled: reason === 'ok' && medianFps >= MIN_BLINK_FPS, reason, medianFps, ...(hint ? { hint } : {}) }
 }
 
 /** CPU delegate is only worth trying when the GPU delegate fails and the machine has 4+ cores. */

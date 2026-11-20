@@ -6,12 +6,14 @@ Tasarım kararları: [docs/HANDOFF-hypothesis-experience.md](./docs/HANDOFF-hypo
 ```
 packages/core/   Saf, deterministik model (Vitest). Senti felt.ts'ten port edildi.
   src/engine.ts      baseline yüzdelik, runs, impulse+EMA eğrisi, aynı tür birleştirme
-  src/screens.ts     ekran pencereli model: hipotez kartı -> beklenen seviye, 4 sapma tipi, Türkçe cümleler, retro klip seçimi
+  src/screens.ts     ekran pencereli model: iki eksen (efor, sürtünme), 4 sapma tipi, Türkçe rapor cümleleri
+  src/questions.ts   ekran geçişinde soru seçimi (planlı + sinyalle), görev sonu kısa retro
+  src/texts.ts       katılımcı metin kataloğu (TR varsayılan) ve düzenlenebilir puan ölçekleri
   src/study.ts       çalışma tanımı JSON'u ve doğrulama (örnek: test/fixtures/study.example.json)
   src/adapters/figma.ts  Figma Embed mesajları -> interaction_event
   src/signals.ts     rage click tespiti (Figma ve embed-sdk ortak)
   src/quality.ts     kamera kalite kontrolü kararı (fps, yüz, ışık ipucu)
-  src/aggregate.ts   çalışma bazında özet (ekran başına sapma sayısı)
+  src/aggregate.ts   görev bazında özet (ekran başına sapma sayısı, beklenen/yaşanan zorluk)
   src/compat/        Senti uyumluluk modeli (sadece regresyon testi için)
   test/              regresyon (docs/evidence), Senti'nin birim testleri, ekran modeli testleri
 apps/spikes/     Faz 0 tarayıcı spike'ları (Vite, çok sayfalı)
