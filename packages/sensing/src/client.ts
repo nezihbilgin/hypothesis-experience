@@ -16,6 +16,8 @@ export interface SensingOptions {
   clock: SessionClock
   onSample: (s: SecondSample) => void
   onError?: (text: string) => void
+  /** Calibration only: raw per-frame lip gap and per-frame loudness (numbers, never pixels or audio). */
+  onRaw?: (r: { kind: 'mouth'; t: number; v: number | null } | { kind: 'audio'; t: number; rms: number }) => void
   targetFps?: number
   /** Microphone for voice activity (talking ratio). */
   audio?: boolean
@@ -66,7 +68,10 @@ export class SensingClient {
     worker.onmessage = (e: MessageEvent<WorkerOut>) => {
       if (e.data.type === 'result') {
         this.busy = false
-        if (this.o.clock.started && !this.o.clock.paused) this.agg.push(e.data.frame)
+        if (this.o.clock.started && !this.o.clock.paused) {
+          this.agg.push(e.data.frame)
+          this.o.onRaw?.({ kind: 'mouth', t: e.data.frame.t, v: e.data.frame.mouthOpen ?? null })
+        }
       } else if (e.data.type === 'error') this.o.onError?.(e.data.text)
     }
     this.timers.push(window.setInterval(() => void this.pump(), 1000 / fps))
@@ -108,7 +113,9 @@ export class SensingClient {
         if (!this.o.clock.started || this.o.clock.paused) return
         an.getFloatTimeDomainData(buf)
         const rms = EnergyVad.rms(buf)
-        this.agg.pushAudio(this.o.clock.t(), vad.push(rms), rms)
+        const t = this.o.clock.t()
+        this.agg.pushAudio(t, vad.push(rms), rms)
+        this.o.onRaw?.({ kind: 'audio', t, rms })
       }, 20)
     )
   }

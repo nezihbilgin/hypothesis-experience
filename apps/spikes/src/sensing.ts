@@ -7,6 +7,8 @@ const DURATION = 60
 const WARMUP_SEC = 3
 let client: SensingClient | null = null
 let samples: SecondSample[] = []
+// Calibration data: per-frame lip gap and per-frame loudness, rounded numbers only.
+let raw: { mouth: [number, number | null][]; audio: [number, number][] } = { mouth: [], audio: [] }
 let decision: unknown = null
 const errors: string[] = []
 const fmt = (v: unknown): string => (v === null || v === undefined ? '–' : typeof v === 'number' ? String(Math.round(v * 100) / 100) : String(v))
@@ -19,6 +21,7 @@ function row(s: SecondSample): void {
 
 async function start(): Promise<void> {
   samples = []
+  raw = { mouth: [], audio: [] }
   decision = null
   $('#rows').innerHTML = ''
   $('#quality').innerHTML = ''
@@ -32,6 +35,11 @@ async function start(): Promise<void> {
     clock,
     audio: $('#audio').checked,
     onError: (t) => errors.push(t),
+    onRaw: (r) => {
+      const t = Math.round(r.t * 1000) / 1000
+      if (r.kind === 'mouth') raw.mouth.push([t, r.v === null ? null : Math.round(r.v * 10000) / 10000])
+      else raw.audio.push([t, Math.round(r.rms * 10000) / 10000])
+    },
     onSample: (s) => {
       samples.push(s)
       row(s)
@@ -84,4 +92,4 @@ if (smoke > 0) {
   }, 200)
 }
 $('#stop').onclick = stop
-$('#dl').onclick = () => download(`sensing-${Date.now()}.json`, { env: envInfo(), decision, samples, errors })
+$('#dl').onclick = () => download(`sensing-${Date.now()}.json`, { env: envInfo(), decision, samples, raw, errors })
