@@ -34,6 +34,7 @@ export function Consent({ run, next }: { run: SessionRun; next: () => void }) {
       <h1>{t('consent.title')}</h1>
       <p>{t('consent.stored')}</p>
       <p>{t('consent.notStored')}</p>
+      {run.study.sourceType === 'figma' ? <p className="muted">{t('consent.thirdParty')}</p> : null}
       <p className="muted">{t('consent.camera')}</p>
       <label className="check">
         <input type="checkbox" checked={camera} onChange={(e) => setCamera(e.target.checked)} /> {t('consent.cameraOption')}
