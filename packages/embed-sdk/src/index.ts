@@ -83,7 +83,11 @@ export function startEmbed(o: EmbedOptions): () => void {
     const root = (e.target as Element | null)?.closest?.('[data-step]') ?? document.documentElement
     const rect = root === document.documentElement ? { left: 0, top: 0, width: innerWidth, height: innerHeight } : root.getBoundingClientRect()
     const norm = normalizedPoint(e.clientX, e.clientY, rect)
-    send('click', { x, y, selector, ...(norm ?? {}) }, at, key)
+    // Offset inside the clicked element (0..1), so a click can be drawn on a reference image of any state that
+    // contains that element (live-site states, decisions 2026-11-20).
+    const target = e.target as Element | null
+    const inEl = target?.getBoundingClientRect ? normalizedPoint(e.clientX, e.clientY, target.getBoundingClientRect()) : null
+    send('click', { x, y, selector, ...(norm ?? {}), ...(inEl ? { ex: inEl.nx, ey: inEl.ny } : {}) }, at, key)
     if (rage.push({ t: at / 1000, x, y, ...(lastPointer ? { pointerType: lastPointer } : {}) })) send('rage-click', { x, y, selector }, at, key)
     const m0 = mutations
     const url0 = location.href

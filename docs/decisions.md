@@ -14,7 +14,8 @@ Kaynak: PM mimari notu. Durum: planlama; tıklama haritası Nezih onayı bekliyo
 
 - Tıklama haritası ve frame replay, iki sağlayıcılı bir "ekran referans görüntüsü" soyutlaması üzerine kurulacak: (a) Figma: REST API'den frame görüntüleri (üründe araştırmacı Figma OAuth ile bağlanır; pilotta PM görüntüleri kendi erişimiyle dışa aktarır); (b) canlı site: araştırmacının kurulumda yaptığı "referans gezinti", embed-sdk her `data-step` kök öğesini araştırmacının kendi tarayıcısında yakalar.
 - Katılımcının cihazında asla ekran görüntüsü alınmaz.
-- Koordinatlar normalize (0-1) saklanır: embed-sdk tıklamalara `nx, ny` (data-step köküne göre, yoksa görünüme göre) ekliyor. Figma tıklamaları frame koordinatında (`nearestScrollingFrameMousePosition` + kaydırma) geliyor; frame boyutu REST'ten gelen görüntüyle bilineceği için normalize işlemi o aşamada yapılacak.
+- Koordinatlar normalize (0-1) saklanır: embed-sdk tıklamalara `nx, ny` (data-step köküne göre, yoksa görünüme göre) ekliyor. Ayrıca hedef öğenin seçicisi (`selector`) ve öğe içindeki normalize konum (`ex, ey`) kaydediliyor.
+- Canlı sitede (M4 sonrası) ekran = `data-step`; durum otomatik (`role=dialog` açılması, `aria-expanded`, `aria-invalid`, URL hash) ya da açık `data-state` etiketiyle belirlenir ve Figma alias'larındaki gibi `state` olayı olur. Referans gezinti her (adım, durum) için görüntü ve öğe kutularını saklar; öğesi hiçbir referans görüntüde olmayan tıklamalar haritaya çizilmez, "görüntüsü olmayan durum" altında öğe etiketiyle listelenir. Figma tıklamaları frame koordinatında (`nearestScrollingFrameMousePosition` + kaydırma) geliyor; frame boyutu REST'ten gelen görüntüyle bilineceği için normalize işlemi o aşamada yapılacak.
 
 ---
 
