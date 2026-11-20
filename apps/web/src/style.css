@@ -38,7 +38,8 @@ textarea { width: 100%; font: inherit; padding: 10px; border-radius: 9px; border
 button.glow { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 35%, transparent); }
 .proto { flex: 1; width: 100%; border: 0; background: #2c2c2c; }
 .loading { position: absolute; top: 50%; width: 100%; text-align: center; color: #ccc; }
-.overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); display: flex; align-items: flex-start; justify-content: center; overflow: auto; }
+/* Question overlay: the prototype behind already shows the NEXT screen; hide it well so it does not bias the answer about the previous one (pilot feedback). */
+.overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.88); backdrop-filter: blur(6px); display: flex; align-items: flex-start; justify-content: center; overflow: auto; }
 .pulse { animation: pulse 1.4s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: 0.5; } }
 dl dt { font-weight: 600; margin-top: 12px; }
