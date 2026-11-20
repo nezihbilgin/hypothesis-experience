@@ -71,6 +71,7 @@ $('#start').onclick = () => void start()
 // ?smoke=N: start automatically, stop after N seconds and print a summary (headless check with a fake camera).
 const smoke = Number(new URLSearchParams(location.search).get('smoke') || 0)
 if (smoke > 0) {
+  if (new URLSearchParams(location.search).get('audio')) $('#audio').checked = true
   void start()
   const timer = setInterval(() => {
     if (samples.length < smoke) return
@@ -78,7 +79,7 @@ if (smoke > 0) {
     stop()
     const out = document.createElement('pre')
     out.id = 'smoke'
-    out.textContent = JSON.stringify({ delegate: client?.delegate ?? null, decision, seconds: samples.length, first: samples[0], last: samples[samples.length - 1], errors })
+    out.textContent = JSON.stringify({ delegate: client?.delegate ?? null, decision, seconds: samples.length, talking: samples.map((x) => x.talking), errors })
     document.body.append(out)
   }, 200)
 }

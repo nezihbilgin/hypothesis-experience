@@ -41,6 +41,9 @@ export class SensingClient {
 
   async start(): Promise<void> {
     const fps = this.o.targetFps ?? 15
+    // Create the AudioContext before any await, while the click's user activation is still valid;
+    // otherwise Chrome may start it suspended and the analyser reads silence.
+    if (this.o.audio) this.audioCtx = new AudioContext()
     this.stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, frameRate: 30 }, audio: this.o.audio ?? false })
     const video = document.createElement('video')
     video.muted = true
@@ -91,8 +94,9 @@ export class SensingClient {
   private startVad(): void {
     const track = this.stream?.getAudioTracks()[0]
     if (!track) return
-    const ac = new AudioContext()
+    const ac = this.audioCtx ?? new AudioContext()
     this.audioCtx = ac
+    void ac.resume()
     const src = ac.createMediaStreamSource(new MediaStream([track]))
     const an = ac.createAnalyser()
     an.fftSize = 1024
