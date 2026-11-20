@@ -8,6 +8,9 @@ describe('figma embed url', () => {
     expect(u.searchParams.get('embed-host')).toBe('localhost')
     expect(u.searchParams.get('client-id')).toBe(FIGMA_CLIENT_ID)
     expect(u.searchParams.get('node-id')).toBe('2-4145')
+    expect(u.searchParams.get('hide-ui')).toBe('1')
+    expect(u.searchParams.get('footer')).toBe('false')
+    expect(u.searchParams.get('hotspot-hints')).toBe('0')
   })
   it('leaves non-Figma links alone', () => {
     expect(figmaEmbedUrl('https://demo.example/app', 'localhost')).toBe('https://demo.example/app')

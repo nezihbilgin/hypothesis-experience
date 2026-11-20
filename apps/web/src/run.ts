@@ -72,6 +72,11 @@ export function figmaEmbedUrl(raw: string, host: string): string {
   u.hostname = 'embed.figma.com'
   u.searchParams.set('embed-host', host || 'localhost')
   u.searchParams.set('client-id', FIGMA_CLIENT_ID)
+  // Participant view: no Figma toolbar/footer over the prototype (it covered sticky buttons in the first pilot),
+  // and no hotspot hints, which would flash clickable areas after a miss and change dead-click behaviour.
+  u.searchParams.set('hide-ui', '1')
+  u.searchParams.set('footer', 'false')
+  u.searchParams.set('hotspot-hints', '0')
   return u.toString()
 }
 
