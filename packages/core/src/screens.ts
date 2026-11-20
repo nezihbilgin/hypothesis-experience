@@ -82,6 +82,35 @@ export function firstActionLatencies(events: InteractionEvent[]): number[] {
   return out
 }
 
+// ---- Logical screens (state variants) ------------------------------------------------------------------
+/** State-variant node id -> logical screen key, from the cards' aliases. */
+export function aliasMap(cards: HypothesisCard[]): Record<string, string> {
+  const m: Record<string, string> = {}
+  for (const c of cards) for (const a of c.aliases ?? []) m[a] = c.screenKey
+  return m
+}
+
+/**
+ * Maps every event to its logical screen and turns a 'screen' event that does not change the logical screen into
+ * a 'state' event, so state variants neither split visits nor count as transitions. Idempotent.
+ */
+export function logicalEvents(events: InteractionEvent[], cards: HypothesisCard[]): InteractionEvent[] {
+  const m = aliasMap(cards)
+  if (!Object.keys(m).length) return events
+  let current: string | null = null
+  return [...events]
+    .sort((a, b) => a.t - b.t)
+    .map((e) => {
+      const key = m[e.screenKey] ?? e.screenKey
+      if (e.type !== 'screen') return key === e.screenKey ? e : { ...e, screenKey: key }
+      const node = (e.payload?.node as string | undefined) ?? e.screenKey
+      if (key === current) return { ...e, screenKey: key, type: 'state' as const, payload: { ...e.payload, node } }
+      current = key
+      const from = typeof e.payload?.from === 'string' ? m[e.payload.from] ?? e.payload.from : undefined
+      return { ...e, screenKey: key, payload: { ...e.payload, ...(from ? { from } : {}), ...(node !== key ? { node } : {}) } }
+    })
+}
+
 // ---- Visits -------------------------------------------------------------------------------------------
 export interface Visit {
   screenKey: string
@@ -116,7 +145,7 @@ export function computeScreenReport(input: ScreenSessionInput): ScreenReport {
   const caps: Capabilities = { hasHover: true, hasScreenVideo: false, ...input.capabilities, hasCamera: input.cameraEnabled && input.capabilities?.hasCamera !== false }
   const cameraEnabled = caps.hasCamera
   const faceOn = cameraEnabled && input.faceSignals === true
-  const events = [...input.events].sort((a, b) => a.t - b.t)
+  const events = logicalEvents(input.events, cards).sort((a, b) => a.t - b.t)
   const end = Math.max(1, Math.ceil(input.endSec))
   const visits = visitsFrom(events, input.endSec)
   const order = new Map(cards.map((c) => [c.screenKey, c.order]))

@@ -3,6 +3,7 @@ import example from './fixtures/study.example.json'
 import {
   FigmaAdapter,
   RageClickDetector,
+  aliasMap,
   cameraQuality,
   cardsFromTask,
   computeBaseline,
@@ -142,6 +143,36 @@ describe('figma adapter', () => {
     const baseline = computeBaseline([], [])
     const r = computeScreenReport({ cards, events, samples: [], baseline, endSec: 6, cameraEnabled: false })
     expect(r.mismatches.find((m) => m.screenKey === '1:2')?.text).toBe('Sepet: akıcı bekledin, katılımcı üç kez tepkisiz bir yere tıkladı ve bir kez aynı yere art arda tıkladı.')
+  })
+})
+
+describe('screen aliases (Figma state variants)', () => {
+  const cards: HypothesisCard[] = [
+    { screenKey: 'amount', screenName: 'Tutar', order: 1, behavior: 'decide', expectedSec: [0, 60], aliases: ['amount-2', 'amount-3'] },
+    { screenKey: 'cards', screenName: 'Kartlar', order: 2, behavior: 'flow', expectedSec: [0, 60], aliases: ['cards-all'] }
+  ]
+  it('the adapter turns a state change into a state event, not a screen transition', () => {
+    const a = new FigmaAdapter({}, aliasMap(cards))
+    const out = [
+      ...a.push({ type: 'PRESENTED_NODE_CHANGED', data: { presentedNodeId: 'amount' } }, 0).events,
+      ...a.push({ type: 'PRESENTED_NODE_CHANGED', data: { presentedNodeId: 'amount-2' } }, 2).events,
+      ...a.push({ type: 'PRESENTED_NODE_CHANGED', data: { presentedNodeId: 'amount-3' } }, 4).events,
+      ...a.push({ type: 'PRESENTED_NODE_CHANGED', data: { presentedNodeId: 'cards-all' } }, 6).events
+    ]
+    expect(out.map((e) => `${e.type}:${e.screenKey}`)).toEqual(['screen:amount', 'state:amount', 'state:amount', 'screen:cards'])
+    expect(out[3].payload).toMatchObject({ from: 'amount', node: 'cards-all' })
+  })
+  it('the report keeps one visit per logical screen even from raw node events', () => {
+    const raw: InteractionEvent[] = [ev(0, 'amount', 'screen'), ev(1, 'amount', 'click'), ev(3, 'amount-2', 'screen'), ev(5, 'amount-3', 'screen'), ev(9, 'cards', 'screen')]
+    const r = computeScreenReport({ cards, events: raw, samples: [], baseline: computeBaseline([], []), endSec: 12, cameraEnabled: false })
+    expect(r.screens.find((x) => x.screenKey === 'amount')).toMatchObject({ durationSec: 9, visits: [{ start: 0, end: 9 }], backs: 0 })
+  })
+  it('study aliases parse, must be unique, and the target may be an alias', () => {
+    const base = { name: 'x', sourceType: 'figma', sourceUrl: 'https://www.figma.com/proto/x' }
+    const ok = parseStudy({ ...base, tasks: [{ prompt: 'p', targetScreen: 'cards-all', screens: [{ key: 'cards', name: 'K', behavior: 'flow', expectedSec: [0, 5], aliases: ['cards-all'] }] }] })
+    expect(ok.ok && cardsFromTask(ok.study.tasks[0])[0].aliases).toEqual(['cards-all'])
+    const dup = parseStudy({ ...base, tasks: [{ prompt: 'p', screens: [{ key: 'a', name: 'A', behavior: 'flow', expectedSec: [0, 5], aliases: ['b'] }, { key: 'b', name: 'B', behavior: 'flow', expectedSec: [0, 5] }] }] })
+    expect(dup.ok ? [] : dup.errors).toEqual(['Görev 1: Ekran 2: "b" anahtarı iki kez kullanılmış.'])
   })
 })
 

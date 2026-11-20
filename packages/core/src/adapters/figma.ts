@@ -42,7 +42,16 @@ export class FigmaAdapter {
   screenKey: string | null = null
   private rage = new RageClickDetector()
 
-  constructor(public context: FigmaContext = {}) {}
+  /** Raw node id currently presented (a state variant when aliases are used). */
+  private node: string | null = null
+
+  /** aliases: state-variant node id -> logical screen key (from the study's screen aliases, see aliasMap). */
+  constructor(
+    public context: FigmaContext = {},
+    private readonly aliases: Record<string, string> = {}
+  ) {}
+
+  private logical = (node: string): string => this.aliases[node] ?? node
 
   /** t: seconds from task start. */
   push(raw: unknown, t: number): FigmaPushResult {
@@ -54,18 +63,30 @@ export class FigmaAdapter {
 
     if (type === 'PRESENTED_NODE_CHANGED') {
       const node = str(data.presentedNodeId)
-      if (!node || node === this.screenKey) return { events: [] }
+      if (!node || node === this.node) return { events: [] }
+      const key = this.logical(node)
+      const via = str(data.interactionType)
+      const fromNode = this.node
+      this.node = node
+      if (key === this.screenKey) {
+        // Same logical screen, another state: not a screen transition (no visit split, no question).
+        return { events: [this.ev(t, 'state', { node, ...(fromNode ? { from: fromNode } : {}), ...(via ? { interactionType: via } : {}) })] }
+      }
       const payload: Record<string, unknown> = {}
       if (this.screenKey) payload.from = this.screenKey
-      const via = str(data.interactionType)
+      if (node !== key) payload.node = node
       if (via) payload.interactionType = via
-      this.screenKey = node
+      this.screenKey = key
       return { events: [this.ev(t, 'screen', payload)] }
     }
 
     if (type === 'MOUSE_PRESS_OR_RELEASE') {
       // A click can arrive before the first PRESENTED_NODE_CHANGED; fall back to the node it reports.
-      if (!this.screenKey) this.screenKey = str(data.presentedNodeId) ?? null
+      if (!this.screenKey) {
+        const pn = str(data.presentedNodeId)
+        this.node = pn ?? null
+        this.screenKey = pn ? this.logical(pn) : null
+      }
       if (!this.screenKey) return { events: [] }
       // Figma sends the click position as data.mousePosition {x, y} (frame coordinates); older/other payloads x, y.
       const obj = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' ? (v as Record<string, unknown>) : {})

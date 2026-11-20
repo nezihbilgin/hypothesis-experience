@@ -4,6 +4,7 @@ import {
   FigmaAdapter,
   SessionClock,
   absoluteNow,
+  aliasMap,
   cardsFromTask,
   computeBaseline,
   computeScreenReport,
@@ -219,7 +220,7 @@ export class SessionRun {
       viewport,
       orientation: viewport.h > viewport.w ? 'portrait' : 'landscape',
       streamId: PROTO_STREAM
-    })
+    }, aliasMap(this.cards()))
     this.protoReady = false
     this.sensing?.newPhase()
     this.clock.start()
@@ -266,9 +267,11 @@ export class SessionRun {
     let question: QuestionMoment | undefined
     for (const ev of events) {
       this.task.events.push(ev)
-      if (ev.type !== 'screen') continue
+      // Target can be a logical screen or one of its state variants (aliases): compare the raw node too.
       const target = this.study.tasks[this.taskIndex].targetScreen
-      if (target && ev.screenKey === target && this.task.reachedTargetAt === null) this.task.reachedTargetAt = ev.t
+      const node = typeof ev.payload?.node === 'string' ? ev.payload.node : ev.screenKey
+      if (target && (ev.type === 'screen' || ev.type === 'state') && (node === target || ev.screenKey === target) && this.task.reachedTargetAt === null) this.task.reachedTargetAt = ev.t
+      if (ev.type !== 'screen') continue
       const known = this.cards().some((c) => c.screenKey === ev.screenKey)
       if (!known && !this.task.unknownScreens.includes(ev.screenKey)) this.task.unknownScreens.push(ev.screenKey)
       const from = ev.payload?.from

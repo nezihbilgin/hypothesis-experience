@@ -21,7 +21,7 @@ export interface EmbedMessage {
   streamId?: string
 }
 
-const TYPES: InteractionType[] = ['screen', 'click', 'dead-click', 'rage-click', 'input-edit', 'input-delete', 'scroll', 'pointer-move', 'visibility', 'js-error']
+const TYPES: InteractionType[] = ['screen', 'click', 'dead-click', 'rage-click', 'input-edit', 'input-delete', 'scroll', 'pointer-move', 'visibility', 'js-error', 'state']
 const POINTERS: PointerKind[] = ['mouse', 'touch', 'pen']
 
 /** Validates a raw message and converts it; null for anything that is not a well-formed SDK message. */

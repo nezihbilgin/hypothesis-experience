@@ -17,6 +17,8 @@ export interface StudyScreen {
   name: string
   /** Shown to participants in questions; when missing, questions do not name the screen. */
   participantName?: string
+  /** Other node ids that are state variants of this screen (same logical screen). */
+  aliases?: string[]
   behavior: Behavior
   expectedSec: [number, number]
   successCriterion?: string
@@ -136,10 +138,22 @@ export function parseStudy(input: unknown): ParseResult {
         const note = optText(s.note)
         const probe = optText(s.probe)
         const participantName = optText(s.participantName)
+        let aliases: string[] | undefined
+        if (s.aliases !== undefined) {
+          if (!Array.isArray(s.aliases) || !s.aliases.every((a) => typeof a === 'string' && a.trim())) errors.push(`${at} (${sname || '?'}): aliases metin listesi olmalı.`)
+          else {
+            aliases = (s.aliases as string[]).map((a) => a.trim())
+            for (const a of aliases) {
+              if (seen.has(a)) errors.push(`${at}: "${a}" anahtarı iki kez kullanılmış.`)
+              seen.add(a)
+            }
+          }
+        }
         screens.push({
           key,
           name: sname,
           ...(participantName ? { participantName } : {}),
+          ...(aliases?.length ? { aliases } : {}),
           behavior,
           expectedSec: okRange ? [e[0] as number, e[1] as number] : [0, 0],
           ...(successCriterion ? { successCriterion } : {}),
@@ -151,7 +165,7 @@ export function parseStudy(input: unknown): ParseResult {
     const startScreen = optText(t.startScreen)
     if (startScreen && !/^I?\d+:\d+$/.test(startScreen)) errors.push(`${tAt}startScreen bir Figma node id olmalı, örn. "26:7221".`)
     const targetScreen = optText(t.targetScreen)
-    if (targetScreen && screens.length && !screens.some((x) => x.key === targetScreen)) errors.push(`${tAt}targetScreen "${targetScreen}" tanımlı ekranlardan biri olmalı.`)
+    if (targetScreen && screens.length && !screens.some((x) => x.key === targetScreen || x.aliases?.includes(targetScreen))) errors.push(`${tAt}targetScreen "${targetScreen}" tanımlı ekranlardan biri olmalı.`)
     tasks.push({ id, prompt: prompt ?? '', screens, ...(startScreen ? { startScreen } : {}), ...(targetScreen ? { targetScreen } : {}) })
   })
 
@@ -220,6 +234,7 @@ export function cardsFromTask(task: StudyTask): HypothesisCard[] {
     screenKey: s.key,
     screenName: s.name,
     ...(s.participantName ? { participantName: s.participantName } : {}),
+    ...(s.aliases ? { aliases: s.aliases } : {}),
     order: i + 1,
     behavior: s.behavior,
     expectedSec: s.expectedSec,

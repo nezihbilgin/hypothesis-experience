@@ -62,6 +62,8 @@ export interface HypothesisCard {
   note?: string
   /** Planned question, asked when the participant leaves this screen. */
   probe?: string
+  /** Other node ids that are state variants of this screen (Figma: one node per state). Same logical screen. */
+  aliases?: string[]
 }
 
 export type InteractionType =
@@ -75,6 +77,7 @@ export type InteractionType =
   | 'pointer-move' // payload: { x, y }; throttled, hovering pointers only (mouse/pen)
   | 'visibility' // payload: { hidden: boolean }
   | 'js-error'
+  | 'state' // payload: { node, from }: another Figma state variant of the same logical screen (see aliases)
 
 export type PointerKind = 'mouse' | 'touch' | 'pen'
 
