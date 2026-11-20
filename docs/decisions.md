@@ -8,6 +8,36 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 
 ---
 
+## 2026-11-20: Yüz sinyali ayarı, 30 sn ısınma, görev bazında zorluk puanı
+
+Kaynak: ürün yönetimi thread'i (Nezih onayı, 20 Kasım). Durum: kararlaştırıldı.
+
+### Yüz sinyalleri (hukuki çerçeve)
+
+- Çalışma bazında "yüz sinyalleri" ayarı. İşyeri ya da eğitim bağlamındaki çalışmalarda varsayılan **kapalı**; araştırmacı açarsa bağlamı onaylar.
+- Katılımcıdan yüz sinyalleri için ayrı, açık onay (kamera zaten opsiyonel).
+- Sorumluluk sözleşmeyle tamamen müşteriye devredilemez (AI Act Madde 5 sağlayıcıyı da bağlar). Koruma ürün tasarımında: duygu çıkarımı yok, kareler cihazdan çıkmaz, sadece sayılar gider. Bunlar müşteri ayarıyla değiştirilemez.
+- İlk dış müşteriden önce tek seferlik, dar kapsamlı hukuki görüş: ham blendshape'in duygu çıkarmadan destekleyici kullanımı Madde 5 ve GDPR Madde 9 açısından.
+- **Yüz verisi ancak vazgeçilmez olduğu gösterilirse kalır:** geriye dönük doğrulamada ve karşılaştırmalı testte her yüz sinyali kapatılarak katkısı ölçülür; katkısı olmayan sinyal çıkar. Kamera tabanlı efor sinyalleri bu kanıt gelene kadar zorunlu değil; kamerasız mod tam bir mod olarak kalır.
+- Nezih'in kendi çalışmalarında katılımcılar şirket çalışanıysa yüz sinyalleri kapalı.
+
+### Isınma görevi
+
+- Süre ~20 sn yerine **30 sn** (nötr okuma + birkaç tıklama).
+- 30 sn'de 5-10 göz kırpma olur; göz kırpma baseline'ı ilk görevin ilk ekranıyla güncellenir. Geriye dönük doğrulamada sadece ısınma ile ısınma + ilk ekran karşılaştırılır.
+
+### Görev sonu: retro yerine zorluk puanı
+
+- Görev sonundaki klipli retro kaldırıldı (sorular ekran geçişinde soruluyor, bkz. önceki giriş).
+- Her görevden **önce** beklenen zorluk (1-7), görevden **hemen sonra** SEQ (1-7). Albert & Dixon beklenen/yaşanan zorluk yöntemi; katılımcının kendi beklenti-deneyim farkı raporda hipotez-davranış farkının yanında gösterilir.
+- Oturum sonunda görevler kısa hatırlatılır ve "en çok zorlandığın görev hangisiydi, neden?" diye tek açık soru sorulur (yazılı).
+
+### Figma
+
+- "Anyone with the link" paylaşımı kabul edildi; alternatif araştırılmayacak.
+
+---
+
 ## 2026-11-20: Sorular ekran geçişinde, AI ile derinleştirme; retro için video yerine frame replay
 
 Kaynak: ürün yönetimi thread'i (Nezih onayı, 20 Kasım). Durum: kararlaştırıldı. 20 Kasım tarihli "Retrospektif" bölümünü (madde 5) aşağıdaki noktalarda geçersiz kılar.
