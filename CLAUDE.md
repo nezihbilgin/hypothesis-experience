@@ -4,14 +4,18 @@ Hypothesis & Real Experience: tasarımcının ekran bazlı hipotezini katılımc
 tarayıcıda çalışan self-moderated usability test aracı. Sahibi Nezih; Türkçe yazışır.
 
 Önce oku:
-- `docs/HANDOFF-hypothesis-experience.md`: ilkeler, veri modeli, sinyaller, fazlar. Kaynak doğruluk burası.
+- `docs/decisions.md`: tarihli kararlar, en yenisi en üstte. Handoff ile çelişirse bu dosya geçerli. Her oturumun başında oku.
+- `docs/HANDOFF-hypothesis-experience.md`: ilkeler, veri modeli, sinyaller, fazlar.
 - `FAZ0-RAPOR.md`: Faz 0 sonuçları ve Faz 1'e taşınan kararlar (bölüm "Faz 1'e taşınan kararlar").
 
-Durum (19 Kasım 2026): Faz 0 kapandı, Faz 1 başladı. `core`'a çalışma JSON'u, Figma adaptörü, rage click, kalite kontrolü kararı,
-az örnekli saniye kuralı ve çalışma özeti eklendi. Sıradaki: `sensing` paketi (worker, SecondSample, kalite ölçümü).
+Planı ya da mimariyi değiştiren her kararı `docs/decisions.md` dosyasına tarihli bir giriş olarak ekle (en üste). Planlama sohbeti de aynı dosyaya yazıyor.
+
+Durum (20 Kasım 2026): Faz 0 kapandı, Faz 1 başladı. `faz1-core` branch'inde `core`'a çalışma JSON'u, Figma adaptörü, rage click,
+kalite kontrolü kararı, az örnekli saniye kuralı ve çalışma özeti eklendi. Sıradaki: `docs/decisions.md` 2026-11-20 "Kodla uzlaştırma" listesi
+(Nezih onayıyla), sonra `sensing` paketi.
 
 Kurallar:
-- İlke 1: raporda ve kodda duygu/niyet çıkarımı yok, sadece gözlemlenen davranış. Yüz ifadesi skoru kullanılmaz.
+- İlke 1: raporda ve kodda duygu/niyet çıkarımı yok, sadece gözlemlenen davranış. Duygu/ifade sınıflandırma skoru kullanılmaz; ham kas hareketi blendshape'leri (göz kırpma, kaş) sadece destekleyici sinyal olarak kullanılabilir (decisions 2026-11-20).
 - İlke 2: eşikler katılımcının ısınma görevinden öğrenilen kendi baseline'ına göre (`max(floor, 2 × p95)`).
 - İlke 3: kamera kareleri cihazdan çıkmaz; sunucuya sadece saniyelik sayılar gider.
 - `packages/core` saf ve deterministik kalır; her değişiklik Vitest testiyle gelir.
