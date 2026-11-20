@@ -10,7 +10,7 @@ import {
   type InteractionEvent
 } from '@hx/core'
 import { describe, expect, it } from 'vitest'
-import { inputChangeKind, orientationOf, screenKeyOf, selectorOf, throttle, type ElLike } from '../src/pure'
+import { inputChangeKind, normalizedPoint, orientationOf, screenKeyOf, selectorOf, throttle, type ElLike } from '../src/pure'
 
 const el = (tagName: string, attrs: Record<string, string> = {}, parent: ElLike | null = null, id?: string): ElLike => ({
   tagName,
@@ -38,6 +38,10 @@ describe('embed SDK helpers', () => {
     expect(inputChangeKind(3, 4)).toBe('input-edit')
     expect(inputChangeKind(4, 3)).toBe('input-delete')
     expect(inputChangeKind(4, 4, 'deleteContentBackward')).toBe('input-delete')
+  })
+  it('normalises a click to the screen root element', () => {
+    expect(normalizedPoint(150, 300, { left: 100, top: 100, width: 200, height: 400 })).toEqual({ nx: 0.25, ny: 0.5 })
+    expect(normalizedPoint(10, 10, { left: 0, top: 0, width: 0, height: 100 })).toBeNull()
   })
   it('orientation and throttle', () => {
     expect(orientationOf(390, 844)).toBe('portrait')

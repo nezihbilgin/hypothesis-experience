@@ -43,6 +43,16 @@ export function inputChangeKind(prevLength: number, nextLength: number, inputTyp
   return nextLength < prevLength ? 'input-delete' : 'input-edit'
 }
 
+/**
+ * Click position normalised (0..1) to the screen's root element (the data-step root, or the viewport), so a
+ * later reference image of that element can show it. Values outside 0..1 mean the click was outside the root.
+ */
+export function normalizedPoint(clientX: number, clientY: number, rect: { left: number; top: number; width: number; height: number }): { nx: number; ny: number } | null {
+  if (!(rect.width > 0 && rect.height > 0)) return null
+  const r3 = (n: number): number => Math.round(n * 1000) / 1000
+  return { nx: r3((clientX - rect.left) / rect.width), ny: r3((clientY - rect.top) / rect.height) }
+}
+
 export const orientationOf = (w: number, h: number): 'portrait' | 'landscape' => (h > w ? 'portrait' : 'landscape')
 
 /** Leaky throttle: true when at least `ms` passed since the last accepted call. */

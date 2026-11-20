@@ -8,6 +8,16 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 
 ---
 
+## 2026-11-20: Ekran referans görüntüsü soyutlaması (planlama notu)
+
+Kaynak: PM mimari notu. Durum: planlama; tıklama haritası Nezih onayı bekliyor, sadece koordinat kaydı şimdi uygulandı.
+
+- Tıklama haritası ve frame replay, iki sağlayıcılı bir "ekran referans görüntüsü" soyutlaması üzerine kurulacak: (a) Figma: REST API'den frame görüntüleri (üründe araştırmacı Figma OAuth ile bağlanır; pilotta PM görüntüleri kendi erişimiyle dışa aktarır); (b) canlı site: araştırmacının kurulumda yaptığı "referans gezinti", embed-sdk her `data-step` kök öğesini araştırmacının kendi tarayıcısında yakalar.
+- Katılımcının cihazında asla ekran görüntüsü alınmaz.
+- Koordinatlar normalize (0-1) saklanır: embed-sdk tıklamalara `nx, ny` (data-step köküne göre, yoksa görünüme göre) ekliyor. Figma tıklamaları frame koordinatında (`nearestScrollingFrameMousePosition` + kaydırma) geliyor; frame boyutu REST'ten gelen görüntüyle bilineceği için normalize işlemi o aşamada yapılacak.
+
+---
+
 ## 2026-11-20: Ölçüm seti genişledi (rage, loop, drop-off, görev başarısı, misclick)
 
 Kaynak: Nezih'in isteği, PM kapsamı (ürün yönetimi thread'i). Durum: uygulandı (`faz1-core`).

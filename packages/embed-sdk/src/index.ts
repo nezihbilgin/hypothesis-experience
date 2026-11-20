@@ -7,7 +7,7 @@
 // Privacy: form values are never read into messages (only edit/delete counts), no text content, no keystrokes.
 // Mobile-ready: pointerType (mouse/touch/pen), viewport and orientation on every event; a tap is a 'click'.
 import { EMBED_SOURCE, RageClickDetector, SCHEMA_VERSION, type EmbedMessage, type InteractionType, type PointerKind } from '@hx/core'
-import { inputChangeKind, orientationOf, screenKeyOf, selectorOf, throttle, type ElLike } from './pure'
+import { inputChangeKind, normalizedPoint, orientationOf, screenKeyOf, selectorOf, throttle, type ElLike } from './pure'
 
 export interface EmbedOptions {
   /** Origin of the participant app; messages go only there. */
@@ -79,7 +79,11 @@ export function startEmbed(o: EmbedOptions): () => void {
     const x = Math.round(e.clientX)
     const y = Math.round(e.clientY)
     const selector = selectorOf(e.target as unknown as ElLike)
-    send('click', { x, y, selector }, at, key)
+    // Normalised to the data-step root (or the viewport) for a future reference image; never a screenshot.
+    const root = (e.target as Element | null)?.closest?.('[data-step]') ?? document.documentElement
+    const rect = root === document.documentElement ? { left: 0, top: 0, width: innerWidth, height: innerHeight } : root.getBoundingClientRect()
+    const norm = normalizedPoint(e.clientX, e.clientY, rect)
+    send('click', { x, y, selector, ...(norm ?? {}) }, at, key)
     if (rage.push({ t: at / 1000, x, y, ...(lastPointer ? { pointerType: lastPointer } : {}) })) send('rage-click', { x, y, selector }, at, key)
     const m0 = mutations
     const url0 = location.href
