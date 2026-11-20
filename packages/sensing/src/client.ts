@@ -125,6 +125,11 @@ export class SensingClient {
     this.agg.flush()
   }
 
+  /** Microphone track, for the calibration page's optional audio file. Never used by the product flow. */
+  get audioTrack(): MediaStreamTrack | null {
+    return this.stream?.getAudioTracks()[0] ?? null
+  }
+
   stop(): void {
     this.flush()
     for (const id of this.timers) clearInterval(id)

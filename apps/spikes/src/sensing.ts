@@ -10,6 +10,11 @@ let samples: SecondSample[] = []
 // Calibration data: per-frame lip gap and per-frame loudness, rounded numbers only.
 let raw: { mouth: [number, number | null][]; audio: [number, number][] } = { mouth: [], audio: [] }
 let decision: unknown = null
+// Optional calibration audio file (opt-in checkbox): recorded locally, downloaded as a separate file.
+let recorder: MediaRecorder | null = null
+let audioChunks: Blob[] = []
+let audioStartSec: number | null = null
+let fileStamp = 0
 const errors: string[] = []
 const fmt = (v: unknown): string => (v === null || v === undefined ? '–' : typeof v === 'number' ? String(Math.round(v * 100) / 100) : String(v))
 
@@ -62,11 +67,23 @@ async function start(): Promise<void> {
     return
   }
   clock.start()
+  fileStamp = Date.now()
+  audioChunks = []
+  audioStartSec = null
+  const track = client.audioTrack
+  if ($('#recaudio').checked && track) {
+    recorder = new MediaRecorder(new MediaStream([track])) // default format: forcing a codec fails on some browsers (Faz 0)
+    recorder.ondataavailable = (e) => { if (e.data.size) audioChunks.push(e.data) }
+    recorder.start(1000)
+    audioStartSec = clock.t()
+  }
   $('#status').textContent = `Ölçülüyor (delegate: ${client.delegate}). İlk ${WARMUP_SEC} sn GPU ısınması, sonraki 5 sn kalite kontrolü.`
   $('#stop').disabled = false
 }
 
 function stop(): void {
+  if (recorder && recorder.state !== 'inactive') recorder.stop()
+  recorder = null
   client?.stop()
   client = null
   $('#stop').disabled = true
@@ -80,16 +97,26 @@ $('#start').onclick = () => void start()
 const smoke = Number(new URLSearchParams(location.search).get('smoke') || 0)
 if (smoke > 0) {
   if (new URLSearchParams(location.search).get('audio')) $('#audio').checked = true
+  if (new URLSearchParams(location.search).get('recaudio')) $('#recaudio').checked = true
   void start()
   const timer = setInterval(() => {
     if (samples.length < smoke) return
     clearInterval(timer)
     stop()
+    setTimeout(() => { const p = document.createElement('pre'); p.id = 'chunks'; p.textContent = String(audioChunks.length); document.body.append(p) }, 500)
     const out = document.createElement('pre')
     out.id = 'smoke'
-    out.textContent = JSON.stringify({ delegate: client?.delegate ?? null, decision, seconds: samples.length, talking: samples.map((x) => x.talking), voice: samples.map((x) => x.voice), errors })
+    out.textContent = JSON.stringify({ delegate: client?.delegate ?? null, decision, seconds: samples.length, talking: samples.map((x) => x.talking), rawMouth: raw.mouth.length, rawAudio: raw.audio.length, audioStartSec, errors })
     document.body.append(out)
   }, 200)
 }
 $('#stop').onclick = stop
-$('#dl').onclick = () => download(`sensing-${Date.now()}.json`, { env: envInfo(), decision, samples, raw, errors })
+$('#dl').onclick = () => {
+  download(`sensing-${fileStamp}.json`, { env: envInfo(), decision, samples, raw, audioFile: audioChunks.length ? { name: `sensing-${fileStamp}.webm`, startSec: audioStartSec } : null, errors })
+  if (audioChunks.length) {
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(new Blob(audioChunks, { type: audioChunks[0].type || 'audio/webm' }))
+    a.download = `sensing-${fileStamp}.webm`
+    setTimeout(() => a.click(), 300)
+  }
+}

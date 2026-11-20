@@ -2,7 +2,8 @@
 <body><main>
 <h1>Faz 1: sensing denemesi</h1>
 <p class="lead">@hx/sensing paketini gerçek kamerayla dener: saniyelik ölçümler (kare sayısı, yüz, baş hızı, hareketsizlik, ekrana yaklaşma, göz kırpma, kaş, ses, dudak ve çene hareketi, ağız hareketiyle doğrulanmış konuşma oranı) ve 5 sn'lik kalite kontrolü. Görüntü ve ses cihazdan çıkmaz.</p>
-<p><label><input type="checkbox" id="audio" checked> Mikrofon (konuşma oranı)</label></p>
+<p><label><input type="checkbox" id="audio" checked> Mikrofon (konuşma oranı)</label><br>
+<label><input type="checkbox" id="recaudio"> Ses dosyasını da kaydet (sadece kalibrasyon için; ayrı bir .webm olarak bu bilgisayara iner, hiçbir yere gönderilmez)</label></p>
 <p><button id="start">Başlat (60 sn)</button> <button id="stop" disabled>Durdur</button> <button id="dl" disabled>Sonucu indir</button></p>
 <p id="status" class="lead"></p>
 <table><tbody id="quality"></tbody></table>
