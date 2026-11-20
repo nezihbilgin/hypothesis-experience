@@ -80,7 +80,10 @@ describe('questions at screen transitions', () => {
     const r2 = computeScreenReport({ cards: [t2Card], events: [ev(0, 'a', 'screen'), ev(2, 'a', 'click'), ev(3, 'b', 'screen')], samples: [], baseline, endSec: 3, cameraEnabled: false })
     const q2 = questionAtTransition({ card: t2Card, report: r2, leftAt: 3, asked: { inTask: [], inSession: [q1!] } })
     expect(q2).toMatchObject({ source: 'planned', probe: 'Nereden başlayacağını nasıl buldun?' })
-    // ...and only once: leaving 'a' again in task 2 does not repeat it.
+    // Friction on 'a' again in task 2 is a new finding: signal questions are de-duplicated per task.
+    const r3 = computeScreenReport({ cards: [t2Card], events: [ev(0, 'a', 'screen'), ev(1, 'a', 'dead-click'), ev(2, 'a', 'click'), ev(3, 'b', 'screen')], samples: [], baseline, endSec: 3, cameraEnabled: false })
+    expect(questionAtTransition({ card: t2Card, report: r3, leftAt: 5, asked: { inTask: [q2!], inSession: [q1!, q2!] } })?.source).toBe('signal')
+    // ...while the planned one is only once: leaving 'a' again in task 2 does not repeat it.
     expect(questionAtTransition({ card: t2Card, report: r2, leftAt: 5, asked: { inTask: [q2!], inSession: [q1!, q2!] } })).toBeNull()
   })
   it('session cap stops transition questions in later tasks', () => {

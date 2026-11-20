@@ -3,6 +3,8 @@
 // - Signal-triggered question: an unexpected mismatch, also asked at the screen transition, never mid-screen.
 // - At most `perTask` transition questions per task; remaining mismatches go to a short end-of-task retro;
 //   at most `perSession` question moments per session. The end-of-task retro is off by default (endOfTask: 0).
+// De-duplication: planned questions once per session (per screen); signal questions once per task per screen +
+// mismatch kind, since the same screen in another task serves another purpose (decisions 2026-11-20).
 // The participant sees no numbers: question wording comes from the text catalog; `mismatch.text` is for the researcher.
 // Pure: the app calls these with a report computed on the data so far (computeScreenReport with endSec = now).
 import type { HypothesisCard, Mismatch, ScreenReport } from './types'
@@ -54,7 +56,7 @@ export function questionAtTransition(opts: {
   const plannedDone = asked.inSession.some((q) => q.source === 'planned' && q.screenKey === card.screenKey)
   if (card.probe && !plannedDone) return { screenKey: card.screenKey, askedAt: leftAt, source: 'planned', probe: card.probe, replay: lastReplay }
   const m = report.mismatches
-    .filter((x) => x.screenKey === card.screenKey && x.kind !== 'over-time' && !askedAbout(asked.inSession, x))
+    .filter((x) => x.screenKey === card.screenKey && x.kind !== 'over-time' && !askedAbout(asked.inTask, x))
     .sort(bySeverity)[0]
   return m ? { screenKey: card.screenKey, askedAt: leftAt, source: 'signal', mismatch: m, replay: m.replay } : null
 }
@@ -64,7 +66,7 @@ export function endOfTaskQuestions(opts: { report: ScreenReport; endedAt: number
   const limits = opts.limits ?? DEFAULT_QUESTION_LIMITS
   const budget = Math.max(0, Math.min(limits.endOfTask, limits.perSession - opts.asked.inSession.length))
   return opts.report.mismatches
-    .filter((m) => !askedAbout(opts.asked.inSession, m))
+    .filter((m) => !askedAbout(opts.asked.inTask, m))
     .sort(bySeverity)
     .slice(0, budget)
     .sort((a, b) => a.at - b.at)
