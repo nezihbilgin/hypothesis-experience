@@ -1,12 +1,23 @@
 {
   "name": "hypothesis-experience",
   "private": true,
-  "workspaces": ["packages/*", "apps/*"],
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc --noEmit -p packages/core",
+    "typecheck": "tsc --noEmit -p packages/core && tsc --noEmit -p packages/sensing && tsc --noEmit -p packages/embed-sdk && tsc --noEmit -p apps/web",
     "spikes": "npm run build -w @hx/spikes && npm run preview -w @hx/spikes",
-    "spikes:dev": "npm run dev -w @hx/spikes"
+    "spikes:dev": "npm run dev -w @hx/spikes",
+    "embed": "npm run build -w @hx/embed-sdk",
+    "web:dev": "npm run dev -w @hx/web",
+    "web": "npm run build -w @hx/web && npm run preview -w @hx/web"
   },
-  "devDependencies": { "@types/node": "^22", "tsx": "4.20.3", "typescript": "5.8.3", "vitest": "3.2.4" }
+  "devDependencies": {
+    "@types/node": "^22",
+    "tsx": "4.20.3",
+    "typescript": "5.8.3",
+    "vitest": "3.2.4"
+  }
 }

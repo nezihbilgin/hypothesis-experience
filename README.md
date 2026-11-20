@@ -6,10 +6,24 @@ Tasarım kararları: [docs/HANDOFF-hypothesis-experience.md](./docs/HANDOFF-hypo
 ```
 packages/core/   Saf, deterministik model (Vitest). Senti felt.ts'ten port edildi.
   src/engine.ts      baseline yüzdelik, runs, impulse+EMA eğrisi, aynı tür birleştirme
-  src/screens.ts     ekran pencereli model: hipotez kartı -> beklenen seviye, 4 sapma tipi, Türkçe cümleler, retro klip seçimi
+  src/screens.ts     ekran pencereli model: iki eksen (efor, sürtünme), 4 sapma tipi, Türkçe rapor cümleleri
+  src/questions.ts   ekran geçişinde soru seçimi (planlı + sinyalle), görev sonu kısa retro
+  src/texts.ts       katılımcı metin kataloğu (TR varsayılan) ve düzenlenebilir puan ölçekleri
+  src/study.ts       çalışma tanımı JSON'u ve doğrulama (örnek: test/fixtures/study.example.json)
+  src/adapters/figma.ts  Figma Embed mesajları -> interaction_event
+  src/signals.ts     rage click tespiti (Figma ve embed-sdk ortak)
+  src/quality.ts     kamera kalite kontrolü kararı (fps, yüz, ışık ipucu)
+  src/aggregate.ts   görev bazında özet (ekran başına sapma sayısı, beklenen/yaşanan zorluk)
   src/compat/        Senti uyumluluk modeli (sadece regresyon testi için)
   test/              regresyon (docs/evidence), Senti'nin birim testleri, ekran modeli testleri
-apps/spikes/     Faz 0 tarayıcı spike'ları (Vite, çok sayfalı)
+packages/sensing/  Tarayıcıda yüz ve ses ölçümü -> SecondSample (kareler cihazdan çıkmaz)
+  src/worker.ts      MediaPipe FaceLandmarker worker'ı (blendshape açık)
+  src/frames.ts      kare sonuçları -> saniyelik ölçüm, göz kırpma (saf, test edilir)
+  src/vad.ts         enerji tabanlı ses aktivitesi
+  src/client.ts      kamera + mikrofon + worker denetleyicisi
+packages/embed-sdk/  Prototip sayfasına eklenen tek <script>: olaylar -> postMessage (interaction_event v2)
+apps/web/        Katılımcı uygulaması (Vite + React): onay, kamera kontrolü, ısınma, görevler, sorular, özet
+apps/spikes/     Faz 0 spike'ları ve Faz 1 sensing deneme sayfası (Vite, çok sayfalı)
 ```
 
 ## Çalıştırma
@@ -18,7 +32,7 @@ Node 20+ gerekir.
 
 ```bash
 npm install
-npm test            # core testleri (24 test)
+npm test            # core testleri
 npm run spikes      # spike sayfalarını derler ve http://localhost:4173 adresinde açar
 ```
 

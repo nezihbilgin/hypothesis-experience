@@ -8,6 +8,209 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 
 ---
 
+## 2026-11-20: Platform sırası
+
+Kaynak: ürün yönetimi thread'i, Nezih onayı. Durum: kararlaştırıldı; bugün kodda değişiklik yok.
+
+- Sıra: Figma (şimdi) → canlı web siteleri (embed-sdk, referans gezinti, ekran = `data-step`, durum = otomatik ya da `data-state`) → mobil web → native SDK.
+- Native SDK sadece test sürümlerinde açılır (TestFlight, iç dağıtım, debug); App Store sürümüne asla girmez.
+- Mobil ve native'de kamerasız mod varsayılan; iki cihaz modu (laptop kamerası) öneri olarak sunulur.
+- Native'de soru cevaplama için ses kaydı, dikte ve laptop sayfası kullanıcı testlerinde karşılaştırılacak.
+- Olay şeması platformdan bağımsız kalır (bugünkü v2 şeması: `pointerType`, `viewport`, `orientation`, `streamId`, yetenek bayrakları).
+
+---
+
+## 2026-11-20: Ekran referans görüntüsü soyutlaması (planlama notu)
+
+Kaynak: PM mimari notu. Durum: planlama; tıklama haritası Nezih onayı bekliyor, sadece koordinat kaydı şimdi uygulandı.
+
+- Tıklama haritası ve frame replay, iki sağlayıcılı bir "ekran referans görüntüsü" soyutlaması üzerine kurulacak: (a) Figma: REST API'den frame görüntüleri (üründe araştırmacı Figma OAuth ile bağlanır; pilotta PM görüntüleri kendi erişimiyle dışa aktarır); (b) canlı site: araştırmacının kurulumda yaptığı "referans gezinti", embed-sdk her `data-step` kök öğesini araştırmacının kendi tarayıcısında yakalar.
+- Katılımcının cihazında asla ekran görüntüsü alınmaz.
+- Koordinatlar normalize (0-1) saklanır: embed-sdk tıklamalara `nx, ny` (data-step köküne göre, yoksa görünüme göre) ekliyor. Ayrıca hedef öğenin seçicisi (`selector`) ve öğe içindeki normalize konum (`ex, ey`) kaydediliyor.
+- Canlı sitede (M4 sonrası) ekran = `data-step`; durum otomatik (`role=dialog` açılması, `aria-expanded`, `aria-invalid`, URL hash) ya da açık `data-state` etiketiyle belirlenir ve Figma alias'larındaki gibi `state` olayı olur. Referans gezinti her (adım, durum) için görüntü ve öğe kutularını saklar; öğesi hiçbir referans görüntüde olmayan tıklamalar haritaya çizilmez, "görüntüsü olmayan durum" altında öğe etiketiyle listelenir. Figma tıklamaları frame koordinatında (`nearestScrollingFrameMousePosition` + kaydırma) geliyor; frame boyutu REST'ten gelen görüntüyle bilineceği için normalize işlemi o aşamada yapılacak.
+
+---
+
+## 2026-11-20: Ölçüm seti genişledi (rage, loop, drop-off, görev başarısı, misclick)
+
+Kaynak: Nezih'in isteği, PM kapsamı (ürün yönetimi thread'i). Durum: uygulandı (`faz1-core`).
+
+- **Rage click:** ekran başına sayı olarak raporda (`ScreenStats.rageClicks`, çalışma özetinde toplam).
+- **Loop:** bir görevde aynı iki mantıksal ekran arasında 2+ gidip gelme (A→B→A→B = 1, A→B→A→B→A→B = 2; çakışmasız sayılır). Sürtünme girdisi (+20/loop), B ekranına (geriye doğru terk edilen ekran) yazılır; geri dönüş sayısından ayrı raporlanır (`report.loops`, `ScreenStats.loops`).
+- **Misclick oranı:** tepkisiz tıklama / tüm tıklama, ekran başına (`misclickRate`).
+- **Görev sonucu:** `direct` (beklenen yoldan hedefe), `indirect` (hedefe yol dışı ekranlardan geçerek), `failed` (hedefe ulaşmadan Bitirdim), `dropped` (görev bitmedi). Son ekran ve zaman kaydedilir; çalışma özetinde sonuç dağılımı ve ekran başına drop-off hunisi (`droppedHere`). Not: v1'de oturum dosyası sadece özet ekranında indirildiği için sekmesi kapanan bir oturumun dosyası oluşmuyor; drop-off'un tam ölçümü sunucuya kayıt (Supabase) gelince mümkün.
+- **Görev süresi ve yönelim süresi:** görev başına raporda; çalışma özetinde medyanları.
+- **Süre aşımı:** görevin ilk ekranında yönelim süresi düşülerek hesaplanır; cümle düşülmüş süreyi kullanır, yönelim ayrı satırda raporlanır (PM).
+- Isı haritası ve yol (sankey) analizi frame görüntülerine bağlı, frame replay ile gelecek; o zamana kadar tıklama koordinatları doğru kaydediliyor.
+
+---
+
+## 2026-11-20: Çalışma düzeyinde ekranlar, beklenen yol, yönelim süresi, soru dili
+
+Kaynak: ürün yönetimi thread'i (PM kararları, Nezih'in v2 oturumu geri bildirimi). Durum: uygulandı (`faz1-core`).
+
+- **Çalışma düzeyinde ekranlar:** ekranlar (kart, `aliases`, `participantName`) çalışma JSON'unda bir kez, en üstte `screens` altında tanımlanabilir. Her görev `expectedPath` (beklenen ekran sırası), `targetScreen` ve isteğe bağlı `startScreen` taşır. Planlı sorular (görev, ekran) çiftine bağlıdır: görevde `probes` (ekran → soru). Aynı ekran başka bir görevde farklı bir amaca hizmet ediyorsa görevde `overrides` (ekran → `behavior`, `expectedSec`, `name`, `participantName`). Eski görev başına `screens` biçimi de kabul edilir.
+- **Beklenen yol dışı:** bir görevin `expectedPath`'inde olmayan ekranlar da kendi kartlarıyla ölçülür. İlk ziyaret sürtünme eksenine eklenir (+40) ve "beklenen yolun dışındaki bu ekrana geldi" cümlesi üretir; raporda ayrıca `offPathScreens` listesi var. Yol dışı ekrandan yola dönmek "geri dönüş" sayılmaz.
+- **Yönelim süresi:** görevin ilk ekranında ilk aksiyona kadar geçen süre varsayılan olarak tereddüt ve efor sapmasından çıkarılır ve raporda ayrıca `orientationSec` olarak verilir (görev metninin netliği hakkında bilgi). `excludeOrientation: false` ile kapatılabilir.
+- **Soru dili:** varsayılan katalog metinleri başarı ya da anlama varsaymaz. "Ne arıyordun?" uygun; oturum sonu sorusu "Varsa, en çok zorlandığın görev hangisiydi ve neden?" oldu. Planlı sorular PM tarafından varsayımsız yeniden yazıldı (çalışma dosyasında).
+- **Dikte:** uygulama içinde konuşma tanıma yok (tarayıcınınki sesi sunucuya gönderir). Cevap kutusunun altında katalogdan ipucu: "İstersen klavyenin dikte özelliğiyle konuşarak yazabilirsin."
+
+---
+
+## 2026-11-20: Sorun ekilmiş prototiple doğrulama; oturum sağlığı bloğu
+
+Kaynak: ürün yönetimi thread'i, Nezih onayı ("ikisi de makul"). Durum: kararlaştırıldı; sağlık bloğu uygulandı (`faz1-core`).
+
+1. **Sorun ekilmiş prototip M2'nin yerini alır:** mevcut prototipin 4-5 bilinen sorun eklenmiş bir kopyası, 6-8 katılımcı, başarı kriterleri önceden sabit (ayrıntılar büyüme dokümanında: https://claude.ai/artifact/9QYb36JZEaUjKqRHjiW3R6). Eski videolarla doğrulama isteğe bağlı, sadece envanter gelirse yapılır. M4 gerçek çalışma olarak kalır. Şimdilik mühendislik işi yok; prototip kopyası tasarım işi.
+2. **Oturum sağlığı bloğu (pilot öncesi):** oturum dosyasının en başında `health`, sadece sayılar: fps medyanı ve p10, yüz bulunan saniye oranı, prototip olay sorunları (geçişe yol açmayan "handled" tıklamalar, tanımsız ekranlar), ısınma kalitesi (süre, tıklama sayısı, baseline geçerli mi), oturumun kaldığı adım, atlanan ve "Hatırlamıyorum" denen sorular, oturum süresi, görev başına süre ve hedefe ulaşma. Otomatik bayraklar: `low-fps` (< 10), `face-missing` (< %70), `unknown-screens`, `missing-transitions`, `baseline-invalid` (< 3 ısınma tıklaması), `not-completed`, `target-not-reached`, `many-dont-remember` (> %50). Araştırmacı raporu yazıldığında en üstte gösterilecek. Hesaplama `core/health.ts`'te (saf, testli).
+
+---
+
+## 2026-11-20: Repo public kalır, prototip linkleri repoya girmez
+
+Kaynak: Nezih kararı (ürün yönetimi thread'i). Durum: uygulandı (`faz1-core`).
+
+- Repo şimdilik public kalır, ancak gerçek prototip linkleri ve Figma dosya anahtarları repoya girmez.
+- Gerçek linkler sadece gitignore'daki yerel ayarda ya da URL parametresinde durur: katılımcı uygulamasında `apps/web/src/studies/*.local.json` (yoksa yer tutucu `example.json`) ya da `?study=<url>`; spike sayfalarında `apps/spikes/.env.local` içindeki `VITE_PROTO_URL` ya da `?url=`.
+- Yayınlanan sayfalar link ön doldurmaz.
+- Git geçmişi yeniden yazılmaz; eski commit'lerde link hâlâ duruyor. Gerekirse Nezih linki Figma'da yeniler.
+
+---
+
+## 2026-11-20: Nezih'in ilk gerçek oturumundan düzeltmeler
+
+Kaynak: Nezih'in Chrome + test Figma prototipi oturumu (kameralı, M1). Durum: uygulandı (`faz1-core`).
+
+- Figma yolu gerçek Chrome'da `localhost:4173` üzerinde çalıştı: ekran geçişleri, tıklamalar, planlı ve sinyalli sorular, SEQ, en zor görev sorusu ve oturum JSON'u geldi.
+- **Faz geçişinde kaybolan saniyeler:** yeni faz (ısınma, görev) başlarken worker'da işlenmekte olan bir kare eski saatin zamanını taşıyordu; toplayıcı yeni saniyeleri "geç kalmış" sayıp ilk 9 sn (ısınma) ve 51 sn'yi (görev) attı. Sensing artık bir faz sayacı tutuyor; eski faza ait kare atılıyor.
+- **Figma tıklama konumu:** konum `data.mousePosition {x, y}` içinde geliyormuş; adaptör `x, y` okuduğu için her tıklama (0, 0) göründü ve art arda tıklama fazla sayıldı. Düzeltildi.
+- **Göz kırpma:** ekrana aşağı bakarken göz kapanma skoru 0.4-0.5 civarında kaldığı için sabit 0.5/0.35 eşikleri hiç kırpma saymadı. Eşik artık kişinin son 3 sn'lik açık göz seviyesine göre: seviye + 0.3 üstüne çıkıp seviye + 0.12'ye inen bir kırpma.
+- **Göz kırpma, ikinci oturum:** kırpma sayımı çalıştı (dakikada 4-20), ama aşağı bakınca skor kalıcı yükselip "kapalı" durumda takılı kaldı ve 35 sn hiç kırpma sayılmadı. 0.6 sn'den uzun "kapanma" artık bakış değişimi sayılıyor: kırpma sayılmaz, açık göz seviyesi yeniden öğrenilir.
+- **Figma tıklama konumu, ikinci oturum:** `mousePosition` de gelmedi; Figma bu kurulumda tıklama konumu göndermiyor olabilir. Konum yoksa art arda tıklama "aynı hedef öğeye 1 sn içinde 3+ tıklama" olarak sayılıyor ve konum (0, 0) yazılmıyor. Oturum dosyasına her Figma mesaj tipinden ilk 3 ham örnek (`figmaRaw`, sadece kimlik ve sayılar) ekleniyor; biçim oradan kesinleşecek.
+- **Görev bitişi belli olsun** (Nezih: "akış nerede bitti anlayamadım"; PM önerisi): görev tanımına isteğe bağlı `targetScreen` eklendi. Katılımcı o ekrana ulaşınca görev çubuğu ve Bitirdim düğmesi vurgulanır ve "Görev tamamlanmış görünüyor…" yazar; görev kendiliğinden bitmez (sonrasında etrafa bakmak da veri). Hedef ekran yoksa görev metninin altında "Görevi bitirdiğini düşündüğünde Bitirdim'e bas." yazar. İki metin de katalogda. Hedefe ulaşma anı `reachedTargetAt` olarak kaydedilir.
+- **Görev başlangıç ekranı (PM, seçenek b):** görev tanımına isteğe bağlı `startScreen` (Figma node id) eklendi; prototip o görevde bu akış başlangıcından açılır (`node-id` ve `starting-point-node-id`). Yoksa linkin kendi başlangıcı kullanılır. Hangi başlangıcın kullanılacağını Nezih seçer.
+- **Ekran durumları (aliases, PM):** Figma'da aynı ekranın her durumu ayrı bir node. Çalışma JSON'unda ekrana isteğe bağlı `aliases` (durum node'ları) eklendi. `core` bunları ana anahtarla aynı mantıksal ekran sayar: Figma adaptörü ve rapor durum değişimini yeni `state` olayı olarak yazar; ziyaret bölünmez, geri dönüş ve geçiş sorusu sadece mantıksal ekran değişince sayılır. `targetScreen` bir alias olabilir (örneğin "hepsi açık" durumu); hedefe ulaşma ham node ile kontrol edilir.
+- **Soru katmanı (Nezih'in pilot geri bildirimi):** soru sorulurken arkadaki prototip zaten bir sonraki ekranı gösteriyor ve önceki ekranla ilgili cevabı etkiliyordu. Katman artık neredeyse opak ve bulanık.
+- **Soru tekrarı (PM):** planlı soru bir ekran için oturumda bir kez sorulur. Sinyalle tetiklenen soru ise görev bazında tekrar edilmez (ekran + sapma türü): aynı ekran başka bir görevde farklı bir amaca hizmet ettiği için oradaki sürtünme ayrı bir bulgudur. 2/6 sınırları değişmedi.
+- **Ağ kanıtı:** oturum dosyasına sayfanın yaptığı tüm isteklerin özeti (`network`: köken, tür, sayı) eklendi. PM'in istediği DevTools Network kaydıyla birlikte "kare ya da ses cihazdan çıkmaz" kriterinin kanıtı olacak.
+- **Figma tıklama konumu, üçüncü oturum (kesinleşti):** konum `data.nearestScrollingFrameMousePosition` (+ `nearestScrollingFrameOffset`) içinde geliyor; ayrıca `targetNodeMousePosition` var. Çerçeve dışına yapılan tıklamalarda bu alanlar `null`; o durumda hedef öğe kuralı geçerli.
+- **Ağ kanıtı (v1 kabulü, kamerasız oturum, HAR):** katılımcı uygulamasının kendisi sadece 3 istek yaptı (`localhost` üzerindeki sayfa, JS ve CSS; hepsi GET). Diğer 360 istek Figma iframe'inden: Figma'nın kendi sunucuları ve Figma'nın kullandığı analiz servisleri (Datadog, LaunchDarkly, Statsig, Sentry). Kodda `fetch` sadece `?study=` ile çalışma dosyası okumak için var; `sendBeacon`, XHR ya da WebSocket yok. Bu kamerasız yarıyı kapatır; kamera ve mikrofon açık bir oturumun HAR'ı da bekleniyor. Figma kendi kullanım verisini topladığı için onay ekranına PM'in istediği cümle eklendi (`consent.thirdParty`, sadece Figma kaynaklı çalışmalarda gösterilir).
+- **Görev saati prototip hazır olunca başlar:** Figma'nın ilk ekranı yaklaşık 25 sn'de geldi; bu süre ölçüme girmesin diye görev saati ilk ekran olayında sıfırlanır.
+- **Isınma:** okuma ekranı ilk aksiyon süresi hesabından çıkarıldı; sadece 4 tıklama ekranı sayılır.
+
+---
+
+## 2026-11-20: Katılımcı akışı v1 kapsamı
+
+Kaynak: ürün yönetimi thread'i (Nezih onayı, kapsam dışı listesine 👍) ve Claude Code. Durum: kararlaştırıldı, v1 `faz1-core`'da uygulandı (`apps/web`).
+
+### Kapsam (M3a: Chrome/Edge, masaüstü, Figma ya da script'li demo, çalışma JSON'u)
+1. Karşılama + görev özeti; tüm metinler katalogdan.
+2. Onay: kamera isteğe bağlı; çalışmada `faceSignals` açıksa yüz sinyalleri için ayrı onay; mikrofon (ses kaydedilmez); ne saklanır, ne saklanmaz.
+3. İzin + kalite kontrolü: 3 sn ısınma + 5 sn ölçüm; medyan < 10 fps ya da yüz yoksa kamerasız mod (kamera hemen bırakılır). Işık ve ortam gürültüsü ipucu.
+4. 30 sn ısınma: nötr okuma metni (78 kelime, katalogda `warmup.text`, PM onayladı); hızlı okuyan ısınmayı kısaltmasın diye Devam 26 sn'den sonra açılır. Ardından her biri ekranın farklı bir yerinde tek düğme olan 4 tıklama ekranı (ilk aksiyon süresi baseline'ı için; PM en az 3, her birinde farklı konum istedi).
+5. Her görev: beklenti puanı → prototip + görev metni + "Bitirdim" → ekran geçişinde soru (önce planlı `probe`, sonra sinyalle tetiklenen; görev başına en fazla 2, oturum başına 6; soru sırasında oturum saati durur) → SEQ.
+6. Soru metni ekranı adıyla bağlam verir: "Az önceki '{ekran}' ekranında…" (katalogda `probe.atTransition`). Ad, çalışma JSON'undaki ekranın isteğe bağlı `participantName` alanından gelir; Figma frame adı ("Frame 23", "Checkout_v2_final") katılımcıya asla gösterilmez. `participantName` yoksa ekran adı geçmez: "Az önceki ekranda ne düşünüyordun, ne arıyordun?" (`probe.atTransitionNoName`). Cevap yazılı, "Hatırlamıyorum" ve "Geç" var. Soru arayüzünde M3b AI takip soruları için kanca bırakıldı.
+7. Oturum sonu: "en çok zorlandığın görev" sorusu, katılımcıya kendi verisinin özeti (davranış sayısı gösterilmez), oturumu silme, oturum JSON'unu indirme (`hx-session/1`, `core` raporunu içerir).
+
+### Kapsam dışı (v2 / M3b)
+- Ekran kaydı (`getDisplayMedia`) yok.
+- Frame replay ve AI takip soruları v2'de (M3b).
+- İlk pilotlarda Supabase yok; oturum JSON'u indirilir.
+- Sesli cevap yok, sadece yazılı.
+
+### Kabul kriterleri (iki kademe)
+- **v1 "bitti":** Nezih test Figma prototipiyle Chrome'da tam bir oturumu bir kez kameralı, bir kez kamerasız tamamlar; indirilen oturum JSON'u `core`'dan geçip sapmalı bir rapor verir; sadece saniyelik sayılar ve olaylar saklanır; kare ya da ses cihazdan çıkmaz.
+- **M3 pilot kapısı (5 katılımcılı çalışmadan önce):** 2 iç pilot oturum yardımsız uçtan uca, her biri ≤ 20 dk; kamerasız yol uçtan uca (kamera reddi, düşük fps); ağ sekmesinde kare ya da ses yok; tüm katılımcı metinleri katalogdan ve katılımcı sayı görmüyor; soru sınırları ve saat durması test edilmiş; eski Intel Mac'te ≥ 10 fps ya da kamerasız moda düşüş; soru cevaplarının ≥ %75'i anlamlı ("Hatırlamıyorum" değil). Video olmadığı için 200 ms senkron kriteri kaldırıldı.
+
+### Uygulama notları
+- Uçtan uca deneme (headless Chrome, sahte kamera, script'li yerel prototip + embed-sdk): kameralı seçimde sahte kamerada yüz olmadığı için kamerasız moda düşüş, kamerasız seçim, iki geçiş sorusu (planlı + sinyalli), soru sınırı, SEQ ve özet doğrulandı. Gerçek yüzle kameralı yol Nezih'in denemesinde doğrulanacak.
+- Headless Chrome'da Figma embed bir "interstitial" sayfası gösterdi ve olay gelmedi; Faz 0'da gerçek Chrome'da `localhost:4173` üzerinde çalışmıştı. Bu yüzden `npm run web` önizlemesi 4173 portunu kullanır (spike önizlemesiyle aynı anda çalıştırılmaz).
+
+---
+
+## 2026-11-20: Görev sonu retro varsayılan kapalı; olay şeması mobile hazır
+
+Kaynak: ürün yönetimi thread'i (`faz1-core` incelemesi), Nezih onayı. Durum: uygulandı (`faz1-core`).
+
+### Görev sonu retro
+- Varsayılan kapalı: `questions.endOfTask` false, `limits.endOfTask` 0. Özellik ve çalışma JSON'undaki ayar duruyor; araştırmacı açabilir.
+- Görev sonunda sadece SEQ, oturum sonunda "en çok zorlandığın görev" sorusu.
+
+### Mobile hazır olay şeması
+- `interaction_event` şema sürümü 2: `pointerType` (`mouse` | `touch` | `pen`), `viewport` ({w, h}), `orientation`, `streamId`. Tıklama ve dokunma aynı olay tipi (`click`); ayrımı `pointerType` yapar. Yeni tip: `pointer-move` (sadece fare/kalem, kısıtlanmış sıklıkta).
+- `SecondSample` da `streamId` taşır. Zaman modelinde akış bazında fark: `StreamInfo { streamId, deviceId, kind, offsetSec }` ve `alignToSession`.
+- Yetenek bayrakları (`Capabilities`: `hasHover`, `hasCamera`, `hasScreenVideo`) `core`'a girer. Ölçülemeyen sinyal hesaptan çıkarılır, "sakin" sayılmaz; rapor hangi sinyallerin ölçüldüğünü `signals` alanında gösterir.
+- Rage click dokunmayı da kapsar: dokunmada "aynı bölge" yarıçapı 60 px (farede 40 px).
+- `packages/embed-sdk`: prototip sayfasına eklenen tek `<script>` (`data-parent-origin` zorunlu, mesajlar sadece o origin'e). Aynı şemaya yazar; form değerleri, metin ve tuş vuruşları gönderilmez. Zaman damgası mutlak (`timeOrigin + now`), uygulama oturum saatine çevirir (`fromEmbedMessage`). Figma adaptörü de cihaz bağlamını (`pointerType`, `viewport`, `orientation`, `streamId`) her olaya ekler.
+
+---
+
+## 2026-11-20: Konuşma için ses-dudak uyumu
+
+Kaynak: Nezih ile sensing denemeleri. Durum: uygulandı (eşik kalibre edilecek).
+
+- Saniye bazında "ses var + dudak oynuyor" kontrolüne ek olarak ses yüksekliği ile dudak aralığının kare kare birlikte hareket edip etmediğine bakılıyor (`avSync`, -1..1). Pencere: bu ve önceki saniye; sesin dudaktan 100 ms önce ya da 200 ms sonra gelmesine izin veriliyor.
+- Ses varken uyum hesaplanabiliyorsa konuşma sayılması için dudak hareketi + `avSync` ≥ 0.3 gerekir; hesaplanamıyorsa önceki dudak kuralı geçerli.
+- VAD gürültü tabanı artık son 3 sn'nin en sessiz karesi (minimum istatistiği). Eski uyarlanan taban, yakında video çalarken videonun ses seviyesine tırmanıyor ve katılımcının kendi konuşmasını da kaçırıyordu. VAD sadece "ses var mı" der; kimin sesi olduğuna ses-dudak uyumu karar verir.
+- İlk etiketli kalibrasyon (Nezih, 20 Kasım, M1): ham veride net konuşma saniyelerinde uyum 0.30-0.85, video açıkken sessiz dudak oynatmada -0.25 ile 0.27 arası; 0.3 eşiği korunuyor. Yeni VAD ile aynı kayıt yeniden oynatıldığında sessiz dudak hareketinin 9 saniyesinden 1'i konuşma sayıldı.
+- Kalibrasyon için deneme sayfası (`apps/spikes/sensing.html`) kare kare dudak aralığı ve ses yüksekliğini indirir; Nezih'in izniyle isteğe bağlı olarak ses dosyasını da (ayrı .webm, yerel indirme) kaydeder. Bu sadece deneme sayfası içindir; ürün akışında görev sırasında ses kaydedilmez.
+- Transkript bu amaçla kullanılmayacak: kimin konuştuğunu ayırmaz, sesin cihazdan çıkmasını ya da ağır bir yerel modeli gerektirir. Retro sesli cevapları için MVP sonrası planda kalıyor.
+
+---
+
+## 2026-11-20: Konuşma doğrulaması dudak aralığına geçti
+
+Kaynak: Nezih'in ikinci M1 denemesi. Durum: uygulandı. Aynı günün "Konuşma oranı çene hareketiyle doğrulanır" girişindeki eşiği geçersiz kılar.
+
+- Konuşurken `jawOpen` sadece 0.01-0.05 oynadı; 0.08 eşiği gerçek konuşmayı kaçırdı.
+- Kontrol artık dudak aralığı: iç üst dudak (landmark 13) ile iç alt dudak (14) arası, yüz genişliğine bölünür; saniye içindeki aralığı (`mouthMovement`) ≥ 0.015 ise ağız hareketli. Bir önceki saniyedeki hareket de geçerli.
+- `jawOpen` doğrulamadan çıkarıldı (sadece ham değer olarak saklanıyor): üçüncü denemede baş hareket ederken konuşmadan 0.03'e kadar oynadı ve yanlış konuşma üretti. Aynı denemede dudak aralığı sessiz saniyelerde ≤ 0.009, konuşurken ≥ 0.022 kaldı.
+- Eşikler bir denemeye dayanıyor; konuşma + başkasının konuştuğu kayıtlarla tekrar kalibre edilecek.
+
+---
+
+## 2026-11-20: Konuşma oranı çene hareketiyle doğrulanır
+
+Kaynak: Nezih'in M1 denemesi (sensing.html). Durum: uygulandı.
+
+- Mikrofon ortamdaki tüm sesi aldığı için ham ses aktivitesi konuşmayı fazla gösterdi. `talking` artık sadece aynı saniyede (ya da bir önceki saniyede) `jawOpen` en az 0.08 oynadıysa sesi sayar; ağız hareketsizse 0, yüz yoksa `null` (doğrulanamaz).
+- Ham değerler ayrıca saklanır: `voice` (mikrofon) ve `jawMovement` (saniye içindeki jawOpen aralığı). 0.08 başlangıç değeri, sonraki denemelerle kalibre edilecek.
+
+---
+
+## 2026-11-20: sensing paketi ve oturum saati (uygulama notları)
+
+Kaynak: Claude Code (`faz1-core` branch'i). Durum: uygulandı.
+
+- `packages/sensing`: worker (MediaPipe FaceLandmarker, blendshape açık) her kare için sadece sayı döndürür; kare worker'da kapatılır. Ana thread'deki `SensingClient` kameradan en fazla 15 fps, 320 px genişliğe küçültülmüş kare gönderir, aynı anda tek kare işlenir.
+- Saniye toplayıcı (`frames.ts`, saf): kare sayısı, yüz (karelerin yarısından fazlası), baş hızı (yüz genişliği/sn), hareketsizlik (0.2 yüz genişliği/sn altındaki aralıkların oranı), yüz genişliği medyanı, kaş ortalaması, konuşma oranı.
+- Göz kırpma: göz kapanma skoru 0.5'i geçip 0.35'in altına inince bir kırpma. Dakikadaki oran son 15 sn'nin ≥ 15 kareli saniyelerinden hesaplanır, en az 5 geçerli saniye ister; yoksa `null`.
+- Ses: enerji tabanlı VAD (uyarlanan gürültü tabanının 3 katı, 8 karelik tutma). Ses hiçbir yere bağlanmaz ya da kaydedilmez.
+- CPU delegate sadece GPU başarısız olursa ve 4+ çekirdekte denenir.
+- Oturum saati (`core/clock.ts`): `performance.timeOrigin + performance.now()`, görev başında sıfır, soru sırasında durur; duruşta sensing kare ve ses almaz.
+- Kalite kontrolü (`sensing/quality.ts`): ilk 3 sn GPU ısınması sayılmaz, sonraki 5 sn'nin kare sayısı ve yüz bulunan saniye oranı `core`'daki karara verilir.
+- Deneme sayfası: `apps/spikes/sensing.html` (gerçek kamerayla 60 sn ölçüm, JSON indirme).
+
+---
+
+## 2026-11-20: core iki eksenli modele geçti (uygulama notları)
+
+Kaynak: Claude Code (`faz1-core` branch'i). Durum: uygulandı. 20 Kasım tarihli girişlerin `core` karşılığı ve uygulamada verilen küçük kararlar.
+
+- Ürün modeli (`screens.ts`) artık efor ve sürtünme olarak iki eksen üretiyor; Senti'nin impuls/EMA eğrisi ve ani baş hareketi (startle) ürün modelinden çıktı, sadece `compat/` regresyonunda duruyor. Konuşma oranı da ürün modelinde kullanılmıyor (think-aloud konuşması karıştırır).
+- **İlk aksiyona kadar geçen süre efor ekseninde.** `flow` kartında kişisel eşiği aşan duraksama `effort-mismatch` (yön: `high`); `read`/`decide` kartında duraksama beklenen efor, sapma değil. Sürtünme ekseni sadece etkileşim olayları: geri dönüş, tepkisiz tıklama, art arda tıklama.
+- `effort-mismatch` (yön: `low`): `read`/`decide` kartında süre `expectedSec[0]` altında, sürtünme ve duraksama yok.
+- `unexpected-friction` artık her kart tipinde üretiliyor (önce sadece `flow`).
+- Yüz sinyalleri (göz kırpma, hareketsizlik, ekrana yaklaşma, kaş) `faceSignals` açıksa okunur, varsayılan kapalı. Sapma üretmezler: efor skoruna %40 ağırlıkla katılır ve sapmanın şiddetini artırırlar. Kaş sadece etkileşim sürtünmesi varsa sayılır. Göz kırpma saniyesi 15 kareden azsa yok sayılır.
+- Gözlenen skorlar 0-100, ekran ziyareti boyunca sabit (basamaklı eğri). Başlangıç eşikleri (göz kırpma düşüşü %25, hareketsizlik +0.15, yaklaşma +%10, kaş +0.1, sürtünme ağırlıkları 25/20/35) geriye dönük doğrulamada kalibre edilecek.
+- Her sapmanın bir `at` anı ve `replay` aralığı (`at` ± 5 sn) var: sürtünmede ilk sürtünme olayı, duraksamada eşiğin aşıldığı an, süre aşımında beklenen üst sınırın dolduğu an, kopmada ilk kayıp saniye.
+- Soru motoru (`questions.ts`): ekrandan çıkışta önce planlı `probe` (ekran başına bir kez), yoksa o ekranın en şiddetli sapması (süre aşımı hariç). Varsayılan sınırlar görev başına 2 geçiş sorusu, görev sonunda 2, oturum başına 6; çalışma JSON'unda değiştirilebilir.
+- Metin kataloğu (`texts.ts`, Türkçe varsayılan) ve ölçekler `{min, max, labels}`: en fazla 11 seçenek; raporda puanlar 0-1'e normalize edilip karşılaştırılıyor. Araştırmacı rapor cümleleri katalog dışında, katılımcıya gösterilmez.
+- Çalışma JSON'u birden fazla görev alıyor (`tasks`); eski tek görevli biçim (`taskPrompt` + `screens`) tek görev olarak kabul ediliyor. `context` `workplace` ya da `education` ise `faceSignals` varsayılanı kapalı.
+
+---
+
 ## 2026-11-20: Katılımcıya görünen metinler ve ölçekler araştırmacı tarafından düzenlenebilir (MVP sonrası)
 
 Kaynak: ürün yönetimi thread'i (Nezih, 20 Kasım). Durum: kararlaştırıldı; uygulama MVP sonrası, mimari şimdiden kapı bırakır.

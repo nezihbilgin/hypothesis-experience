@@ -10,7 +10,8 @@ export default defineConfig({
         index: resolve(__dirname, 'index.html'),
         figma: resolve(__dirname, 'figma.html'),
         face: resolve(__dirname, 'face.html'),
-        record: resolve(__dirname, 'record.html')
+        record: resolve(__dirname, 'record.html'),
+        sensing: resolve(__dirname, 'sensing.html')
       }
     }
   }

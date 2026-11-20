@@ -1,0 +1,10 @@
+{
+  "name": "@hx/embed-sdk",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": { "build": "vite build" },
+  "dependencies": { "@hx/core": "0.0.0" },
+  "devDependencies": { "vite": "6.3.5" }
+}
