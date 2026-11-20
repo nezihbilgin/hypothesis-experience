@@ -1,6 +1,6 @@
 import { SessionClock, computeBaseline, computeScreenReport, type SecondSample } from '@hx/core'
 import { describe, expect, it } from 'vitest'
-import { EnergyVad, QualityProbe, SecondAggregator, type FrameResult } from '../src'
+import { EnergyVad, QualityProbe, SecondAggregator, avSync, type FrameResult } from '../src'
 
 /** Frames for one second at `fps`, face centred and still unless overridden. */
 const second = (sec: number, fps: number, o: (i: number) => Partial<FrameResult> = () => ({})): FrameResult[] =>
@@ -72,6 +72,42 @@ describe('second aggregator', () => {
   })
   it('talking is null without a microphone', () => {
     expect(run(second(0, 10, (i) => ({ mouthOpen: i % 2 ? 0.08 : 0.01 })))[0].talking).toBeNull()
+  })
+  describe('lip-voice sync', () => {
+    const lipsAt = (t: number) => 0.03 + 0.02 * Math.sin(2 * Math.PI * 3 * t)
+    const sim = (rmsAt: (t: number) => number, seconds = 3): SecondSample[] => {
+      const out: SecondSample[] = []
+      const agg = new SecondAggregator((x) => out.push(x))
+      const frames = Array.from({ length: seconds }, (_, sec) => second(sec, 15, (i) => ({ mouthOpen: lipsAt(sec + i / 15) }))).flat()
+      let a = 0
+      for (const f of frames) {
+        for (; a / 50 <= f.t; a++) {
+          const r = rmsAt(a / 50)
+          agg.pushAudio(a / 50, r > 0.05, r)
+        }
+        agg.push(f)
+      }
+      agg.flush()
+      return out
+    }
+    it('own speech: voice loudness follows the lips', () => {
+      const out = sim((t) => 0.05 + 0.04 * Math.sin(2 * Math.PI * 3 * (t - 0.1)))
+      expect(out[1].avSync).toBeGreaterThan(0.8)
+      expect(out[1].talking).toBe(out[1].voice)
+      expect(out[1].talking).toBeGreaterThan(0)
+    })
+    it('another voice while the lips move: no sync, not talking', () => {
+      const out = sim((t) => 0.05 + 0.04 * Math.sin(2 * Math.PI * 7.3 * t + 1))
+      expect(out[1].voice).toBeGreaterThan(0)
+      expect(out[1].avSync!).toBeLessThan(0.3)
+      expect(out[1].talking).toBe(0)
+    })
+    it('avSync is null without enough data or with a flat signal', () => {
+      expect(avSync([{ t: 0, v: 0.1 }], [{ t: 0, rms: 0.1 }])).toBeNull()
+      const mouth = Array.from({ length: 15 }, (_, i) => ({ t: i / 15, v: 0.02 }))
+      const audio = Array.from({ length: 50 }, (_, i) => ({ t: i / 50, rms: Math.random() }))
+      expect(avSync(mouth, audio)).toBeNull()
+    })
   })
   it('output feeds the core model: baseline and report', () => {
     const warm = run(Array.from({ length: 30 }, (_, s) => second(s - 30, 15)).flat())

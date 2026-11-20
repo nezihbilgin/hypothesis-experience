@@ -107,7 +107,8 @@ export class SensingClient {
       window.setInterval(() => {
         if (!this.o.clock.started || this.o.clock.paused) return
         an.getFloatTimeDomainData(buf)
-        this.agg.pushAudio(this.o.clock.t(), vad.push(EnergyVad.rms(buf)))
+        const rms = EnergyVad.rms(buf)
+        this.agg.pushAudio(this.o.clock.t(), vad.push(rms), rms)
       }, 20)
     )
   }

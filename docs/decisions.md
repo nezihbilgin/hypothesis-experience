@@ -8,6 +8,16 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 
 ---
 
+## 2026-11-20: Konuşma için ses-dudak uyumu
+
+Kaynak: Nezih ile sensing denemeleri. Durum: uygulandı (eşik kalibre edilecek).
+
+- Saniye bazında "ses var + dudak oynuyor" kontrolüne ek olarak ses yüksekliği ile dudak aralığının kare kare birlikte hareket edip etmediğine bakılıyor (`avSync`, -1..1). Pencere: bu ve önceki saniye; sesin dudaktan 100 ms önce ya da 200 ms sonra gelmesine izin veriliyor.
+- Ses varken uyum hesaplanabiliyorsa konuşma sayılması için dudak hareketi + `avSync` ≥ 0.3 gerekir; hesaplanamıyorsa önceki dudak kuralı geçerli.
+- Transkript bu amaçla kullanılmayacak: kimin konuştuğunu ayırmaz, sesin cihazdan çıkmasını ya da ağır bir yerel modeli gerektirir. Retro sesli cevapları için MVP sonrası planda kalıyor.
+
+---
+
 ## 2026-11-20: Konuşma doğrulaması dudak aralığına geçti
 
 Kaynak: Nezih'in ikinci M1 denemesi. Durum: uygulandı. Aynı günün "Konuşma oranı çene hareketiyle doğrulanır" girişindeki eşiği geçersiz kılar.
