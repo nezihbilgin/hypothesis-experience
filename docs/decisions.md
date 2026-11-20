@@ -31,6 +31,8 @@ Kaynak: Nezih ile sensing denemeleri. Durum: uygulandı (eşik kalibre edilecek)
 
 - Saniye bazında "ses var + dudak oynuyor" kontrolüne ek olarak ses yüksekliği ile dudak aralığının kare kare birlikte hareket edip etmediğine bakılıyor (`avSync`, -1..1). Pencere: bu ve önceki saniye; sesin dudaktan 100 ms önce ya da 200 ms sonra gelmesine izin veriliyor.
 - Ses varken uyum hesaplanabiliyorsa konuşma sayılması için dudak hareketi + `avSync` ≥ 0.3 gerekir; hesaplanamıyorsa önceki dudak kuralı geçerli.
+- VAD gürültü tabanı artık son 3 sn'nin en sessiz karesi (minimum istatistiği). Eski uyarlanan taban, yakında video çalarken videonun ses seviyesine tırmanıyor ve katılımcının kendi konuşmasını da kaçırıyordu. VAD sadece "ses var mı" der; kimin sesi olduğuna ses-dudak uyumu karar verir.
+- İlk etiketli kalibrasyon (Nezih, 20 Kasım, M1): ham veride net konuşma saniyelerinde uyum 0.30-0.85, video açıkken sessiz dudak oynatmada -0.25 ile 0.27 arası; 0.3 eşiği korunuyor. Yeni VAD ile aynı kayıt yeniden oynatıldığında sessiz dudak hareketinin 9 saniyesinden 1'i konuşma sayıldı.
 - Kalibrasyon için deneme sayfası (`apps/spikes/sensing.html`) kare kare dudak aralığı ve ses yüksekliğini indirir; Nezih'in izniyle isteğe bağlı olarak ses dosyasını da (ayrı .webm, yerel indirme) kaydeder. Bu sadece deneme sayfası içindir; ürün akışında görev sırasında ses kaydedilmez.
 - Transkript bu amaçla kullanılmayacak: kimin konuştuğunu ayırmaz, sesin cihazdan çıkmasını ya da ağır bir yerel modeli gerektirir. Retro sesli cevapları için MVP sonrası planda kalıyor.
 

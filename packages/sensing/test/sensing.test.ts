@@ -127,11 +127,19 @@ describe('second aggregator', () => {
 
 describe('energy VAD', () => {
   it('detects speech above the adaptive noise floor and holds briefly', () => {
-    const vad = new EnergyVad({ minRms: 0.01, ratio: 3, adapt: 0.1, hangover: 2 })
+    const vad = new EnergyVad({ minRms: 0.01, ratio: 3, floorWindow: 150, hangover: 2 })
     const quiet = Array.from({ length: 10 }, () => vad.push(0.005))
     expect(quiet.every((x) => !x)).toBe(true)
     expect(vad.push(0.1)).toBe(true)
     expect([vad.push(0.005), vad.push(0.005), vad.push(0.005)]).toEqual([true, true, false])
+  })
+  it('keeps detecting speech while a steady background (e.g. a video) plays', () => {
+    const vad = new EnergyVad()
+    // 10 s of "video": loud words (0.08) with short pauses (0.004) every 0.5 s.
+    const out: boolean[] = []
+    for (let i = 0; i < 500; i++) out.push(vad.push(i % 25 < 5 ? 0.004 : 0.08))
+    expect(vad.floor).toBeLessThan(0.01)
+    expect(out.slice(400).filter(Boolean).length).toBeGreaterThan(75) // words still count as sound after 8 s, not learned as noise
   })
   it('computes RMS', () => {
     expect(EnergyVad.rms([0.5, -0.5, 0.5, -0.5])).toBe(0.5)
