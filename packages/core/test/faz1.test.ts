@@ -99,6 +99,15 @@ describe('figma adapter', () => {
     expect(out[2].payload).toEqual({ from: '1:2', interactionType: 'ON_CLICK' })
     expect(out.every((e) => e.v === 2)).toBe(true)
   })
+  it('reads the click position from data.mousePosition', () => {
+    const a = new FigmaAdapter()
+    a.push({ type: 'PRESENTED_NODE_CHANGED', data: { presentedNodeId: '1:2' } }, 0)
+    const ev = a.push({ type: 'MOUSE_PRESS_OR_RELEASE', data: { handled: false, mousePosition: { x: 120, y: 340 } } }, 1).events
+    expect(ev[0].payload).toMatchObject({ x: 120, y: 340 })
+    // Three clicks far apart are not a rage click.
+    a.push({ type: 'MOUSE_PRESS_OR_RELEASE', data: { handled: false, mousePosition: { x: 500, y: 40 } } }, 1.2)
+    expect(a.push({ type: 'MOUSE_PRESS_OR_RELEASE', data: { handled: false, mousePosition: { x: 20, y: 600 } } }, 1.4).events.some((e) => e.type === 'rage-click')).toBe(false)
+  })
   it('a click before any screen event uses the node it reports', () => {
     const a = new FigmaAdapter()
     expect(a.push({ type: 'MOUSE_PRESS_OR_RELEASE', data: { handled: true } }, 0).events).toEqual([])

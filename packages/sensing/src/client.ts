@@ -32,6 +32,9 @@ export class SensingClient {
   private audioCtx: AudioContext | null = null
   private timers: number[] = []
   private busy = false
+  /** Phase counter: a frame still in flight when a new phase starts carries the old clock's time and is dropped. */
+  private phase = 0
+  private inflightPhase = -1
   private agg: SecondAggregator
   private vad: EnergyVad | null = null
   delegate: 'GPU' | 'CPU' | null = null
@@ -69,7 +72,7 @@ export class SensingClient {
     worker.onmessage = (e: MessageEvent<WorkerOut>) => {
       if (e.data.type === 'result') {
         this.busy = false
-        if (this.o.clock.started && !this.o.clock.paused) {
+        if (this.inflightPhase === this.phase && this.o.clock.started && !this.o.clock.paused) {
           this.agg.push(e.data.frame)
           this.o.onRaw?.({ kind: 'mouth', t: e.data.frame.t, v: e.data.frame.mouthOpen ?? null })
         }
@@ -85,6 +88,7 @@ export class SensingClient {
     if (!v || !this.worker || this.busy || v.readyState < 2) return
     if (!this.o.clock.started || this.o.clock.paused) return
     this.busy = true
+    this.inflightPhase = this.phase
     const abs = this.now()
     try {
       const width = this.o.frameWidth ?? 320
@@ -130,6 +134,7 @@ export class SensingClient {
   /** Start a new phase (warm-up, next task): closes the open second and starts a fresh aggregator, so seconds
    * restart from the clock's new zero. Call right before SessionClock.start(). */
   newPhase(): void {
+    this.phase++
     this.agg.flush()
     this.agg = new SecondAggregator(this.o.onSample)
   }

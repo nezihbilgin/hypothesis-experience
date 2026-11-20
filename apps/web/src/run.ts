@@ -91,6 +91,8 @@ export class SessionRun {
   private probe: QualityProbe | null = null
   private adapter: FigmaAdapter | null = null
   private taskIndex = -1
+  /** The task clock restarts at zero when the prototype is ready (first screen), so loading time is not measured. */
+  private protoReady = false
 
   constructor(readonly study: Study, readonly participant: string) {}
 
@@ -204,20 +206,33 @@ export class SessionRun {
       orientation: viewport.h > viewport.w ? 'portrait' : 'landscape',
       streamId: PROTO_STREAM
     })
+    this.protoReady = false
     this.sensing?.newPhase()
     this.clock.start()
     this.phase = 'task'
   }
 
+  private markReady(): void {
+    if (this.protoReady) return
+    this.protoReady = true
+    this.task.samples = []
+    this.sensing?.newPhase()
+    this.clock.start()
+  }
+
   /** Intake of a postMessage from the prototype iframe. Returns a question to ask now, or a blocking error. */
-  handleMessage(e: MessageEvent): { question?: QuestionMoment; blocked?: string } {
+  handleMessage(e: MessageEvent): { question?: QuestionMoment; blocked?: string; ready?: boolean } {
     if (this.phase !== 'task' || this.clock.paused) return {}
-    const t = this.clock.at(absoluteNow(performance))
     const events: InteractionEvent[] = []
     const src = this.study.sourceType
+    let ready = false
     if (src === 'figma') {
       if (!/(^|\.)figma\.com$/.test(new URL(e.origin).hostname) || !this.adapter) return {}
-      const r = this.adapter.push(e.data, t)
+      if (!this.protoReady && e.data && typeof e.data === 'object' && (e.data as { type?: unknown }).type === 'PRESENTED_NODE_CHANGED') {
+        this.markReady()
+        ready = true
+      }
+      const r = this.adapter.push(e.data, this.clock.at(absoluteNow(performance)))
       if (r.status === 'login-required' || r.status === 'password-required') {
         this.task.blocked = r.status
         return { blocked: r.status }
@@ -225,8 +240,12 @@ export class SessionRun {
       events.push(...r.events)
     } else {
       if (e.origin !== new URL(this.study.sourceUrl).origin) return {}
+      if (!this.protoReady && e.data && typeof e.data === 'object' && (e.data as { type?: unknown }).type === 'screen') {
+        this.markReady()
+        ready = true
+      }
       const ev = fromEmbedMessage(e.data, (ms) => this.clock.at(ms))
-      if (ev) events.push({ ...ev, streamId: ev.streamId ?? PROTO_STREAM })
+      if (ev) events.push({ ...ev, t: Math.max(0, ev.t), streamId: ev.streamId ?? PROTO_STREAM })
     }
     let question: QuestionMoment | undefined
     for (const ev of events) {
@@ -237,7 +256,7 @@ export class SessionRun {
       const from = ev.payload?.from
       if (typeof from === 'string' && this.study.questions.atTransitions && !question) question = this.transitionQuestion(from, ev.t) ?? undefined
     }
-    return question ? { question } : {}
+    return { ...(question ? { question } : {}), ...(ready ? { ready } : {}) }
   }
 
   private reportUntil(endSec: number): ScreenReport {

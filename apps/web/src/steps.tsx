@@ -107,11 +107,12 @@ export function Warmup({ run, next }: { run: SessionRun; next: () => void }) {
   }, [])
   useEffect(() => {
     if (step === 0) run.startWarmup()
-    if (step <= CLICK_SPOTS.length) run.warmupEvent('screen', `warmup-${step}`)
+    // Only the click screens count as "screen shown -> first action"; the reading screen would inflate it.
+    if (step >= 1 && step <= CLICK_SPOTS.length) run.warmupEvent('screen', `warmup-${step}`)
     if (step === CLICK_SPOTS.length + 1) run.finishWarmup()
   }, [step, run])
   const click = () => {
-    run.warmupEvent('click', `warmup-${step}`)
+    if (step >= 1) run.warmupEvent('click', `warmup-${step}`)
     setStep(step + 1)
   }
   if (step === 0)
@@ -186,6 +187,7 @@ export function TaskRun({ run, next }: { run: SessionRun; next: (retro: Question
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       const r = run.handleMessage(e)
+      if (r.ready) setLoaded(true)
       if (r.blocked) setBlocked(r.blocked)
       if (r.question) {
         run.pauseForQuestion()
@@ -213,7 +215,7 @@ export function TaskRun({ run, next }: { run: SessionRun; next: (retro: Question
         </button>
       </header>
       {!loaded ? <p className="loading">{t('task.loading')}</p> : null}
-      <iframe ref={frameRef} className="proto" src={src} title="prototype" allow="clipboard-write" onLoad={() => setLoaded(true)} />
+      <iframe ref={frameRef} className="proto" src={src} title="prototype" allow="clipboard-write" />
       {blocked ? (
         <div className="overlay">
           <Card>

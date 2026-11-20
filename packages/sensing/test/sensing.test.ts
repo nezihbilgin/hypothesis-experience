@@ -40,6 +40,11 @@ describe('second aggregator', () => {
     const slow = run(Array.from({ length: 6 }, (_, s) => blinking(s, 12)).flat())
     expect(slow.every((s) => s.blinkRate === null)).toBe(true)
   })
+  it('counts blinks when looking down keeps the open-eye score high (~0.45)', () => {
+    const blinking = (sec: number) => second(sec, 15, (i) => ({ blink: i === 3 || i === 4 ? 0.9 : 0.45 + (i % 3) * 0.02 }))
+    const out = run(Array.from({ length: 6 }, (_, s) => blinking(s)).flat())
+    expect(out[5].blinkRate).toBe(60)
+  })
   it('a half-closed eye flicker between thresholds is not a blink', () => {
     const out = run(Array.from({ length: 6 }, (_, s) => second(s, 15, (i) => ({ blink: i % 2 ? 0.45 : 0.4 }))).flat())
     expect(out[5].blinkRate).toBe(0)

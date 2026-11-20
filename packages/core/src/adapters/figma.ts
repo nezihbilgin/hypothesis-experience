@@ -67,8 +67,10 @@ export class FigmaAdapter {
       // A click can arrive before the first PRESENTED_NODE_CHANGED; fall back to the node it reports.
       if (!this.screenKey) this.screenKey = str(data.presentedNodeId) ?? null
       if (!this.screenKey) return { events: [] }
-      const x = num(data.x) ?? 0
-      const y = num(data.y) ?? 0
+      // Figma sends the click position as data.mousePosition {x, y} (frame coordinates); older/other payloads x, y.
+      const mp = data.mousePosition && typeof data.mousePosition === 'object' ? (data.mousePosition as Record<string, unknown>) : {}
+      const x = num(mp.x) ?? num(data.x) ?? 0
+      const y = num(mp.y) ?? num(data.y) ?? 0
       const payload: Record<string, unknown> = { x, y }
       const target = str(data.targetNodeId)
       if (target) payload.targetNodeId = target

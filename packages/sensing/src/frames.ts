@@ -21,9 +21,12 @@ export interface FrameResult {
 
 /** Head speed below this (face-widths per second) counts as still. */
 export const STILL_SPEED = 0.2
-/** Blink: eye-closure score rises above HIGH, then falls below LOW (hysteresis). */
-export const BLINK_HIGH = 0.5
-export const BLINK_LOW = 0.35
+/** Blink: the eye-closure score rises BLINK_RISE above the open-eye level, then falls back to within BLINK_FALL of it
+ * (hysteresis). The open-eye level is the median of the last BLINK_LEVEL_FRAMES faced frames: looking down at a
+ * screen keeps eyeBlink around 0.4-0.5, so fixed 0.5/0.35 thresholds missed every blink (Nezih's first session). */
+export const BLINK_RISE = 0.3
+export const BLINK_FALL = 0.12
+const BLINK_LEVEL_FRAMES = 45
 /** Blink rate needs >= 15 frames per second (blinks last 100-400 ms). */
 export const BLINK_MIN_FPS = 15
 /** Voice counts as the participant talking only if the lips move within the second (or the previous one, for speech
@@ -90,6 +93,7 @@ export class SecondAggregator {
   private frames: FrameResult[] = []
   private prevFace: FrameResult | null = null
   private eyeClosed = false
+  private eyeLevel: number[] = []
   /** Per completed second: blinks and whether the second had enough fps. */
   private blinkHistory: { sec: number; blinks: number; valid: boolean }[] = []
   private talking = new Map<number, { active: number; total: number }>()
@@ -156,8 +160,14 @@ export class SecondAggregator {
     let blinks = 0
     for (const f of fr) {
       if (!f.face || f.blink === undefined) continue
-      if (!this.eyeClosed && f.blink >= BLINK_HIGH) this.eyeClosed = true
-      else if (this.eyeClosed && f.blink <= BLINK_LOW) {
+      const sorted = this.eyeLevel.length ? [...this.eyeLevel].sort((a, b) => a - b) : [f.blink]
+      const level = sorted[Math.floor((sorted.length - 1) / 2)]
+      if (!this.eyeClosed) {
+        this.eyeLevel.push(f.blink)
+        if (this.eyeLevel.length > BLINK_LEVEL_FRAMES) this.eyeLevel.shift()
+      }
+      if (!this.eyeClosed && f.blink >= Math.min(0.95, level + BLINK_RISE)) this.eyeClosed = true
+      else if (this.eyeClosed && f.blink <= level + BLINK_FALL) {
         this.eyeClosed = false
         blinks++
       }

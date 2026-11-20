@@ -8,6 +8,19 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 
 ---
 
+## 2026-11-20: Nezih'in ilk gerçek oturumundan düzeltmeler
+
+Kaynak: Nezih'in Chrome + test Figma prototipi oturumu (kameralı, M1). Durum: uygulandı (`faz1-core`).
+
+- Figma yolu gerçek Chrome'da `localhost:4173` üzerinde çalıştı: ekran geçişleri, tıklamalar, planlı ve sinyalli sorular, SEQ, en zor görev sorusu ve oturum JSON'u geldi.
+- **Faz geçişinde kaybolan saniyeler:** yeni faz (ısınma, görev) başlarken worker'da işlenmekte olan bir kare eski saatin zamanını taşıyordu; toplayıcı yeni saniyeleri "geç kalmış" sayıp ilk 9 sn (ısınma) ve 51 sn'yi (görev) attı. Sensing artık bir faz sayacı tutuyor; eski faza ait kare atılıyor.
+- **Figma tıklama konumu:** konum `data.mousePosition {x, y}` içinde geliyormuş; adaptör `x, y` okuduğu için her tıklama (0, 0) göründü ve art arda tıklama fazla sayıldı. Düzeltildi.
+- **Göz kırpma:** ekrana aşağı bakarken göz kapanma skoru 0.4-0.5 civarında kaldığı için sabit 0.5/0.35 eşikleri hiç kırpma saymadı. Eşik artık kişinin son 3 sn'lik açık göz seviyesine göre: seviye + 0.3 üstüne çıkıp seviye + 0.12'ye inen bir kırpma.
+- **Görev saati prototip hazır olunca başlar:** Figma'nın ilk ekranı yaklaşık 25 sn'de geldi; bu süre ölçüme girmesin diye görev saati ilk ekran olayında sıfırlanır.
+- **Isınma:** okuma ekranı ilk aksiyon süresi hesabından çıkarıldı; sadece 4 tıklama ekranı sayılır.
+
+---
+
 ## 2026-11-20: Katılımcı akışı v1 kapsamı
 
 Kaynak: ürün yönetimi thread'i (Nezih onayı, kapsam dışı listesine 👍) ve Claude Code. Durum: kararlaştırıldı, v1 `faz1-core`'da uygulandı (`apps/web`).
