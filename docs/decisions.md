@@ -13,7 +13,8 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 Kaynak: Nezih'in ikinci M1 denemesi. Durum: uygulandı. Aynı günün "Konuşma oranı çene hareketiyle doğrulanır" girişindeki eşiği geçersiz kılar.
 
 - Konuşurken `jawOpen` sadece 0.01-0.05 oynadı; 0.08 eşiği gerçek konuşmayı kaçırdı.
-- Birincil kontrol artık dudak aralığı: iç üst dudak (landmark 13) ile iç alt dudak (14) arası, yüz genişliğine bölünür; saniye içindeki aralığı (`mouthMovement`) ≥ 0.015 ise ağız hareketli. `jawOpen` aralığı ≥ 0.03 de yeterli sayılır. Bir önceki saniyedeki hareket de geçerli.
+- Kontrol artık dudak aralığı: iç üst dudak (landmark 13) ile iç alt dudak (14) arası, yüz genişliğine bölünür; saniye içindeki aralığı (`mouthMovement`) ≥ 0.015 ise ağız hareketli. Bir önceki saniyedeki hareket de geçerli.
+- `jawOpen` doğrulamadan çıkarıldı (sadece ham değer olarak saklanıyor): üçüncü denemede baş hareket ederken konuşmadan 0.03'e kadar oynadı ve yanlış konuşma üretti. Aynı denemede dudak aralığı sessiz saniyelerde ≤ 0.009, konuşurken ≥ 0.022 kaldı.
 - Eşikler bir denemeye dayanıyor; konuşma + başkasının konuştuğu kayıtlarla tekrar kalibre edilecek.
 
 ---

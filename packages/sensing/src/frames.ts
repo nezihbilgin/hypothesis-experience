@@ -26,11 +26,10 @@ export const BLINK_HIGH = 0.5
 export const BLINK_LOW = 0.35
 /** Blink rate needs >= 15 frames per second (blinks last 100-400 ms). */
 export const BLINK_MIN_FPS = 15
-/** Voice counts as the participant talking only if the lips or jaw move within the second (or the previous one,
- * for speech crossing a second boundary). Lip gap range in face widths; jawOpen range. Calibrated on one M1 run
- * (20 Nov): jawOpen moved only 0.01-0.05 while talking, so the lips are the primary check. */
+/** Voice counts as the participant talking only if the lips move within the second (or the previous one, for speech
+ * crossing a second boundary). Lip gap range in face widths. Calibrated on two M1 runs (20 Nov): silent seconds
+ * <= 0.009 even with head movement, talking >= 0.022. jawOpen is kept as a raw value only: it also moves with the head. */
 export const MOUTH_MOVE_MIN = 0.015
-export const JAW_MOVE_MIN = 0.03
 /** Trailing window for the blink rate, and the least valid seconds it needs. */
 export const BLINK_WINDOW_SEC = 15
 export const BLINK_MIN_SECONDS = 5
@@ -52,7 +51,7 @@ export class SecondAggregator {
   /** Per completed second: blinks and whether the second had enough fps. */
   private blinkHistory: { sec: number; blinks: number; valid: boolean }[] = []
   private talking = new Map<number, { active: number; total: number }>()
-  private prevJawActive = false
+  private prevMouthActive = false
 
   constructor(private readonly emit: (s: SecondSample) => void) {}
 
@@ -77,7 +76,7 @@ export class SecondAggregator {
   flush(): void {
     if (this.sec !== null && this.frames.length) this.close()
     this.prevFace = null
-    this.prevJawActive = false
+    this.prevMouthActive = false
   }
 
   private close(): void {
@@ -136,9 +135,9 @@ export class SecondAggregator {
     }
     const jawMovement = range('jawOpen')
     const mouthMovement = range('mouthOpen')
-    const mouthActive = (mouthMovement !== null && mouthMovement >= MOUTH_MOVE_MIN) || (jawMovement !== null && jawMovement >= JAW_MOVE_MIN)
-    const talking = voice === null || (jawMovement === null && mouthMovement === null) ? null : mouthActive || this.prevJawActive ? voice : 0
-    this.prevJawActive = mouthActive
+    const mouthActive = mouthMovement !== null && mouthMovement >= MOUTH_MOVE_MIN
+    const talking = voice === null || mouthMovement === null ? null : mouthActive || this.prevMouthActive ? voice : 0
+    this.prevMouthActive = mouthActive
 
     this.emit({
       t: sec,
