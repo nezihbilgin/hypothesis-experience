@@ -152,6 +152,12 @@ describe('study definition (tasks, settings)', () => {
     expect(r.study.questions).toMatchObject({ endOfTask: false, preTaskRating: true, limits: { perTask: 1, endOfTask: 0, perSession: 6 } })
     expect(r.study.faceSignals).toBe(true)
   })
+  it('accepts a Figma node id as a task start screen', () => {
+    const ok = parseStudy({ ...base, tasks: [{ prompt: 'x', screens: [screen], startScreen: '26:7221' }] })
+    expect(ok.ok && ok.study.tasks[0].startScreen).toBe('26:7221')
+    const bad = parseStudy({ ...base, tasks: [{ prompt: 'x', screens: [screen], startScreen: 'Sepet' }] })
+    expect(bad.ok ? [] : bad.errors).toEqual(['Görev 1: startScreen bir Figma node id olmalı, örn. "26:7221".'])
+  })
   it('accepts a target screen only if it is one of the task screens', () => {
     const ok = parseStudy({ ...base, tasks: [{ prompt: 'x', screens: [screen], targetScreen: '1:2' }] })
     expect(ok.ok && ok.study.tasks[0].targetScreen).toBe('1:2')

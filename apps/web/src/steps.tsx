@@ -184,7 +184,10 @@ export function TaskRun({ run, next }: { run: SessionRun; next: (retro: Question
   const [loaded, setLoaded] = useState(false)
   const [reached, setReached] = useState(false)
   const hasTarget = !!run.study.tasks.find((x) => x.id === run.task.id)?.targetScreen
-  const src = useMemo(() => (run.study.sourceType === 'figma' ? figmaEmbedUrl(run.study.sourceUrl, location.hostname) : run.study.sourceUrl), [run])
+  const src = useMemo(() => {
+    const start = run.study.tasks.find((x) => x.id === run.task.id)?.startScreen
+    return run.study.sourceType === 'figma' ? figmaEmbedUrl(run.study.sourceUrl, location.hostname, start) : run.study.sourceUrl
+  }, [run])
   const started = useRef(false)
 
   useEffect(() => {

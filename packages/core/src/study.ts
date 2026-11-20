@@ -30,6 +30,9 @@ export interface StudyTask {
   prompt: string
   /** In the order the researcher expects them; order is used to detect going back. */
   screens: StudyScreen[]
+  /** Figma: node id the prototype starts from for this task (a flow's starting point), e.g. "26:7221".
+   * Without it the link's own starting point is used. */
+  startScreen?: string
   /** Screen key that means the task goal was reached. The app highlights "Done" there; it never auto-finishes. */
   targetScreen?: string
 }
@@ -145,9 +148,11 @@ export function parseStudy(input: unknown): ParseResult {
         })
       })
     }
+    const startScreen = optText(t.startScreen)
+    if (startScreen && !/^I?\d+:\d+$/.test(startScreen)) errors.push(`${tAt}startScreen bir Figma node id olmalı, örn. "26:7221".`)
     const targetScreen = optText(t.targetScreen)
     if (targetScreen && screens.length && !screens.some((x) => x.key === targetScreen)) errors.push(`${tAt}targetScreen "${targetScreen}" tanımlı ekranlardan biri olmalı.`)
-    tasks.push({ id, prompt: prompt ?? '', screens, ...(targetScreen ? { targetScreen } : {}) })
+    tasks.push({ id, prompt: prompt ?? '', screens, ...(startScreen ? { startScreen } : {}), ...(targetScreen ? { targetScreen } : {}) })
   })
 
   // Texts, scales, question points

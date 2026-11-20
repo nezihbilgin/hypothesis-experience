@@ -68,9 +68,14 @@ export interface QualityResult extends QualityDecision {
 }
 
 /** Figma prototype link -> embed URL (embed.figma.com + embed-host + client-id), as in Spike 1. */
-export function figmaEmbedUrl(raw: string, host: string): string {
+export function figmaEmbedUrl(raw: string, host: string, startNode?: string): string {
   const u = new URL(raw)
   if (!/(^|\.)figma\.com$/.test(u.hostname)) return raw
+  if (startNode) {
+    // Start this task's prototype at a given flow starting point (task.startScreen).
+    u.searchParams.set('node-id', startNode.replace(':', '-'))
+    u.searchParams.set('starting-point-node-id', startNode)
+  }
   u.hostname = 'embed.figma.com'
   u.searchParams.set('embed-host', host || 'localhost')
   u.searchParams.set('client-id', FIGMA_CLIENT_ID)

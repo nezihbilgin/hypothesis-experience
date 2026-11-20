@@ -12,6 +12,11 @@ describe('figma embed url', () => {
     expect(u.searchParams.get('footer')).toBe('false')
     expect(u.searchParams.get('hotspot-hints')).toBe('0')
   })
+  it('starts at a task start screen when given', () => {
+    const u = new URL(figmaEmbedUrl('https://www.figma.com/proto/abc/Test?node-id=2-4145&starting-point-node-id=2%3A4145', 'localhost', '26:7221'))
+    expect(u.searchParams.get('node-id')).toBe('26-7221')
+    expect(u.searchParams.get('starting-point-node-id')).toBe('26:7221')
+  })
   it('leaves non-Figma links alone', () => {
     expect(figmaEmbedUrl('https://demo.example/app', 'localhost')).toBe('https://demo.example/app')
   })
