@@ -14,13 +14,15 @@ export interface SecondSample {
   headSpeedMax: number | null
   /** Face width / frame width, median this second (leaning-in signal). */
   faceWidthRatio?: number | null
-  /** Fraction of this second the participant was talking, 0..1: voice activity confirmed by jaw movement.
+  /** Fraction of this second the participant was talking, 0..1: voice activity confirmed by lip or jaw movement.
    * null when it cannot be confirmed (no face this second, or no microphone). */
   talking: number | null
-  /** Raw voice activity from the microphone, 0..1, before the jaw check (also picks up other people and noise). */
+  /** Raw voice activity from the microphone, 0..1, before the mouth check (also picks up other people and noise). */
   voice?: number | null
   /** Range of the raw jawOpen blendshape within this second, 0..1 (mouth movement). */
   jawMovement?: number | null
+  /** Range of the inner lip gap within this second, in face widths (lip movement). */
+  mouthMovement?: number | null
   /** Frames processed this second, with or without a face (frame-rate proxy). Below 5 the second counts as no data. */
   samples: number
   /** Blinks per minute, estimated over a short window. null when fps < 15 (blinks last 100-400 ms). */

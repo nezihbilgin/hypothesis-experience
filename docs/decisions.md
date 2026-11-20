@@ -8,6 +8,16 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 
 ---
 
+## 2026-11-20: Konuşma doğrulaması dudak aralığına geçti
+
+Kaynak: Nezih'in ikinci M1 denemesi. Durum: uygulandı. Aynı günün "Konuşma oranı çene hareketiyle doğrulanır" girişindeki eşiği geçersiz kılar.
+
+- Konuşurken `jawOpen` sadece 0.01-0.05 oynadı; 0.08 eşiği gerçek konuşmayı kaçırdı.
+- Birincil kontrol artık dudak aralığı: iç üst dudak (landmark 13) ile iç alt dudak (14) arası, yüz genişliğine bölünür; saniye içindeki aralığı (`mouthMovement`) ≥ 0.015 ise ağız hareketli. `jawOpen` aralığı ≥ 0.03 de yeterli sayılır. Bir önceki saniyedeki hareket de geçerli.
+- Eşikler bir denemeye dayanıyor; konuşma + başkasının konuştuğu kayıtlarla tekrar kalibre edilecek.
+
+---
+
 ## 2026-11-20: Konuşma oranı çene hareketiyle doğrulanır
 
 Kaynak: Nezih'in M1 denemesi (sensing.html). Durum: uygulandı.

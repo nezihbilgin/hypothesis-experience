@@ -13,7 +13,7 @@ const fmt = (v: unknown): string => (v === null || v === undefined ? '–' : typ
 
 function row(s: SecondSample): void {
   const tr = document.createElement('tr')
-  tr.innerHTML = [s.t, s.samples, s.face ? 'evet' : 'hayır', s.headSpeedMax, s.stillness, s.faceWidthRatio, s.blinkRate, s.browDown, s.voice, s.jawMovement, s.talking].map((v) => `<td>${fmt(v)}</td>`).join('')
+  tr.innerHTML = [s.t, s.samples, s.face ? 'evet' : 'hayır', s.headSpeedMax, s.stillness, s.faceWidthRatio, s.blinkRate, s.browDown, s.voice, s.mouthMovement, s.jawMovement, s.talking].map((v) => `<td>${fmt(v)}</td>`).join('')
   $('#rows').prepend(tr)
 }
 

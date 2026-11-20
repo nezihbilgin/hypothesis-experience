@@ -34,7 +34,12 @@ export function toFrame(r: FaceLandmarkerResult, t: number): FrameResult {
     sx += p.x
     sy += p.y
   }
-  const f: FrameResult = { t, face: true, cx: sx / pts.length, cy: sy / pts.length, width: maxX - minX }
+  const width = maxX - minX
+  const f: FrameResult = { t, face: true, cx: sx / pts.length, cy: sy / pts.length, width }
+  // Lip gap: inner upper lip (13) to inner lower lip (14), in face widths. More sensitive than jawOpen for small speech.
+  const up = pts[13]
+  const lo = pts[14]
+  if (up && lo && width > 0) f.mouthOpen = Math.hypot(up.x - lo.x, up.y - lo.y) / width
   const blink = score(r, ['eyeBlinkLeft', 'eyeBlinkRight'])
   const brow = score(r, ['browDownLeft', 'browDownRight'])
   const jaw = score(r, ['jawOpen'])

@@ -63,6 +63,13 @@ describe('second aggregator', () => {
     expect(out.map((x) => x.talking)).toEqual([0.4, 0.4, 0, 0, null])
     expect(out[0].jawMovement).toBe(0.25)
   })
+  it('small lip movement confirms talking even when the jaw barely moves', () => {
+    const lips = (sec: number) => second(sec, 10, (i) => ({ jawOpen: 0.02 + (i % 2) * 0.01, mouthOpen: i % 2 ? 0.04 : 0.01 }))
+    const still = (sec: number) => second(sec, 10, (i) => ({ jawOpen: 0.02, mouthOpen: 0.005 + (i % 2) * 0.002 }))
+    const out = withAudio([...lips(0), ...still(1), ...still(2)], () => true, 3)
+    expect(out.map((x) => x.mouthMovement)).toEqual([0.03, 0.002, 0.002])
+    expect(out.map((x) => x.talking)).toEqual([1, 1, 0])
+  })
   it('talking is null without a microphone', () => {
     expect(run(second(0, 10, (i) => ({ jawOpen: i % 2 ? 0.3 : 0.05 })))[0].talking).toBeNull()
   })
