@@ -11,6 +11,7 @@ import {
   endOfTaskQuestions,
   fromEmbedMessage,
   questionAtTransition,
+  sessionHealth,
   type AskedSoFar,
   type Baseline,
   type Capabilities,
@@ -91,6 +92,8 @@ export function figmaEmbedUrl(raw: string, host: string, startNode?: string): st
 export class SessionRun {
   readonly clock = new SessionClock(() => absoluteNow(performance))
   readonly startedAt = new Date().toISOString()
+  /** Current flow step (set by the app); written into the health block. */
+  step = 'welcome'
   consent: Consent = { camera: false, microphone: false, faceSignals: false, at: '' }
   quality: QualityResult | null = null
   sensing: SensingClient | null = null
@@ -335,9 +338,31 @@ export class SessionRun {
     this.sensing = null
   }
 
+  health(): ReturnType<typeof sessionHealth> {
+    return sessionHealth({
+      cameraOn: this.cameraOn,
+      warmup: this.warmup,
+      baseline: this.baseline,
+      tasks: this.tasks.filter(Boolean).map((t, i) => ({
+        id: t.id,
+        events: t.events,
+        samples: t.samples,
+        unknownScreens: t.unknownScreens,
+        questions: t.questions,
+        endSec: t.endSec,
+        reachedTargetAt: t.reachedTargetAt,
+        hasTarget: !!this.study.tasks[i]?.targetScreen
+      })),
+      sessionSec: (Date.now() - Date.parse(this.startedAt)) / 1000,
+      lastStep: this.step
+    })
+  }
+
   toJSON(): unknown {
     return {
       schema: SESSION_SCHEMA,
+      // Session health first: numbers only, with automatic flags (decisions 2026-11-20).
+      health: this.health(),
       study: { orgId: this.study.orgId, name: this.study.name, sourceType: this.study.sourceType, sourceUrl: this.study.sourceUrl, faceSignals: this.study.faceSignals, locale: this.study.locale },
       participant: this.participant,
       startedAt: this.startedAt,

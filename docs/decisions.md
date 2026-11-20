@@ -8,6 +8,15 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 
 ---
 
+## 2026-11-20: Sorun ekilmiş prototiple doğrulama; oturum sağlığı bloğu
+
+Kaynak: ürün yönetimi thread'i, Nezih onayı ("ikisi de makul"). Durum: kararlaştırıldı; sağlık bloğu uygulandı (`faz1-core`).
+
+1. **Sorun ekilmiş prototip M2'nin yerini alır:** mevcut prototipin 4-5 bilinen sorun eklenmiş bir kopyası, 6-8 katılımcı, başarı kriterleri önceden sabit (ayrıntılar büyüme dokümanında: https://claude.ai/artifact/9QYb36JZEaUjKqRHjiW3R6). Eski videolarla doğrulama isteğe bağlı, sadece envanter gelirse yapılır. M4 gerçek çalışma olarak kalır. Şimdilik mühendislik işi yok; prototip kopyası tasarım işi.
+2. **Oturum sağlığı bloğu (pilot öncesi):** oturum dosyasının en başında `health`, sadece sayılar: fps medyanı ve p10, yüz bulunan saniye oranı, prototip olay sorunları (geçişe yol açmayan "handled" tıklamalar, tanımsız ekranlar), ısınma kalitesi (süre, tıklama sayısı, baseline geçerli mi), oturumun kaldığı adım, atlanan ve "Hatırlamıyorum" denen sorular, oturum süresi, görev başına süre ve hedefe ulaşma. Otomatik bayraklar: `low-fps` (< 10), `face-missing` (< %70), `unknown-screens`, `missing-transitions`, `baseline-invalid` (< 3 ısınma tıklaması), `not-completed`, `target-not-reached`, `many-dont-remember` (> %50). Araştırmacı raporu yazıldığında en üstte gösterilecek. Hesaplama `core/health.ts`'te (saf, testli).
+
+---
+
 ## 2026-11-20: Repo public kalır, prototip linkleri repoya girmez
 
 Kaynak: Nezih kararı (ürün yönetimi thread'i). Durum: uygulandı (`faz1-core`).

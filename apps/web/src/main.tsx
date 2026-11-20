@@ -31,6 +31,7 @@ function Flow({ study, participant }: { study: Study; participant: string }) {
   // ?debug=1 exposes the run for automated end-to-end checks (still nothing leaves the browser).
   if (new URLSearchParams(location.search).has('debug')) (window as unknown as { __hxRun: SessionRun }).__hxRun = run
   const [step, setStep] = useState<Step>({ k: 'welcome' })
+  run.step = step.k
   const go = useCallback((s: Step) => setStep(s), [])
   const afterTask = (i: number) => (i + 1 < study.tasks.length ? go({ k: 'intro', i: i + 1 }) : go({ k: 'hardest' }))
   let view
