@@ -6,7 +6,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import example from './studies/example.json'
 const localStudies = import.meta.glob('./studies/*.local.json', { eager: true, import: 'default' })
-const localStudy = Object.values(localStudies)[0]
+// ?local=<name> picks ./studies/<name>.local.json; otherwise the first one alphabetically.
+const localPick = new URLSearchParams(location.search).get('local')
+const localStudy = (localPick ? localStudies[`./studies/${localPick}.local.json`] : undefined) ?? Object.entries(localStudies).sort(([a], [b]) => a.localeCompare(b))[0]?.[1]
 import { SessionRun } from './run'
 import { CameraCheck, Consent, Hardest, Retro, Seq, Summary, TaskIntro, TaskRun, Warmup, Welcome } from './steps'
 import { TextsCtx } from './ui'
