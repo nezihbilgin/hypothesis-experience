@@ -8,6 +8,40 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 
 ---
 
+## 2026-11-20: Sorular ekran geçişinde, AI ile derinleştirme; retro için video yerine frame replay
+
+Kaynak: ürün yönetimi thread'i (Nezih onayı, 20 Kasım). Durum: kararlaştırıldı. 20 Kasım tarihli "Retrospektif" bölümünü (madde 5) aşağıdaki noktalarda geçersiz kılar.
+
+**Konumlandırma:** "moderated derinliği, unmoderated ölçekte".
+
+### Soru zamanlaması (hibrit)
+
+- **Planlı soru:** hipotez kartına opsiyonel `probe` alanı (araştırmacının önceden yazdığı soru). Katılımcı o ekrandan **çıkarken** sorulur.
+- **Sinyalle tetiklenen soru:** beklenmedik sapma olursa yine **ekran geçişinde** sorulur, ekranın ortasında asla. Görev başına en fazla 2 soru (planlı + tetiklenen toplam).
+- Soru sırasında oturum saati durur; o ekranın ölçümü soru başlamadan kapanmış olur.
+- Kalan sapmalar görev sonunda kısa retro olarak sorulur. Toplam oturum başına en fazla 6 soru anı.
+
+### AI ile derinleştirme
+
+- Cevaba göre en fazla 2 takip sorusu. AI'a hipotez kartı, gözlenen davranış (sadece olgular) ve katılımcının cevabı verilir.
+- Kurallar: yönlendirmeyen, nötr dil; duygu/niyet çıkarımı yok (İlke 1); katılımcıya sayı gösterilmez; her soruda "geç" seçeneği.
+- MVP'de cevap **yazılı** başlar. Ses + transkripsiyon, sesin cihazdan çıkması için ayrı onay ve AB bölgesi gerektirdiği için sonraki adım.
+- AI soru kalitesi (yönlendirme var mı) M3 pilotunda ayrıca değerlendirilir.
+
+### "O ana götürme": video yerine frame replay
+
+- Retro ve soru anında katılımcıya ekran videosu değil, Figma frame görüntüsü + kaydedilen cursor izi ve tıklama noktaları oynatılır.
+- Sebep: katılımcının ekranından kayıt gerekmez (gizlilik), Safari/Firefox/mobilde çalışır.
+- Ekran videosu sadece araştırmacı raporu için gerekirse opsiyonel kalır; MVP'de nerede saklanacağı ayrıca kararlaştırılacak.
+- Retro/rapor bileşeni bir "oynatma kaynağı" soyutlaması alır (frame replay, ileride video).
+
+### Etkisi
+
+- M2 (geriye dönük doğrulama) etkilenmez.
+- M3'teki retro adımının yerini bu soru motoru alır. `screens.ts` `retroMoments` mantığı "geçişte soru adayı" seçimine dönüşür.
+
+---
+
 ## 2026-11-20: Arayüze özgü model, retrospektif, zaman senkronu, geriye dönük doğrulama
 
 Kaynak: planlama sohbeti (18-19 Kasım). Durum: kararlaştırıldı, kod uyarlaması Nezih onayıyla yapılacak (aşağıda "Kodla uzlaştırma").
