@@ -8,6 +8,21 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 
 ---
 
+## 2026-11-20: Katılımcıya görünen metinler ve ölçekler araştırmacı tarafından düzenlenebilir (MVP sonrası)
+
+Kaynak: ürün yönetimi thread'i (Nezih, 20 Kasım). Durum: kararlaştırıldı; uygulama MVP sonrası, mimari şimdiden kapı bırakır.
+
+- Beklenti ve SEQ puanlaması araştırmacının inisiyatifinde: ölçek aralığı (örn. 1-7 ya da 1-10) ve uç/ara etiketler düzenlenebilir.
+- Soruların çıkış anları (görev öncesi/sonrası, ekran geçişi, oturum sonu) ve soru metinleri düzenlenebilir.
+- Son kullanıcıya görünen her metin (onay, yönergeler, butonlar, sorular) hem düzenlenebilir hem çok dilli olmalı.
+
+MVP'de yapılacak ucuz hazırlık (şimdi):
+- Katılımcıya görünen tüm metinler kodun içine gömülmez, tek bir metin kataloğunda anahtar → metin olarak durur (varsayılan dil Türkçe).
+- Ölçek, çalışma JSON'unda `{ min, max, labels }` olarak tutulur; varsayılan 1-7. Kod sabit 7'ye dayanmaz.
+- Soru tetikleme noktaları çalışma JSON'unda veri olarak tanımlanır (varsayılanlar önceki girişteki gibi).
+
+---
+
 ## 2026-11-20: Yüz sinyali ayarı, 30 sn ısınma, görev bazında zorluk puanı
 
 Kaynak: ürün yönetimi thread'i (Nezih onayı, 20 Kasım). Durum: kararlaştırıldı.
