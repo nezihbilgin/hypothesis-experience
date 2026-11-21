@@ -80,11 +80,13 @@ describe('questions at screen transitions', () => {
     const r2 = computeScreenReport({ cards: [t2Card], events: [ev(0, 'a', 'screen'), ev(2, 'a', 'click'), ev(3, 'b', 'screen')], samples: [], baseline, endSec: 3, cameraEnabled: false })
     const q2 = questionAtTransition({ card: t2Card, report: r2, leftAt: 3, asked: { inTask: [], inSession: [q1!] } })
     expect(q2).toMatchObject({ source: 'planned', probe: 'Nereden başlayacağını nasıl buldun?' })
-    // Friction on 'a' again in task 2 is a new finding: signal questions are de-duplicated per task.
+    // At most one question per screen within a task: coming back to 'a' in task 2 asks nothing more, planned or signal.
     const r3 = computeScreenReport({ cards: [t2Card], events: [ev(0, 'a', 'screen'), ev(1, 'a', 'dead-click'), ev(2, 'a', 'click'), ev(3, 'b', 'screen')], samples: [], baseline, endSec: 3, cameraEnabled: false })
-    expect(questionAtTransition({ card: t2Card, report: r3, leftAt: 5, asked: { inTask: [q2!], inSession: [q1!, q2!] } })?.source).toBe('signal')
-    // ...while the planned one is only once: leaving 'a' again in task 2 does not repeat it.
+    expect(questionAtTransition({ card: t2Card, report: r3, leftAt: 5, asked: { inTask: [q2!], inSession: [q1!, q2!] } })).toBeNull()
     expect(questionAtTransition({ card: t2Card, report: r2, leftAt: 5, asked: { inTask: [q2!], inSession: [q1!, q2!] } })).toBeNull()
+    // Two tasks with their own planned question on the same screen: each task asks its own (QA KA-19).
+    const t3Card: HypothesisCard = { ...t1Card, probe: 'Siparişlerinle ilgili ne arardın?' }
+    expect(questionAtTransition({ card: t3Card, report: r2, leftAt: 3, asked: { inTask: [], inSession: [q1!, q2!] } })).toMatchObject({ source: 'planned', probe: 'Siparişlerinle ilgili ne arardın?' })
   })
   it('session cap stops transition questions in later tasks', () => {
     const full = Array.from({ length: 6 }, () => ({ screenKey: 'x', askedAt: 0, source: 'signal' as const, replay: [0, 1] as [number, number] }))

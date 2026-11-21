@@ -53,8 +53,10 @@ export function questionAtTransition(opts: {
   const limits = opts.limits ?? DEFAULT_QUESTION_LIMITS
   if (asked.inTask.length >= limits.perTask || asked.inSession.length >= limits.perSession) return null
   const lastReplay: [number, number] = [Math.max(0, leftAt - 2 * REPLAY_PAD_SEC), leftAt]
-  const plannedDone = asked.inSession.some((q) => q.source === 'planned' && q.screenKey === card.screenKey)
-  if (card.probe && !plannedDone) return { screenKey: card.screenKey, askedAt: leftAt, source: 'planned', probe: card.probe, replay: lastReplay }
+  // At most one question per screen within a task, and none again when the participant comes back to it. Planned
+  // questions are per task: a screen shared by two tasks asks each task's own question (decisions 2026-11-21).
+  if (asked.inTask.some((q) => q.screenKey === card.screenKey)) return null
+  if (card.probe) return { screenKey: card.screenKey, askedAt: leftAt, source: 'planned', probe: card.probe, replay: lastReplay }
   const m = report.mismatches
     .filter((x) => x.screenKey === card.screenKey && x.kind !== 'over-time' && !askedAbout(asked.inTask, x))
     .sort(bySeverity)[0]
