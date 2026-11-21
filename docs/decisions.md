@@ -8,6 +8,16 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 
 ---
 
+## 2026-11-21: Cihaz alt sınırı: Apple Silicon ya da yaklaşık 2020 sonrası bilgisayar
+
+Kaynak: Nezih ("11 yıllık Intel Mac'i desteklemesek de olur"), PM. Durum: geçerli. 2026-11-20 M3 pilot kapısındaki "eski Intel Mac'te ≥ 10 fps" şartının yerine geçer.
+
+- **Yeni alt sınır:** Apple Silicon (M1 ve üstü) ya da yaklaşık 2020 sonrası, donanım hızlandırmalı (GPU'lu) bir bilgisayar. Kamera sinyalleri bu cihazlarda ≥ 10 fps, göz kırpma için ≥ 15 fps beklenir.
+- **Daha zayıf cihazlar:** desteklenmez ama dışlanmaz; düşük fps algılanınca kamerasız moda düşme davranışı aynen kalır (fps eşikleri 2026-11-20 kararındaki gibi).
+- **Ölçümler:** Untitled UI geçişi ve think-aloud denemesindeki fps/CPU ölçümleri bu alt sınıra göre, M1'de yapılır. Faz 0'daki Intel Mac ölçümleri kayıt olarak kalır.
+
+---
+
 ## 2026-11-21: Rapor: görev kutuları, zaman çizgisi, takılma anları, araştırmacı notu
 
 Kaynak: Nezih'in test geri bildirimi, PM iş listesi. Durum: uygulandı (`faz1-core`).
