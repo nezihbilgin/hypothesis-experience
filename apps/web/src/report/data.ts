@@ -1,5 +1,5 @@
 // Researcher report data helpers (pure, unit-tested): session files -> rows for tables, CSV and the click map.
-import { computeScreenReport, taskOutcome, type Baseline, type HypothesisCard, type InteractionEvent, type ScreenReport, type SecondSample, type SessionHealth, type Study, type TaskOutcome } from '@hx/core'
+import { computeScreenReport, taskOutcome, type Baseline, type HypothesisCard, type InteractionEvent, type Mismatch, type ScreenReport, type ScreenStats, type SecondSample, type SessionHealth, type Study, type TaskOutcome } from '@hx/core'
 
 export interface SessionTask {
   id: string
@@ -111,4 +111,81 @@ export function metricsCsv(sessions: SessionFile[], names: (taskId: string) => H
       }
     }
   return rows.join('\n') + '\n'
+}
+
+// ---- Readable report text (report layer only; core numbers unchanged) ---------------------------------------
+
+const BEHAVIOR_HYPOTHESIS: Record<HypothesisCard['behavior'], string> = {
+  flow: 'akış ekranı (takılmadan geçmesi beklendi)',
+  read: 'okuma ekranı (dikkatle okuması beklendi)',
+  decide: 'karar ekranı (seçenekleri tartması beklendi)'
+}
+const times = (k: number): string => (k === 1 ? 'bir kez' : `${k} kez`)
+const sec = (v: number): string => `${Math.round(v)} sn`
+
+/** Two-line mismatch text: what the researcher hypothesised, what was observed. Behaviour only (Principle 1). */
+export function mismatchLines(m: Mismatch, card: HypothesisCard | undefined, st: ScreenStats | undefined): { hypothesis: string; observation: string } {
+  const hyp = card ? BEHAVIOR_HYPOTHESIS[card.behavior] : 'ekran'
+  if (m.kind === 'over-time') {
+    const max = card?.expectedSec[1]
+    return { hypothesis: `${hyp}, en fazla ${max !== undefined ? sec(max) : '?'}`, observation: `${sec(st?.timedSec ?? st?.durationSec ?? 0)} sürdü` }
+  }
+  if (m.kind === 'disengagement') return { hypothesis: hyp, observation: `${sec(st?.awaySec ?? 0)} ekrandan uzaklaştı` }
+  if (m.kind === 'effort-mismatch') {
+    if (m.direction === 'high') return { hypothesis: hyp, observation: `ilk tıklamadan önce ${sec(st?.firstActionSec ?? 0)} durdu` }
+    return { hypothesis: hyp, observation: `${sec(st?.durationSec ?? 0)}'de geçti` }
+  }
+  const parts: string[] = []
+  if (st?.offPath) parts.push('beklenen yolun dışındaki bu ekrana geldi')
+  if (st?.backs) parts.push(`${times(st.backs)} geri döndü`)
+  if (st?.deadClicks) parts.push(`${times(st.deadClicks)} tepkisiz bir yere tıkladı`)
+  if (st?.rageClicks) parts.push(`${times(st.rageClicks)} aynı yere art arda tıkladı`)
+  if (st?.loops) parts.push(`${times(st.loops)} bir önceki ekranla arasında gidip geldi`)
+  return { hypothesis: hyp, observation: parts.join(', ') || 'takıldı' }
+}
+
+export interface Highlight {
+  kind: 'mismatch' | 'dropped' | 'rage' | 'loop'
+  screenKey: string
+  title: string
+  hypothesis?: string
+  observation: string
+  /** Answer the participant gave about this screen, if any. */
+  answer?: string
+}
+
+/** "Öne çıkan anlar": the 3 heaviest mismatches, the drop-off screen, rage clicks and loops, with answers. */
+export function highlights(task: SessionTask, cards: HypothesisCard[]): Highlight[] {
+  const r = task.report
+  if (!r) return []
+  const name = (k: string): string => cards.find((c) => c.screenKey === k)?.participantName ?? cards.find((c) => c.screenKey === k)?.screenName ?? k
+  const answerFor = (k: string): string | undefined => {
+    const q = task.questions.find((x) => x.moment.screenKey === k)
+    return q ? (q.answer ?? (q.dontRemember ? '(hatırlamıyorum)' : '(geçti)')) : undefined
+  }
+  const st = (k: string) => r.screens.find((s) => s.screenKey === k)
+  const out: Highlight[] = []
+  const seen = new Set<string>()
+  for (const m of [...r.mismatches].sort((a, b) => b.severity - a.severity).slice(0, 3)) {
+    const l = mismatchLines(m, cards.find((c) => c.screenKey === m.screenKey), st(m.screenKey))
+    out.push({ kind: 'mismatch', screenKey: m.screenKey, title: name(m.screenKey), ...l, answer: answerFor(m.screenKey) })
+    seen.add(`${m.screenKey}|${m.kind}`)
+  }
+  if (task.outcome?.result === 'dropped' && task.outcome.lastScreen)
+    out.push({ kind: 'dropped', screenKey: task.outcome.lastScreen, title: name(task.outcome.lastScreen), observation: 'görevi bu ekranda yarıda bıraktı', answer: answerFor(task.outcome.lastScreen) })
+  for (const s of r.screens) {
+    if (s.rageClicks && !seen.has(`${s.screenKey}|unexpected-friction`))
+      out.push({ kind: 'rage', screenKey: s.screenKey, title: name(s.screenKey), observation: `${times(s.rageClicks)} aynı yere art arda tıkladı`, answer: answerFor(s.screenKey) })
+    if (s.loops && !seen.has(`${s.screenKey}|unexpected-friction`))
+      out.push({ kind: 'loop', screenKey: s.screenKey, title: name(s.screenKey), observation: `${times(s.loops)} bir önceki ekranla arasında gidip geldi`, answer: answerFor(s.screenKey) })
+  }
+  return out
+}
+
+/** Click counts for the legend under a click map. */
+export function clickLegend(points: ClickPoint[], size: { w: number; h: number } | undefined, node: string): { working: number; dead: number; outside: number; drawable: ClickPoint[] } {
+  const inFrame = (p: ClickPoint): boolean => !p.frameId || p.frameId === node
+  const fits = (p: ClickPoint): boolean => !size || (p.x >= 0 && p.y >= 0 && p.x <= size.w && p.y <= size.h)
+  const drawable = points.filter((p) => inFrame(p) && fits(p))
+  return { working: drawable.filter((p) => !p.dead).length, dead: drawable.filter((p) => p.dead).length, outside: points.length - drawable.length, drawable }
 }

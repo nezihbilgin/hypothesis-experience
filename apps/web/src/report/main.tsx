@@ -7,7 +7,7 @@ import { createRoot } from 'react-dom/client'
 import example from '../studies/example.json'
 import '../style.css'
 import './report.css'
-import { clicksByScreen, metricsCsv, parseSessionFile, recompute, type SessionFile, type SessionTask } from './data'
+import { clickLegend, clicksByScreen, highlights, metricsCsv, mismatchLines, parseSessionFile, recompute, type SessionFile, type SessionTask } from './data'
 import { figmaFrames, hasFigmaFrames, type ReferenceImageProvider } from './images'
 
 const localStudies = import.meta.glob('../studies/*.local.json', { eager: true, import: 'default' })
@@ -46,127 +46,195 @@ function ClickMap({ screenKey, task, images }: { screenKey: string; task: Sessio
   if (!group || (!group.points.length && !group.noPosition)) return null
   const byNode = new Map<string, typeof group.points>()
   for (const p of group.points) byNode.set(p.node, [...(byNode.get(p.node) ?? []), p])
-  const unmapped: string[] = []
+  let unknown = group.noPosition
   const maps = [...byNode].flatMap(([node, pts]) => {
     const img = images.image(node)
-    const drawable = pts.filter((p) => !p.frameId || p.frameId === node)
     if (!img) {
-      unmapped.push(`${node}: ${pts.length}`)
+      unknown += pts.length
       return []
     }
-    if (drawable.length < pts.length) unmapped.push(`${node} (iç kaydırma alanı): ${pts.length - drawable.length}`)
     const sz = size[node]
-    // Clicks outside the frame image (outside the design, or scrolled content missing from the export) are listed.
-    const outside = sz ? drawable.filter((p) => p.x > sz.w || p.y > sz.h).length : 0
-    if (outside) unmapped.push(`${node} (frame dışı): ${outside}`)
+    const l = clickLegend(pts, sz, node)
     return [
       <figure key={node} className="clickmap">
         <div className="clickmap-frame">
           <img src={img.url} alt={node} onLoad={(e) => setSize((s) => ({ ...s, [node]: { w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight } }))} />
-          {sz
-            ? drawable.filter((p) => p.x <= sz.w && p.y <= sz.h).map((p, i) => <span key={i} className={p.dead ? 'dot dead' : 'dot'} style={{ left: `${(p.x / sz.w) * 100}%`, top: `${(p.y / sz.h) * 100}%` }} />)
-            : null}
+          {sz ? l.drawable.map((p, i) => <span key={i} className={p.dead ? 'dot dead' : 'dot'} style={{ left: `${(p.x / sz.w) * 100}%`, top: `${(p.y / sz.h) * 100}%` }} />) : null}
         </div>
-        <figcaption>{node === screenKey ? 'Ekran' : `Durum ${node}`} · {drawable.length} tıklama</figcaption>
+        <figcaption>
+          {node === screenKey ? null : <span className="muted">Ekranın başka bir durumu · </span>}
+          <span className="lg"><i className="dot-lg" /> {l.working} çalışan</span>
+          <span className="lg"><i className="dot-lg dead" /> {l.dead} tepkisiz</span>
+          {l.outside ? <span className="lg">Tasarımın dışına tıklama: {l.outside}</span> : null}
+        </figcaption>
       </figure>
     ]
   })
   return (
     <div className="clickmaps">
       {maps}
-      {unmapped.length || group.noPosition ? (
-        <p className="muted small">
-          Görüntüsü olmayan durum: {unmapped.join(', ') || '–'}
-          {group.noPosition ? ` · konumsuz tıklama: ${group.noPosition}` : ''}
-        </p>
-      ) : null}
+      {unknown ? <p className="muted small">Konumu bilinmeyen tıklama: {unknown}</p> : null}
     </div>
   )
 }
 
-function TaskSection({ task }: { task: SessionTask }) {
+function Mismatches({ task, cards }: { task: SessionTask; cards: HypothesisCard[] }) {
+  const r = task.report
+  if (!r?.mismatches.length) return null
+  const name = (k: string): string => cards.find((c) => c.screenKey === k)?.screenName ?? k
+  return (
+    <ul className="mismatches">
+      {r.mismatches.map((m, i) => {
+        const l = mismatchLines(m, cards.find((c) => c.screenKey === m.screenKey), r.screens.find((x) => x.screenKey === m.screenKey))
+        return (
+          <li key={i}>
+            <b>{name(m.screenKey)}</b>
+            <br />
+            <span className="muted">Hipotez:</span> {l.hypothesis}
+            <br />
+            <span className="muted">Gözlem:</span> {l.observation}
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+function TaskSection({ task, faceOn }: { task: SessionTask; faceOn: boolean }) {
   const cards = cardsOf(task.id)
   const name = (k: string): string => cards.find((c) => c.screenKey === k)?.screenName ?? k
   const r = task.report
+  const hl = highlights(task, cards)
+  const LABEL: Record<string, string> = { mismatch: 'Sapma', dropped: 'Yarıda bırakma', rage: 'Art arda tıklama', loop: 'Gidip gelme' }
   return (
     <section className="task-section">
       <h3>{task.prompt}</h3>
-      <p>
-        <b>{task.outcome?.result ? RESULT[task.outcome.result] : 'Sonuç yok'}</b> · görev süresi {n(task.endSec)} sn · yönelim süresi {n(r?.orientationSec ?? null)} sn · beklenti {task.expectation ?? '–'} → SEQ {task.seq ?? '–'}
-        {task.outcome?.result === 'dropped' && task.outcome.lastScreen ? ` · son ekran: ${name(task.outcome.lastScreen)}` : ''}
+      <p className="task-summary">
+        <span>
+          Beklenen zorluk {task.expectation ?? '–'} → SEQ {task.seq ?? '–'}
+        </span>
+        <span className={`result ${task.outcome?.result ?? ''}`}>{task.outcome?.result ? RESULT[task.outcome.result] : 'Sonuç yok'}</span>
+        <span>
+          {n(task.endSec, 0)} sn{r?.orientationSec != null ? ` (yönelim ${n(r.orientationSec, 0)} sn)` : ''}
+        </span>
       </p>
-      {r?.mismatches.length ? (
-        <ul className="mismatches">
-          {r.mismatches.map((m, i) => (
-            <li key={i}>{m.text}</li>
-          ))}
-        </ul>
-      ) : null}
-      {task.questions.length ? (
-        <div className="answers">
-          <h4>Sorular</h4>
+      {hl.length ? (
+        <div className="highlights">
+          <h4>Öne çıkan anlar</h4>
           <ul>
-            {task.questions.map((q, i) => (
+            {hl.map((h, i) => (
               <li key={i}>
-                <span className="muted">{name(q.moment.screenKey)} · {q.moment.source === 'planned' ? q.moment.probe : q.moment.mismatch?.text}</span>
+                <span className="hl-kind">{LABEL[h.kind]}</span> <b>{h.title}</b>
+                {h.hypothesis ? (
+                  <>
+                    <br />
+                    <span className="muted">Hipotez:</span> {h.hypothesis}
+                  </>
+                ) : null}
                 <br />
-                {q.answer ?? (q.dontRemember ? '(hatırlamıyorum)' : '(geçti)')}
+                <span className="muted">Gözlem:</span> {h.observation}
+                {h.answer ? (
+                  <>
+                    <br />
+                    <span className="muted">Katılımcının cevabı:</span> “{h.answer}”
+                  </>
+                ) : null}
               </li>
             ))}
           </ul>
         </div>
-      ) : null}
-      {r ? (
-        <table className="metrics">
-          <thead>
-            <tr>
-              <th>Ekran</th>
-              <th>Süre</th>
-              <th>Efor</th>
-              <th>Sürtünme</th>
-              <th>Geri</th>
-              <th>Loop</th>
-              <th>Misclick</th>
-              <th>Rage</th>
-            </tr>
-          </thead>
-          <tbody>
+      ) : (
+        <p className="muted">Öne çıkan bir an yok.</p>
+      )}
+      <details>
+        <summary>Tüm sapmalar, sorular ve ekran ayrıntıları</summary>
+        <h4>Sapmalar</h4>
+        <Mismatches task={task} cards={cards} />
+        {task.questions.length ? (
+          <div className="answers">
+            <h4>Sorular</h4>
+            <ul>
+              {task.questions.map((q, i) => (
+                <li key={i}>
+                  <span className="muted">
+                    {name(q.moment.screenKey)} · {q.moment.source === 'planned' ? q.moment.probe : 'sinyalle sorulan soru'}
+                  </span>
+                  <br />
+                  {q.answer ?? (q.dontRemember ? '(hatırlamıyorum)' : '(geçti)')}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        {r ? (
+          <>
+            <h4>Ekranlar</h4>
+            {!faceOn ? (
+              <p className="muted small">
+                Duraksama: ekranda ilk tıklamaya kadar geçen süre, katılımcının ısınmadaki kendi eşiğine göre 0-100. Görevin ilk ekranında yönelim süresi hariç.
+              </p>
+            ) : (
+              <p className="muted small">Efor: ilk tıklamaya kadar duraksama ve yüz sinyalleri (hareketsizlik, göz kırpma, ekrana yaklaşma), kendi ısınmasına göre 0-100.</p>
+            )}
+            <table className="metrics">
+              <thead>
+                <tr>
+                  <th>Ekran</th>
+                  <th>Ziyaret, süre</th>
+                  <th>{faceOn ? 'Efor' : 'Duraksama'}</th>
+                  <th>Sürtünme</th>
+                  <th>Geri</th>
+                  <th>Loop</th>
+                  <th>Misclick</th>
+                  <th>Rage</th>
+                </tr>
+              </thead>
+              <tbody>
+                {r.screens.map((s) => (
+                  <tr key={s.screenKey} className={s.offPath ? 'offpath' : ''}>
+                    <td>
+                      {name(s.screenKey)}
+                      {s.offPath ? ' (yol dışı)' : ''}
+                    </td>
+                    <td>
+                      {s.visits.length} ziyaret, toplam {n(s.durationSec, 0)} sn
+                    </td>
+                    <td>{s.observed.effort}</td>
+                    <td>{s.observed.friction}</td>
+                    <td>{s.backs}</td>
+                    <td>{s.loops ?? 0}</td>
+                    <td>{s.misclickRate === null || s.misclickRate === undefined ? '–' : `%${Math.round(s.misclickRate * 100)}`}</td>
+                    <td>{s.rageClicks}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
             {r.screens.map((s) => (
-              <tr key={s.screenKey} className={s.offPath ? 'offpath' : ''}>
-                <td>
-                  {name(s.screenKey)}
-                  {s.offPath ? ' (yol dışı)' : ''}
-                </td>
-                <td>{n(s.durationSec)}</td>
-                <td>{s.observed.effort}</td>
-                <td>{s.observed.friction}</td>
-                <td>{s.backs}</td>
-                <td>{s.loops ?? 0}</td>
-                <td>{s.misclickRate === null || s.misclickRate === undefined ? '–' : `%${Math.round(s.misclickRate * 100)}`}</td>
-                <td>{s.rageClicks}</td>
-              </tr>
+              <div key={s.screenKey} className="clickmap-block">
+                <h4>{name(s.screenKey)}</h4>
+                <ClickMap screenKey={s.screenKey} task={task} images={figmaFrames} />
+              </div>
             ))}
-          </tbody>
-        </table>
-      ) : null}
-      {r?.screens.map((s) => (
-        <div key={s.screenKey} className="clickmap-block">
-          <h4>{name(s.screenKey)}</h4>
-          <ClickMap screenKey={s.screenKey} task={task} images={figmaFrames} />
-        </div>
-      ))}
+          </>
+        ) : null}
+      </details>
     </section>
   )
 }
 
+function faceSignalsOn(s: SessionFile): boolean {
+  return !!study?.faceSignals && !!s.consent?.faceSignals && !!s.capabilities?.hasCamera
+}
+
 function Health({ s }: { s: SessionFile }) {
   const h = s.health
-  if (!h) return <p className="muted">Bu dosyada sağlık bloğu yok (eski sürüm).</p>
+  const face = !study?.faceSignals ? 'Yüz sinyalleri bu çalışmada kapalı' : faceSignalsOn(s) ? 'Yüz sinyalleri açık' : 'Yüz sinyalleri bu oturumda kullanılmadı (onay ya da kamera yok)'
+  if (!h) return <p className="muted small">{face} · Bu dosyada sağlık bloğu yok (eski sürüm).</p>
   return (
     <div className="health">
       <div className="flags">{h.flags.length ? h.flags.map((f) => <span key={f} className="flag">{FLAG[f] ?? f}</span>) : <span className="flag ok">Sorun görünmüyor</span>}</div>
       <p className="muted small">
-        Süre {n(h.sessionSec / 60)} dk · kamera {h.camera.on ? `açık, fps ${n(h.camera.fpsMedian, 0)} (p10 ${n(h.camera.fpsP10, 0)}), yüz %${Math.round((h.camera.faceShare ?? 0) * 100)}` : 'kapalı'} · ısınma {n(h.warmup.durationSec)} sn, {h.warmup.clicks} tıklama · tanımsız ekran {h.prototype.unknownScreens} · geçişsiz tıklama {h.prototype.clicksWithoutTransition} · soru {h.questions.asked} (geç {h.questions.skipped}, hatırlamıyorum {h.questions.dontRemember})
+        {face} · süre {n(h.sessionSec / 60)} dk · kamera {h.camera.on ? `açık, fps ${n(h.camera.fpsMedian, 0)} (p10 ${n(h.camera.fpsP10, 0)}), yüz %${Math.round((h.camera.faceShare ?? 0) * 100)}` : 'kapalı'} · ısınma {n(h.warmup.durationSec)} sn, {h.warmup.clicks} tıklama · tanımsız ekran {h.prototype.unknownScreens} · geçişsiz tıklama {h.prototype.clicksWithoutTransition} · soru {h.questions.asked} (geç {h.questions.skipped}, hatırlamıyorum {h.questions.dontRemember})
       </p>
     </div>
   )
@@ -261,7 +329,7 @@ function App() {
           <h2>{s.participant || 'Katılımcı'} · {s.startedAt.slice(0, 16).replace('T', ' ')}</h2>
           <Health s={s} />
           {s.tasks.filter((t): t is SessionTask => !!t).map((t) => (
-            <TaskSection key={t.id} task={t} />
+            <TaskSection key={t.id} task={t} faceOn={faceSignalsOn(s)} />
           ))}
           {s.hardestTask?.answer ? <p><b>En zor görev:</b> {s.hardestTask.answer}</p> : null}
         </section>
@@ -269,5 +337,8 @@ function App() {
     </main>
   )
 }
+
+// Printing (PDF): open every collapsed section first so nothing is missing from the printout.
+window.addEventListener('beforeprint', () => document.querySelectorAll('details').forEach((d) => (d.open = true)))
 
 createRoot(document.getElementById('root')!).render(<App />)

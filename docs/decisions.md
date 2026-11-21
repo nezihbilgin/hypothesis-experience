@@ -8,6 +8,19 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 
 ---
 
+## 2026-11-21: Rapor okunabilirliği (P1, P2)
+
+Kaynak: Nezih'in rapor geri bildirimi, PM önceliklendirmesi, Nezih onayı. Durum: uygulandı (`faz1-core`); sadece rapor katmanı, `core` hesapları değişmedi.
+
+- Tıklama haritasının altında açıklamalı sayılar: çalışan, tepkisiz, "Tasarımın dışına tıklama". "Görüntüsü olmayan durum" satırı kalktı; konumu bilinmeyen tıklamalar varsa tek satırda sayılır.
+- Görev başlığının altında ayrı bir satır: beklenen zorluk → SEQ, sonuç, süre (yönelim süresiyle).
+- Sapmalar iki satır: "Hipotez: karar ekranı (seçenekleri tartması beklendi)" / "Gözlem: 3 sn'de geçti". "X bekledin" kalıbı raporda kullanılmıyor.
+- Yüz sinyalleri kapalıyken "Efor" sütunu "Duraksama" adını alır ve tablonun üstünde tek satır açıklama var. Ekran satırında ziyaret sayısı ve toplam süre ("2 ziyaret, toplam 34 sn"; aynı görevde tekrar gelince toplanır, başka görevde ayrı sayılır).
+- Sağlık bloğunda yüz sinyali durumu ("bu çalışmada kapalı" / "açık" / "bu oturumda kullanılmadı").
+- Her görevin başında "Öne çıkan anlar": en ağır 3 sapma, yarıda bırakılan ekran, art arda tıklama ve gidip gelme; her biri o ekran için verilen cevapla. Ham tablolar ve haritalar katlanmış bölümde; yazdırırken hepsi açılır.
+
+---
+
 ## 2026-11-20: Tıklama haritası ve dışa aktarma (M3)
 
 Kaynak: Nezih onayı ("evet eklensin, dışa aktar, güvenlik önemli"), PM kapsamı. Durum: uygulandı (`faz1-core`); Figma görüntüleri Nezih'in bilgisayarına indirilince harita dolacak.

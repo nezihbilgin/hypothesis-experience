@@ -23,3 +23,17 @@
   .session, .task-section { break-inside: auto; }
   .clickmap { break-inside: avoid; }
 }
+
+.task-summary { display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 8px 12px; background: color-mix(in srgb, var(--accent) 8%, var(--card)); border-radius: 8px; font-size: 0.92rem; }
+.result { font-weight: 600; }
+.result.failed, .result.dropped { color: #b3261e; }
+.result.direct { color: #2e7d32; }
+.highlights ul { list-style: none; padding: 0; }
+.highlights li { border-left: 3px solid var(--accent); padding: 6px 10px; margin: 8px 0; background: var(--bg); }
+.hl-kind { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.mismatches li { margin: 8px 0; }
+details { margin-top: 12px; }
+details summary { cursor: pointer; color: var(--accent); }
+.lg { margin-right: 10px; white-space: nowrap; }
+.dot-lg { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: rgba(47, 91, 211, 0.75); vertical-align: middle; }
+.dot-lg.dead { background: rgba(179, 38, 30, 0.85); }

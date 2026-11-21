@@ -21,3 +21,27 @@ describe('report data', () => {
     expect(row).toBe('P1,t1,direct,20,3,5,6,a,"Sepet, ana",0,12,30,0,3,0,0,2,1,0.5,0,0,over-time')
   })
 })
+
+import { clickLegend, highlights, mismatchLines } from '../src/report/data'
+
+describe('readable report text', () => {
+  const card = { screenKey: 'p', screenName: '04 Paket', participantName: 'Paket seçimi', order: 1, behavior: 'decide' as const, expectedSec: [8, 30] as [number, number] }
+  const st = { screenKey: 'p', durationSec: 3, timedSec: undefined, visits: [], firstActionSec: 1, hesitation: false, backs: 0, deadClicks: 0, rageClicks: 0, clicks: 1, misclickRate: 0, loops: 0, awaySec: 0, observed: { effort: 10, friction: 0 }, faceSupport: [] }
+  const mm = (kind: string, extra = {}) => ({ screenKey: 'p', kind, start: 0, end: 3, at: 0, replay: [0, 5], expected: { effort: 80, friction: 20 }, observed: { effort: 10, friction: 0 }, severity: 1, text: '', ...extra }) as never
+  it('writes hypothesis and observation lines without "bekledin"', () => {
+    expect(mismatchLines(mm('effort-mismatch', { direction: 'low' }), card, st as never)).toEqual({ hypothesis: 'karar ekranı (seçenekleri tartması beklendi)', observation: "3 sn'de geçti" })
+    expect(mismatchLines(mm('over-time'), card, { ...st, durationSec: 40 } as never)).toEqual({ hypothesis: 'karar ekranı (seçenekleri tartması beklendi), en fazla 30 sn', observation: '40 sn sürdü' })
+    expect(mismatchLines(mm('unexpected-friction'), card, { ...st, deadClicks: 2, loops: 1 } as never).observation).toBe('2 kez tepkisiz bir yere tıkladı, bir kez bir önceki ekranla arasında gidip geldi')
+  })
+  it('picks highlights with the answer given about that screen', () => {
+    const task = { id: 't', prompt: 'x', expectation: 5, seq: 5, events: [], endSec: 10, report: { mismatches: [mm('effort-mismatch', { direction: 'low', severity: 2 })], screens: [{ ...st, rageClicks: 1 }] }, outcome: { result: 'dropped', lastScreen: 'p', endedAt: 10, offPathVisited: [] }, questions: [{ moment: { screenKey: 'p', source: 'signal' }, answer: 'Hangisini seçeceğimi düşündüm', dontRemember: false, skipped: false }] }
+    const h = highlights(task as never, [card])
+    expect(h.map((x) => x.kind)).toEqual(['mismatch', 'dropped', 'rage'])
+    expect(h[0]).toMatchObject({ title: 'Paket seçimi', observation: "3 sn'de geçti", answer: 'Hangisini seçeceğimi düşündüm' })
+  })
+  it('legend counts working, unresponsive and outside-the-design clicks', () => {
+    const pts = [{ node: 'n', x: 10, y: 10, dead: false }, { node: 'n', x: 20, y: 20, dead: true }, { node: 'n', x: 10, y: 1000, dead: true }, { node: 'n', x: 10, y: 10, dead: false, frameId: 'inner' }]
+    const l = clickLegend(pts, { w: 414, h: 896 }, 'n')
+    expect({ working: l.working, dead: l.dead, outside: l.outside }).toEqual({ working: 1, dead: 1, outside: 2 })
+  })
+})
