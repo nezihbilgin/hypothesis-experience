@@ -8,6 +8,16 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 
 ---
 
+## 2026-11-21: Pilot öncesi özellik dondurma; haftalık karar incelemesi
+
+Kaynak: PM önerisi, Nezih'in onayı. Durum: geçerli.
+
+- **Dondurma:** think-aloud denemesi (ve onaylanırsa uygulaması) ile rapor düzeltmeleri (zaman çizgisi, takılma anları, araştırmacı notu, yorum hataları) bittikten sonra yeni özellik alınmaz. Sonra M3 pilot kapısı: başka kişilerle iki pilot oturum. Sonraki kararlar pilot sonuçlarına göre.
+- **Untitled UI:** geçiş PR #5'te hazır; pilotu geciktirirse pilottan sonraya kalır.
+- **QA:** ayrı bir QA thread'i senaryo bulgularını PM üzerinden iletir. Karar incelemeleri haftalık.
+
+---
+
 ## 2026-11-21: Cihaz alt sınırı: Apple Silicon ya da yaklaşık 2020 sonrası bilgisayar
 
 Kaynak: Nezih ("11 yıllık Intel Mac'i desteklemesek de olur"), PM. Durum: geçerli. 2026-11-20 M3 pilot kapısındaki "eski Intel Mac'te ≥ 10 fps" şartının yerine geçer.

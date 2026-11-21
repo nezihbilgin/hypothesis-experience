@@ -9,3 +9,7 @@ dist
 # Figma frame images of company prototypes (click map) and their download script. Never commit.
 frames.local/
 *.local.sh
+
+# Think-aloud spike: Whisper models and the transformers.js/onnxruntime bundles stay local (large, fetched once)
+apps/spikes/public/models.local/
+apps/spikes/public/vendor.local/
