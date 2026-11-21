@@ -601,6 +601,11 @@ function FiveSecondSection({ s }: { s: SessionFile }) {
     <section className="fivesec-report">
       <h3>5 saniye testi</h3>
       <p className="muted small">Ekran 5 saniye gösterildi, sonra hatırladıkları soruldu. Kamera ve tıklama ölçülmez.</p>
+      {rs.some((r) => !r.shown) ? (
+        <p className="hint" role="alert">
+          {rs.filter((r) => !r.shown).length} test gösterilemedi (ekran görüntüsü yok).
+        </p>
+      ) : null}
       {rs.map((r) => {
         const img = figmaFrames.image(r.screen)
         const name = study?.tasks.flatMap((t) => t.screens).find((x) => x.key === r.screen)?.name ?? r.screen
@@ -619,7 +624,9 @@ function FiveSecondSection({ s }: { s: SessionFile }) {
                   ))}
                 </dl>
               ) : (
-                <p className="muted">Ekran görüntüsü olmadığı için gösterilmedi.</p>
+                <p className="hint" role="alert">
+                  Uyarı: bu test katılımcıya gösterilmedi, çünkü ekran görüntüsü katılımcının bilgisayarında bulunamadı (frames.local/). Cevap yok.
+                </p>
               )}
             </div>
           </div>
@@ -635,7 +642,15 @@ function Health({ s }: { s: SessionFile }) {
   if (!h) return <p className="muted small">{face} · Bu dosyada sağlık bloğu yok (eski sürüm).</p>
   return (
     <div className="health">
-      <div className="flags">{h.flags.length ? h.flags.map((f) => <span key={f} className="flag">{FLAG[f] ?? f}</span>) : <span className="flag ok">Sorun görünmüyor</span>}</div>
+      <div className="flags">
+        {h.flags.map((f) => (
+          <span key={f} className="flag">
+            {FLAG[f] ?? f}
+          </span>
+        ))}
+        {(s.fiveSecondResults ?? []).some((r) => !r.shown) ? <span className="flag">5 saniye testi gösterilemedi</span> : null}
+        {!h.flags.length && !(s.fiveSecondResults ?? []).some((r) => !r.shown) ? <span className="flag ok">Sorun görünmüyor</span> : null}
+      </div>
       <p className="muted small">
         {face} · süre {n(h.sessionSec / 60)} dk · kamera {h.camera.on ? `açık, fps ${n(h.camera.fpsMedian, 0)} (p10 ${n(h.camera.fpsP10, 0)}), yüz %${Math.round((h.camera.faceShare ?? 0) * 100)}` : 'kapalı'} · ısınma {n(h.warmup.durationSec)} sn, {h.warmup.clicks} tıklama · tanımsız ekran {h.prototype.unknownScreens} · geçişsiz tıklama {h.prototype.clicksWithoutTransition} · tıklamasız geçiş {h.prototype.clicklessTransitions ?? '–'} · soru {h.questions.asked} (geç {h.questions.skipped}, hatırlamıyorum {h.questions.dontRemember})
       </p>

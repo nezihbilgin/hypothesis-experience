@@ -273,6 +273,9 @@ describe('metric set: loops, misclicks, outcome, orientation in over-time, funne
     expect(o(path.slice(0, 3), false)).toMatchObject({ result: 'dropped', lastScreen: 'b' })
     // Reaching the target with a click-less (keyboard) transition is not a direct success.
     expect(o([ev(0, 'a', 'screen'), ev(0.8, 'a', 'click'), ev(1, 'b', 'screen'), ev(2, 't', 'screen'), ev(3, 't-done', 'screen', { interactionType: 'ON_CLICK' })])).toMatchObject({ result: 'indirect', clicklessTransitions: 1 })
+    // Timed, hover and drag transitions are the prototype's design, not a skipped click (QA KA-15).
+    for (const it of ['AFTER_TIMEOUT', 'ON_HOVER', 'MOUSE_ENTER', 'ON_DRAG'])
+      expect(o([ev(0, 'a', 'screen'), ev(0.8, 'a', 'click'), ev(1, 'b', 'screen', { interactionType: 'ON_CLICK' }), ev(2, 't', 'screen', { interactionType: it }), ev(2.5, 't', 'click'), ev(3, 't-done', 'screen', { interactionType: 'ON_CLICK' })])).toMatchObject({ result: 'direct', clicklessTransitions: 0 })
   })
   it('task summary: results, drop-off funnel, rage and misclicks per screen, median orientation', () => {
     const run = (events: InteractionEvent[], finished: boolean) => {

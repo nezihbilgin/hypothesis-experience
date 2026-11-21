@@ -10,13 +10,19 @@ export const SCHEMA_VERSION = 2
  * a transition; Figma's interactionType ON_CLICK always counts as a click.
  */
 export const CLICKLESS_WINDOW_SEC = 1
+/**
+ * Transition types that can mean "moved on without clicking" (keyboard navigation reports no trigger or a key).
+ * Figma's timed (AFTER_TIMEOUT), hover/mouse (ON_HOVER, MOUSE_*), drag (ON_DRAG) and press transitions are the
+ * prototype's own design, not a skipped click, and are not counted (QA KA-15).
+ */
+export const KEYBOARD_LIKE = new Set(['NONE', 'ON_KEY_DOWN', 'KEY_DOWN'])
 export function clicklessTransitions(events: { t: number; type: string; screenKey: string; payload?: Record<string, unknown> }[]): { t: number; screenKey: string; node: string; type: 'screen' | 'state' }[] {
   const ev = [...events].sort((a, b) => a.t - b.t)
   const clicks = ev.filter((e) => e.type === 'click' || e.type === 'dead-click' || e.type === 'rage-click').map((e) => e.t)
   const changes = ev.filter((e) => e.type === 'screen' || e.type === 'state')
   return changes
     .slice(1)
-    .filter((e) => e.payload?.interactionType !== 'ON_CLICK' && !clicks.some((c) => c <= e.t && e.t - c <= CLICKLESS_WINDOW_SEC))
+    .filter((e) => KEYBOARD_LIKE.has(String(e.payload?.interactionType ?? 'NONE')) && !clicks.some((c) => c <= e.t && e.t - c <= CLICKLESS_WINDOW_SEC))
     .map((e) => ({ t: e.t, screenKey: e.screenKey, node: typeof e.payload?.node === 'string' ? e.payload.node : e.screenKey, type: e.type as 'screen' | 'state' }))
 }
 

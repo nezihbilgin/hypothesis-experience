@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import '../style.css'
 import './setup.css'
+import { figmaFrames } from '../report/images'
 import { allNodes, emptyStudy, nodesFromSession, toEditor, toStudyJson, type EditorContextQuestion, type EditorFiveSecond, type EditorScreen, type EditorStudy, type EditorTask } from './model'
 
 const BEHAVIORS: { v: Behavior; label: string }[] = [
@@ -286,6 +287,11 @@ function FiveSecondEditor({ s, set }: { s: EditorStudy; set: (s: EditorStudy) =>
               Testi sil
             </button>
           </div>
+          {x.screen && !figmaFrames.image(x.screen) ? (
+            <p className="hint" role="alert">
+              Bu ekranın görüntüsü <code>frames.local/</code> klasöründe yok ({x.screen.replace(':', '-')}.png). Görüntü eklenmezse katılımcıya bu test gösterilmez ve raporda "gösterilmedi" uyarısı çıkar.
+            </p>
+          ) : null}
           {x.questions.map((q, k) => (
             <div key={k} className="row">
               <input className="grow" placeholder={`Soru ${k + 1}`} value={q} onChange={(e) => up(i, { questions: x.questions.map((y, m) => (m === k ? e.target.value : y)) })} />
