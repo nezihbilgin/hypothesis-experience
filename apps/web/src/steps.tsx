@@ -12,12 +12,8 @@ export function Welcome({ run, next }: { run: SessionRun; next: () => void }) {
     <Card>
       <h1>{t('welcome.title')}</h1>
       <p>{t('welcome.body')}</p>
-      <h2>{t('welcome.tasks')}</h2>
-      <ol>
-        {run.study.tasks.map((x) => (
-          <li key={x.id}>{x.prompt}</li>
-        ))}
-      </ol>
+      {/* Task prompts are shown one at a time (task intro); listing them all here gave away later tasks (pilot feedback). */}
+      <p>{t('welcome.tasks', { count: run.study.tasks.length })}</p>
       <button className="primary" onClick={next}>
         {t('welcome.start')}
       </button>
@@ -348,9 +344,13 @@ export function TaskRun({ run, next }: { run: SessionRun; next: (retro: Question
           {t('task.done')}
         </button>
       </header>
-      {!loaded ? <p className="loading">{t('task.loading')}</p> : null}
       <div className="proto-wrap">
         <iframe ref={frameRef} className="proto" src={src} title="prototype" allow="clipboard-write" />
+        {!loaded ? (
+          <div className="loading" role="status">
+            <p className="pulse">{t('task.loading')}</p>
+          </div>
+        ) : null}
         {comment?.mode === 'pick' ? (
           <div
             className="pick-layer"

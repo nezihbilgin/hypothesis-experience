@@ -48,15 +48,20 @@ function runs(seconds: SecondSample[], test: (s: SecondSample) => boolean, minSe
 /**
  * Moments within one screen's seconds. `faceSignals` gates the blendshape/pose moments (still, lean-in, brow,
  * blink-drop); 'away' needs only the camera and 'talk' the microphone.
+ * 'still' counts only seconds without interaction (`activeSeconds`: seconds with a click): sitting still while
+ * clicking through is the norm at a screen (first real session: stillness was ~1 most of the time), so the moment
+ * means "held still without doing anything", at least max(5 s, 2 x the personal first-action time).
  */
-export function faceTimeline(samples: SecondSample[], baseline: Baseline, faceSignals: boolean): FaceMoment[] {
+export function faceTimeline(samples: SecondSample[], baseline: Baseline, faceSignals: boolean, activeSeconds: Iterable<number> = []): FaceMoment[] {
+  const active = new Set(activeSeconds)
   const sec = [...samples].filter((s) => s.samples >= MIN_SAMPLES).sort((a, b) => a.t - b.t)
   const faced = (s: SecondSample): boolean => s.face
   const out: FaceMoment[] = []
   out.push(...runs(sec, (s) => !s.face, FACE_RUN_MIN_SEC, 'away'))
   out.push(...runs(sec, (s) => faced(s) && (s.talking ?? 0) >= TALK_LEVEL, FACE_RUN_MIN_SEC, 'talk'))
   if (faceSignals) {
-    out.push(...runs(sec, (s) => faced(s) && (s.stillness ?? 0) >= STILL_LEVEL, FACE_STILL_MIN_SEC, 'still'))
+    const stillMin = Math.max(FACE_STILL_MIN_SEC, Math.ceil(2 * baseline.firstActionP95))
+    out.push(...runs(sec, (s) => faced(s) && !active.has(s.t) && (s.stillness ?? 0) >= STILL_LEVEL, stillMin, 'still'))
     if (baseline.faceWidthMedian > 0) out.push(...runs(sec, (s) => faced(s) && (s.faceWidthRatio ?? 0) >= baseline.faceWidthMedian * LEAN_RATIO, FACE_RUN_MIN_SEC, 'lean-in'))
     out.push(...runs(sec, (s) => faced(s) && s.browDown != null && s.browDown - baseline.browDownMedian >= BROW_RISE, FACE_RUN_MIN_SEC, 'brow'))
     const blink = sec.filter((s) => faced(s) && s.samples >= MIN_BLINK_SAMPLES && s.blinkRate != null)

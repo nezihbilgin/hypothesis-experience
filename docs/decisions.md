@@ -8,6 +8,16 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 
 ---
 
+## 2026-11-21: Görevler tek tek; prototip yüklenirken bekleme yazısı; "hareketsiz kaldı" tanımı
+
+Kaynak: Nezih'in kameralı test oturumu ve notları. Durum: uygulandı (`faz1-core`).
+
+- **Görevler tek tek:** hoş geldin ekranı artık tüm görev metinlerini listelemiyor, sadece görev sayısını söylüyor. Bir görevin metni, sonraki görevde ne yapılacağını ele veriyordu. Görev metni sadece kendi giriş ekranında görünür (oturum sonundaki "en zor görev" sorusunda liste kalır).
+- **Yükleme yazısı:** prototip ilk ekranını gösterene kadar iframe'in üstünde "Prototip yükleniyor, lütfen bekle…" katmanı var. Önceki yazı iframe'in arkasında kalıyordu ve katılımcı beyaz ekrana bakıyordu.
+- **"Hareketsiz kaldı":** ilk gerçek oturumda hareketsizlik değeri neredeyse hep 1'di (ekran başında oturan kişi zaten kıpırdamıyor), bu yüzden her ekranda uzun "hareketsiz" anları çıkıyordu. Artık sadece **tıklama olmayan** saniyeler sayılıyor ve süre en az max(5 sn, kişinin ilk tıklama süresinin 2 katı). Anlamı: hiçbir şey yapmadan hareketsiz durdu.
+
+---
+
 ## 2026-11-21: Isınma sadeleşti; bağlam soruları; ekranda yorum; davranış zaman çizelgesi; 5 saniye testi
 
 Kaynak: Nezih'in onayı (PM üzerinden, A–E maddeleri) ve PM eki (yorum konumu). Durum: uygulandı (`faz1-core`).

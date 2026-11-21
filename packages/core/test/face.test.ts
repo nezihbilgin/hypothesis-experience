@@ -24,6 +24,10 @@ describe('face timeline', () => {
       { kind: 'away', t: 18, sec: 2 }
     ])
   })
+  it('still means no interaction: seconds with a click break the run', () => {
+    const secs = Array.from({ length: 12 }, (_, t) => s(t, { stillness: 1 }))
+    expect(faceTimeline(secs, base, true, [3, 4]).filter((m) => m.kind === 'still')).toEqual([{ kind: 'still', t: 5, sec: 7 }])
+  })
   it('without face signals only away and talking remain', () => {
     const secs = Array.from({ length: 6 }, (_, t) => s(t, { stillness: 1, talking: t < 3 ? 0.6 : 0 }))
     expect(faceTimeline(secs, base, false)).toEqual([{ kind: 'talk', t: 0, sec: 3 }])

@@ -8,7 +8,7 @@ export const DEFAULT_LOCALE = 'tr'
 export const TEXTS_TR = {
   'welcome.title': 'Merhaba, katıldığın için teşekkürler',
   'welcome.body': 'Birkaç kısa görevde bir prototipi kullanacaksın. Doğru ya da yanlış bir yol yok; test edilen sen değil, tasarım.',
-  'welcome.tasks': 'Görevler',
+  'welcome.tasks': '{count} kısa görev var. Görevleri sırayla, her seferinde bir tane göstereceğiz.',
   'welcome.start': 'Başlayalım',
   'consent.title': 'Başlamadan önce',
   'consent.stored': 'Saklananlar: tıklamaların, ekran geçişlerin, verdiğin puanlar ve yazdığın cevaplar.',
@@ -47,7 +47,7 @@ export const TEXTS_TR = {
   'fivesec.after': 'Ekran kapandı. Hatırladığın kadarıyla cevapla.',
   'task.doneHint': "Görevi bitirdiğini düşündüğünde Bitirdim'e bas.",
   'task.reachedHint': "Görev tamamlanmış görünüyor. Hazır olduğunda Bitirdim'e bas.",
-  'task.loading': 'Prototip yükleniyor…',
+  'task.loading': 'Prototip yükleniyor, lütfen bekle. Bu birkaç saniye sürebilir.',
   'task.blocked': 'Prototip açılamadı. Lütfen araştırmacıya haber ver.',
   'rating.expectation': 'Bu görevin ne kadar kolay ya da zor olacağını düşünüyorsun?',
   'rating.seq': 'Bu görev genel olarak ne kadar kolay ya da zordu?',

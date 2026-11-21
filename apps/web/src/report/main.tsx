@@ -131,7 +131,7 @@ const pct = (v: number | null | undefined): string => (v === null || v === undef
 
 function StepCard({ task, s, cards, normalSec, firstScreen, face }: { task: SessionTask; s: ScreenStats; cards: HypothesisCard[]; normalSec: number; firstScreen: string | undefined; face: { baseline: Baseline; signals: boolean } | null }) {
   const inVisit = (t: number): boolean => s.visits.some((v) => t >= Math.floor(v.start) && t < v.end)
-  const moments = face && task.samples?.length ? faceTimeline(task.samples.filter((x) => inVisit(x.t)), face.baseline, face.signals) : []
+  const moments = face && task.samples?.length ? faceTimeline(task.samples.filter((x) => inVisit(x.t)), face.baseline, face.signals, task.events.filter((e) => e.type === 'click' || e.type === 'dead-click').map((e) => Math.floor(e.t))) : []
   const pause = pauseText(s, normalSec, s.screenKey === firstScreen)
   const card = cards.find((c) => c.screenKey === s.screenKey)
   const r = task.report!

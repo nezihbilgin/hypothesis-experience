@@ -37,7 +37,8 @@ textarea { width: 100%; font: inherit; padding: 10px; border-radius: 9px; border
 .taskbar.reached .task-hint { color: var(--fg); font-weight: 600; }
 button.glow { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 35%, transparent); }
 .proto { flex: 1; width: 100%; border: 0; background: #2c2c2c; }
-.loading { position: absolute; top: 50%; width: 100%; text-align: center; color: #ccc; }
+.loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: #2c2c2c; color: #e6e6e6; font-size: 1.05rem; padding: 24px; text-align: center; }
+.loading p { margin: 0; }
 /* Question overlay: the prototype behind already shows the NEXT screen; hide it well so it does not bias the answer about the previous one (pilot feedback). */
 .overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.88); backdrop-filter: blur(6px); display: flex; align-items: flex-start; justify-content: center; overflow: auto; }
 .pulse { animation: pulse 1.4s ease-in-out infinite; }
