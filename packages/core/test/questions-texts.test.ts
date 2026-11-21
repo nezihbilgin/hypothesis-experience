@@ -80,11 +80,13 @@ describe('questions at screen transitions', () => {
     const r2 = computeScreenReport({ cards: [t2Card], events: [ev(0, 'a', 'screen'), ev(2, 'a', 'click'), ev(3, 'b', 'screen')], samples: [], baseline, endSec: 3, cameraEnabled: false })
     const q2 = questionAtTransition({ card: t2Card, report: r2, leftAt: 3, asked: { inTask: [], inSession: [q1!] } })
     expect(q2).toMatchObject({ source: 'planned', probe: 'Nereden başlayacağını nasıl buldun?' })
-    // Friction on 'a' again in task 2 is a new finding: signal questions are de-duplicated per task.
+    // At most one question per screen within a task: coming back to 'a' in task 2 asks nothing more, planned or signal.
     const r3 = computeScreenReport({ cards: [t2Card], events: [ev(0, 'a', 'screen'), ev(1, 'a', 'dead-click'), ev(2, 'a', 'click'), ev(3, 'b', 'screen')], samples: [], baseline, endSec: 3, cameraEnabled: false })
-    expect(questionAtTransition({ card: t2Card, report: r3, leftAt: 5, asked: { inTask: [q2!], inSession: [q1!, q2!] } })?.source).toBe('signal')
-    // ...while the planned one is only once: leaving 'a' again in task 2 does not repeat it.
+    expect(questionAtTransition({ card: t2Card, report: r3, leftAt: 5, asked: { inTask: [q2!], inSession: [q1!, q2!] } })).toBeNull()
     expect(questionAtTransition({ card: t2Card, report: r2, leftAt: 5, asked: { inTask: [q2!], inSession: [q1!, q2!] } })).toBeNull()
+    // Two tasks with their own planned question on the same screen: each task asks its own (QA KA-19).
+    const t3Card: HypothesisCard = { ...t1Card, probe: 'Siparişlerinle ilgili ne arardın?' }
+    expect(questionAtTransition({ card: t3Card, report: r2, leftAt: 3, asked: { inTask: [], inSession: [q1!, q2!] } })).toMatchObject({ source: 'planned', probe: 'Siparişlerinle ilgili ne arardın?' })
   })
   it('session cap stops transition questions in later tasks', () => {
     const full = Array.from({ length: 6 }, () => ({ screenKey: 'x', askedAt: 0, source: 'signal' as const, replay: [0, 1] as [number, number] }))
@@ -163,6 +165,17 @@ describe('study definition (tasks, settings)', () => {
     expect(ok.ok && ok.study.tasks[0].targetScreen).toBe('1:2')
     const bad = parseStudy({ ...base, tasks: [{ prompt: 'x', screens: [screen], targetScreen: '9:9' }] })
     expect(bad.ok ? [] : bad.errors).toEqual(['Görev 1: targetScreen "9:9" tanımlı ekranlardan biri olmalı.'])
+  })
+  it('parses context questions, 5-second tests and the comments switch', () => {
+    const r = parseStudy({ ...base, taskPrompt: 'x', screens: [screen], comments: false,
+      contextQuestions: [{ text: 'Bu uygulamayı ne sıklıkla kullanıyorsun?', type: 'choice', options: ['Her gün', 'Haftada bir', 'Daha az'] }, { id: 'rol', text: 'Rolün nedir?' }],
+      fiveSecondTests: [{ screen: '1:2', questions: ['Bu ekran ne ile ilgiliydi?'] }] })
+    if (!r.ok) throw new Error(r.errors.join())
+    expect(r.study.contextQuestions).toEqual([{ id: 'q1', text: 'Bu uygulamayı ne sıklıkla kullanıyorsun?', type: 'choice', options: ['Her gün', 'Haftada bir', 'Daha az'] }, { id: 'rol', text: 'Rolün nedir?', type: 'text' }])
+    expect(r.study.fiveSecondTests).toEqual([{ id: '5s-1', screen: '1:2', seconds: 5, questions: ['Bu ekran ne ile ilgiliydi?'] }])
+    expect(r.study.comments).toBe(false)
+    const bad = parseStudy({ ...base, taskPrompt: 'x', screens: [screen], contextQuestions: [{ text: 'a', type: 'choice', options: ['x'] }], fiveSecondTests: [{ screen: '1:2', questions: [] }] })
+    expect(bad.ok ? [] : bad.errors).toEqual(['Bağlam sorusu 1: tek seçimli soruda en az 2 seçenek olmalı.', '5 saniye testi 1: 1 ile 3 arasında soru olmalı.'])
   })
   it('face signals default off for workplace and education studies', () => {
     for (const context of ['workplace', 'education']) {

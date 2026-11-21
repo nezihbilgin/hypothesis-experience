@@ -3,6 +3,7 @@
 import type { QuestionMoment } from '@hx/core'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { downloadJson, figmaEmbedUrl, type QualityResult, type SessionRun } from './run'
+import { figmaFrames } from './report/images'
 import { AnswerBox, Card, Rating, useT } from './ui'
 
 export function Welcome({ run, next }: { run: SessionRun; next: () => void }) {
@@ -11,12 +12,8 @@ export function Welcome({ run, next }: { run: SessionRun; next: () => void }) {
     <Card>
       <h1>{t('welcome.title')}</h1>
       <p>{t('welcome.body')}</p>
-      <h2>{t('welcome.tasks')}</h2>
-      <ol>
-        {run.study.tasks.map((x) => (
-          <li key={x.id}>{x.prompt}</li>
-        ))}
-      </ol>
+      {/* Task prompts are shown one at a time (task intro); listing them all here gave away later tasks (pilot feedback). */}
+      <p>{t('welcome.tasks', { count: run.study.tasks.length })}</p>
       <button className="primary" onClick={next}>
         {t('welcome.start')}
       </button>
@@ -88,29 +85,31 @@ export function CameraCheck({ run, next }: { run: SessionRun; next: () => void }
   )
 }
 
-// Warm-up (>= 30 s): neutral reading (Continue enabled after READ_MIN_SEC so a fast reader cannot cut the baseline
-// short), then 4 single-button screens, one target each in a different part of the screen (first-action latency p95).
-const READ_MIN_SEC = 26
-const CLICK_SPOTS: [number, number][] = [
-  [20, 28],
-  [78, 34],
-  [26, 76],
-  [72, 72]
+// Warm-up (~30 s, decisions 2026-11-21): the instructions themselves are the warm-up. A short intro to read
+// (Continue enabled after INTRO_MIN_SEC), then 4 screens, each with one sentence and a "Tamam" button in a different
+// part of the screen. "Screen shown -> first action" on those 4 screens (read a sentence, find the button, click)
+// is the personal baseline; camera/mic seconds of the whole warm-up feed the face baseline as before.
+const INTRO_MIN_SEC = 12
+const SPOTS: { x: number; y: number; key: 'warmup.s1' | 'warmup.s2' | 'warmup.s3' | 'warmup.s4' }[] = [
+  { x: 22, y: 26, key: 'warmup.s1' },
+  { x: 76, y: 32, key: 'warmup.s2' },
+  { x: 26, y: 74, key: 'warmup.s3' },
+  { x: 72, y: 70, key: 'warmup.s4' }
 ]
 
 export function Warmup({ run, next }: { run: SessionRun; next: () => void }) {
   const t = useT()
-  const [step, setStep] = useState(0) // 0 = reading, 1..4 = click screens, 5 = done
+  const [step, setStep] = useState(0) // 0 = intro, 1..4 = sentence screens, 5 = done
   const [canContinue, setCanContinue] = useState(false)
   useEffect(() => {
-    const id = setTimeout(() => setCanContinue(true), READ_MIN_SEC * 1000)
+    const id = setTimeout(() => setCanContinue(true), INTRO_MIN_SEC * 1000)
     return () => clearTimeout(id)
   }, [])
   useEffect(() => {
     if (step === 0) run.startWarmup()
-    // Only the click screens count as "screen shown -> first action"; the reading screen would inflate it.
-    if (step >= 1 && step <= CLICK_SPOTS.length) run.warmupEvent('screen', `warmup-${step}`)
-    if (step === CLICK_SPOTS.length + 1) run.finishWarmup()
+    // Only the sentence screens count as "screen shown -> first action"; the intro would inflate it.
+    if (step >= 1 && step <= SPOTS.length) run.warmupEvent('screen', `warmup-${step}`)
+    if (step === SPOTS.length + 1) run.finishWarmup()
   }, [step, run])
   const click = () => {
     if (step >= 1) run.warmupEvent('click', `warmup-${step}`)
@@ -120,20 +119,22 @@ export function Warmup({ run, next }: { run: SessionRun; next: () => void }) {
     return (
       <Card>
         <p className="muted">{t('warmup.intro')}</p>
-        <p className="reading">{t('warmup.text')}</p>
+        <p className="reading">{t('warmup.welcome')}</p>
         <button className="primary" disabled={!canContinue} onClick={click}>
           {t('common.next')}
         </button>
       </Card>
     )
-  if (step <= CLICK_SPOTS.length) {
-    const [x, y] = CLICK_SPOTS[step - 1]
+  if (step <= SPOTS.length) {
+    const sp = SPOTS[step - 1]
     return (
       <div className="stage">
-        <p className="stage-text">{t('warmup.click')}</p>
-        <button className="primary spot" style={{ left: `${x}%`, top: `${y}%` }} onClick={click}>
-          {t('warmup.clickButton')}
-        </button>
+        <div className="spot-note" style={{ left: `${sp.x}%`, top: `${sp.y}%` }}>
+          <p>{t(sp.key)}</p>
+          <button className="primary" onClick={click}>
+            {t('warmup.ok')}
+          </button>
+        </div>
       </div>
     )
   }
@@ -141,6 +142,111 @@ export function Warmup({ run, next }: { run: SessionRun; next: () => void }) {
     <Card>
       <p>{t('warmup.done')}</p>
       <button className="primary" onClick={next}>
+        {t('common.next')}
+      </button>
+    </Card>
+  )
+}
+
+/** Context questions after the warm-up (not timed). Short text or single choice. */
+export function ContextQuestions({ run, next }: { run: SessionRun; next: () => void }) {
+  const t = useT()
+  const qs = run.study.contextQuestions
+  const [answers, setAnswers] = useState<Record<string, string>>({})
+  useEffect(() => {
+    if (!qs.length) next()
+  }, [qs.length, next])
+  if (!qs.length) return null
+  return (
+    <Card>
+      <h1>{t('context.title')}</h1>
+      {qs.map((q) => (
+        <div key={q.id} className="ctx-q">
+          <p className="q">{q.text}</p>
+          {q.type === 'choice' ? (
+            (q.options ?? []).map((o) => (
+              <label key={o} className="check">
+                <input type="radio" name={q.id} checked={answers[q.id] === o} onChange={() => setAnswers({ ...answers, [q.id]: o })} /> {o}
+              </label>
+            ))
+          ) : (
+            <input className="text" value={answers[q.id] ?? ''} onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })} />
+          )}
+        </div>
+      ))}
+      <div className="row">
+        <button
+          className="primary"
+          onClick={() => {
+            run.contextAnswers = qs.map((q) => ({ id: q.id, text: q.text, answer: answers[q.id]?.trim() || null }))
+            next()
+          }}
+        >
+          {t('common.next')}
+        </button>
+      </div>
+    </Card>
+  )
+}
+
+/** No reference image for a 5-second test on this machine: skip it and record that it was not shown. */
+function MissingImage({ onSkip }: { onSkip: () => void }) {
+  useEffect(() => {
+    onSkip()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  return null
+}
+
+/** 5-second tests: a screen image for N s, then 1-3 recall questions. No camera or click measurement. */
+export function FiveSecondTests({ run, next }: { run: SessionRun; next: () => void }) {
+  const t = useT()
+  const tests = run.study.fiveSecondTests
+  const [i, setI] = useState(0)
+  const [phase, setPhase] = useState<'intro' | 'show' | 'ask'>('intro')
+  const [answers, setAnswers] = useState<string[]>([])
+  useEffect(() => {
+    if (i >= tests.length) next()
+  }, [i, tests.length, next])
+  const test = tests[i]
+  const img = test ? figmaFrames.image(test.screen) : null
+  useEffect(() => {
+    if (phase !== 'show' || !test) return
+    const id = setTimeout(() => setPhase('ask'), test.seconds * 1000)
+    return () => clearTimeout(id)
+  }, [phase, test])
+  if (!test) return null
+  const finish = (shown: boolean) => {
+    run.fiveSecondResults.push({ id: test.id, screen: test.screen, shown, answers: test.questions.map((q, k) => ({ question: q, answer: answers[k]?.trim() || null })) })
+    setAnswers([])
+    setPhase('intro')
+    setI(i + 1)
+  }
+  if (!img) return <MissingImage onSkip={() => finish(false)} />
+  if (phase === 'intro')
+    return (
+      <Card>
+        <p>{t('fivesec.intro')}</p>
+        <button className="primary" onClick={() => setPhase('show')}>
+          {t('fivesec.start')}
+        </button>
+      </Card>
+    )
+  if (phase === 'show')
+    return (
+      <div className="fivesec-stage">
+        <img src={img.url} alt="" />
+      </div>
+    )
+  return (
+    <Card>
+      <p className="muted">{t('fivesec.after')}</p>
+      {test.questions.map((q, k) => (
+        <div key={k} className="ctx-q">
+          <p className="q">{q}</p>
+          <textarea rows={2} value={answers[k] ?? ''} onChange={(e) => setAnswers(Object.assign([...answers], { [k]: e.target.value }))} />
+        </div>
+      ))}
+      <button className="primary" onClick={() => finish(true)}>
         {t('common.next')}
       </button>
     </Card>
@@ -183,6 +289,9 @@ export function TaskRun({ run, next }: { run: SessionRun; next: (retro: Question
   const [blocked, setBlocked] = useState<string | null>(null)
   const [loaded, setLoaded] = useState(false)
   const [reached, setReached] = useState(false)
+  // Comment mode: 'pick' = choose a point on the prototype, then write. The clock is paused throughout.
+  const [comment, setComment] = useState<{ mode: 'pick' } | { mode: 'write'; point: { ix: number; iy: number; iw: number; ih: number } } | null>(null)
+  const [commentText, setCommentText] = useState('')
   const hasTarget = !!run.study.tasks.find((x) => x.id === run.task.id)?.targetScreen
   const src = useMemo(() => {
     const start = run.study.tasks.find((x) => x.id === run.task.id)?.startScreen
@@ -220,12 +329,70 @@ export function TaskRun({ run, next }: { run: SessionRun; next: (retro: Question
           {run.task.prompt}
           <span className="task-hint">{reached ? t('task.reachedHint') : hasTarget ? '' : t('task.doneHint')}</span>
         </span>
-        <button className={reached ? 'primary glow' : 'primary'} disabled={!!question} onClick={() => next(run.finishTask())}>
+        {run.study.comments ? (
+          <button
+            disabled={!!question || !!comment}
+            onClick={() => {
+              run.startComment()
+              setComment({ mode: 'pick' })
+            }}
+          >
+            {t('comment.add')}
+          </button>
+        ) : null}
+        <button className={reached ? 'primary glow' : 'primary'} disabled={!!question || !!comment} onClick={() => next(run.finishTask())}>
           {t('task.done')}
         </button>
       </header>
-      {!loaded ? <p className="loading">{t('task.loading')}</p> : null}
-      <iframe ref={frameRef} className="proto" src={src} title="prototype" allow="clipboard-write" />
+      <div className="proto-wrap">
+        <iframe ref={frameRef} className="proto" src={src} title="prototype" allow="clipboard-write" />
+        {!loaded ? (
+          <div className="loading" role="status">
+            <p className="pulse">{t('task.loading')}</p>
+          </div>
+        ) : null}
+        {comment?.mode === 'pick' ? (
+          <div
+            className="pick-layer"
+            onClick={(e) => {
+              const r = e.currentTarget.getBoundingClientRect()
+              setComment({ mode: 'write', point: { ix: Math.round(e.clientX - r.left), iy: Math.round(e.clientY - r.top), iw: Math.round(r.width), ih: Math.round(r.height) } })
+            }}
+          >
+            <p className="pick-hint">{t('comment.pick')}</p>
+          </div>
+        ) : null}
+        {comment?.mode === 'write' ? <span className="pin" style={{ left: comment.point.ix, top: comment.point.iy }} /> : null}
+      </div>
+      {comment?.mode === 'write' ? (
+        <div className="comment-box">
+          <p className="q">{t('comment.prompt')}</p>
+          <textarea rows={3} autoFocus value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder={t('probe.placeholder')} />
+          <p className="muted small">{t('probe.dictationHint')}</p>
+          <div className="row">
+            <button
+              className="primary"
+              disabled={!commentText.trim()}
+              onClick={() => {
+                run.endComment(comment.point, commentText)
+                setComment(null)
+                setCommentText('')
+              }}
+            >
+              {t('comment.save')}
+            </button>
+            <button
+              onClick={() => {
+                run.endComment(null, null)
+                setComment(null)
+                setCommentText('')
+              }}
+            >
+              {t('common.cancel')}
+            </button>
+          </div>
+        </div>
+      ) : null}
       {blocked ? (
         <div className="overlay">
           <Card>

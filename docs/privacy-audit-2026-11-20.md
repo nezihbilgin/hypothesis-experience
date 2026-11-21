@@ -40,3 +40,23 @@ string yok; `samples` yalnız sayı.
 - Ses analizcisi hedefe bağlı değil; ses çalınmaz, kaydedilmez. AudioContext `stop()`'ta kapanır.
 - Konsola kare/ses yazılmaz (`onError` ve `onRaw` ürün akışında bağlı değil).
 - Embed SDK form değerlerini okumaz, sadece uzunluk farkı; mesajlar sadece `parentOrigin`'e gider.
+
+
+## Ek: kamera ve mikrofon açık oturumda ağ kontrolü (21 Kasım 2026)
+
+v1 kabulünün son maddesi ("kamera kareleri ya da ses cihazdan çıkmaz", ağ trafiği üzerinden). Nezih'in kamerasız oturumunun HAR kaydı (20 Kasım) kamerasız yarıyı kapatmıştı; bu ek kameralı yarıyı kapatır.
+
+Yöntem: headless Chrome, sahte kamera ve mikrofon (`--use-fake-device-for-media-stream`, `--use-fake-ui-for-media-stream`), Chrome DevTools Protocol ile tüm ağ istekleri (sayfa, iframe ve MediaPipe worker'ı dahil; WebSocket oluşturma da izlendi). Tam oturum: onay (kamera + mikrofon + yüz sinyali), kalite kontrolü, 30 sn ısınma, görev (yerel script'li prototip + embed-sdk, bir geçiş sorusu), SEQ, oturum sonu, özet, oturum dosyasını indirme. Sahte kamerada yüz olmadığı için kalite kontrolü normalde kamerasız moda düşer; bu kontrol için sadece `?debug=1&keepCamera=1` ile çalışan bir test kancası kamerayı oturum boyunca açık tuttu (worker 30 ısınma + 11 görev saniyesi üretti).
+
+Sonuç (kameralı / kamerasız):
+
+| Kaynak | Kameralı + mikrofonlu | Kamerasız |
+|---|---|---|
+| Uygulama sayfası | GET: sayfa, JS (3), CSS, favicon, çalışma dosyası (`data:` URL) | GET: sayfa, JS (2), CSS, favicon, çalışma dosyası |
+| MediaPipe worker | GET: worker script, `vision_wasm_module_internal.js`, `.wasm`, `face_landmarker.task` (hepsi kendi origin'imiz) | – |
+| Prototip iframe'i | GET: prototip sayfası, `hx-embed.js` | aynı |
+| GET dışı istek (POST vb.) | yok | yok |
+| Gövdesi olan istek | yok | yok |
+| WebSocket | yok | yok |
+
+Kameralı oturumdaki tek fark, model ve wasm dosyalarının kendi origin'imizden indirilmesi. Görüntü ya da ses içeren, ya da herhangi bir veri gönderen istek yok. Figma kaynaklı çalışmalarda Figma iframe'inin kendi istekleri (Figma sunucuları ve Figma'nın analiz servisleri) ayrıca vardır; 20 Kasım HAR'ında listelendi ve onay ekranı bunu söylüyor (`consent.thirdParty`).

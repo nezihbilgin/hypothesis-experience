@@ -37,7 +37,8 @@ textarea { width: 100%; font: inherit; padding: 10px; border-radius: 9px; border
 .taskbar.reached .task-hint { color: var(--fg); font-weight: 600; }
 button.glow { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 35%, transparent); }
 .proto { flex: 1; width: 100%; border: 0; background: #2c2c2c; }
-.loading { position: absolute; top: 50%; width: 100%; text-align: center; color: #ccc; }
+.loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: #2c2c2c; color: #e6e6e6; font-size: 1.05rem; padding: 24px; text-align: center; }
+.loading p { margin: 0; }
 /* Question overlay: the prototype behind already shows the NEXT screen; hide it well so it does not bias the answer about the previous one (pilot feedback). */
 .overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.88); backdrop-filter: blur(6px); display: flex; align-items: flex-start; justify-content: center; overflow: auto; }
 .pulse { animation: pulse 1.4s ease-in-out infinite; }
@@ -47,3 +48,16 @@ dl dd { margin: 4px 0 0; }
 @media (max-width: 600px) { .card { margin: 16px; padding: 20px; } .scale { flex-wrap: wrap; } .opt { flex: 0 0 calc(25% - 6px); } }
 
 .small { font-size: 0.82rem; margin: 6px 0 0; }
+.spot-note { position: absolute; transform: translate(-50%, -50%); max-width: 280px; text-align: center; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+.spot-note p { margin: 0 0 10px; }
+.proto-wrap { position: relative; flex: 1; display: flex; }
+.proto-wrap .proto { flex: 1; }
+.pick-layer { position: absolute; inset: 0; cursor: crosshair; background: rgba(0, 0, 0, 0.08); }
+.pick-hint { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); margin: 0; background: var(--card); padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line); }
+.pin { position: absolute; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: #e8a400; border: 2px solid #fff; pointer-events: none; }
+.comment-box { position: fixed; right: 16px; bottom: 16px; width: 340px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2); }
+.comment-box textarea { width: 100%; }
+.ctx-q { margin: 14px 0; }
+.ctx-q input.text { width: 100%; font: inherit; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--fg); }
+.fivesec-stage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #111; }
+.fivesec-stage img { max-height: 96vh; max-width: 96vw; }

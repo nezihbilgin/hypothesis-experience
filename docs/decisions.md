@@ -8,6 +8,150 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 
 ---
 
+## 2026-11-21: Think-aloud kapsamı ve soru modeli; pilot öncesi soru kuralları
+
+Kaynak: Nezih'in think-aloud soru-cevap onayları (PM thread'i, 21 Kasım), PM kararları (QA senaryo listesi v1 soruları 6–8). Durum: kararlaştırıldı. Think-aloud uygulaması M1 denemesinin sonucuna bağlı. 2026-11-20 "Sorular ekran geçişinde" girişindeki "ekranın ortasında asla" ve 2/6 sınırını **sadece think-aloud açıkken** geçersiz kılar.
+
+### Think-aloud (çalışma bazında, isteğe bağlı)
+- Ses sadece bellekte, cihazda yazıya dökülür; ses hiçbir yere gitmez ve saklanmaz. Kişisel bilgiler otomatik maskelenir, araştırmacı maskeyi kaldıramaz. Önce Türkçe, sonra İngilizce.
+- Isınma: yönerge sessiz okunur (katılımcı yüksek sesle okuması gerektiğini düşünmemeli), sonra kısa konuşma alıştırması ekranı.
+- Hatırlatma: takılma anında 8 sn ya da genel olarak 60 sn sessizlik; görev başına en fazla 2.
+- Konuşma süresi duraksama sayılmaz. Raporda alıntılar ve zaman çizgisinde konuşma şeridi.
+- Mikrofon verilmezse çalışma yazılı cevaplarla devam eder.
+
+### Soru modeli
+- **Think-aloud açıkken:** görevin ilk ekranına gelişte "Burada ne görüyorsun?" (varsayılan açık); sürtünmede anında soru, ekran başına en fazla 1, oturumda varsayılan 10 (saat durur); ekrandan çıkarken soru varsayılan kapalı.
+- **Think-aloud kapalıyken:** 2026-11-20 kuralı aynen geçerli: ekrandan çıkarken planlı ve sinyal tetikli sorular, görev başına 2, oturumda 6; anında soru varsayılan kapalı.
+- **Aynı ekran birden fazla görevde:** planlı sorular görev bazlıdır; her görevde kendi sorusu sorulur. Aynı görev içinde bir ekranda en fazla 1 soru; ekrana yeniden gelinirse tekrar sorulmaz. Oturum üst sınırı her durumda geçerli.
+- **Mikrofon reddi ya da kesintisi:** geçerli kuralı ayar değil, oturumun gerçek durumu belirler. Mikrofon en başta reddedilirse oturum baştan sona think-aloud kapalı kurallarla yürür (görev başına 2, oturumda 6 soru, ekrandan çıkarken soru açık). Oturum ortasında kesilirse kural değişikliği bir sonraki görevin başında olur; o ana kadar sorulan sorular 6'lık sınırdan düşülür, sınır dolduysa yeni soru sorulmaz. Rapor mod değişikliğini ve zamanını gösterir.
+- **Mod geçişi tek yönlüdür:** mikrofon kesildikten sonra geri gelse bile oturum think-aloud kapalı modda devam eder.
+- **Gelişte soru:** o ekrandaki tek soru hakkını kullanır, yani o ekranda ayrıca anında soru sorulmaz. 10'luk anında soru sınırından düşülmez.
+- **Katılımcı yükü paneli:** panel iki rakam gösterir. "Kesin" sayısı bağlam, 5 saniye, gelişte ve planlı çıkış sorularını kapsar. "En fazla" sayısı buna anında ve sinyal tetikli soru tavanlarını ekler. Uyarı yalnızca kesin soru sayısı 12'yi ya da tahmini süre 20 dakikayı aşarsa çıkar. Anında soru tavanı 10 olarak kalır. Beklenti ve SEQ ölçekleri sayılmaz.
+
+### Ölçüm ve gizlilik
+- **"%75 anlamlı cevap" kriteri:** payda sorulan tüm soru anlarıdır; "Geç", boş ve "Hatırlamıyorum" paydaya dahil, anlamlı sayılmaz. Raporda geçme oranı ayrıca gösterilir (soru anının katılımcıya maliyeti de bir sinyal).
+- **Yazılı cevaplarda maskeleme:** think-aloud transkriptine uygulanan `core` redact yazılı cevaplara ve yorumlara da uygulanır (pilot öncesi, gizlilik düzeltmesi sayılır, dondurmayı delmez).
+
+---
+
+## 2026-11-21: Pilot öncesi özellik dondurma; haftalık karar incelemesi
+
+Kaynak: PM önerisi, Nezih'in onayı. Durum: geçerli.
+
+- **Dondurma:** think-aloud denemesi (ve onaylanırsa uygulaması) ile rapor düzeltmeleri (zaman çizgisi, takılma anları, araştırmacı notu, yorum hataları) bittikten sonra yeni özellik alınmaz. Sonra M3 pilot kapısı: başka kişilerle iki pilot oturum. Sonraki kararlar pilot sonuçlarına göre.
+- **Untitled UI:** geçiş PR #5'te hazır; pilotu geciktirirse pilottan sonraya kalır.
+- **QA:** ayrı bir QA thread'i senaryo bulgularını PM üzerinden iletir. Karar incelemeleri haftalık.
+
+---
+
+## 2026-11-21: Cihaz alt sınırı: Apple Silicon ya da yaklaşık 2020 sonrası bilgisayar
+
+Kaynak: Nezih ("11 yıllık Intel Mac'i desteklemesek de olur"), PM. Durum: geçerli. 2026-11-20 M3 pilot kapısındaki "eski Intel Mac'te ≥ 10 fps" şartının yerine geçer.
+
+- **Yeni alt sınır:** Apple Silicon (M1 ve üstü) ya da yaklaşık 2020 sonrası, donanım hızlandırmalı (GPU'lu) bir bilgisayar. Kamera sinyalleri bu cihazlarda ≥ 10 fps, göz kırpma için ≥ 15 fps beklenir.
+- **Daha zayıf cihazlar:** desteklenmez ama dışlanmaz; düşük fps algılanınca kamerasız moda düşme davranışı aynen kalır (fps eşikleri 2026-11-20 kararındaki gibi).
+- **Ölçümler:** Untitled UI geçişi ve think-aloud denemesindeki fps/CPU ölçümleri bu alt sınıra göre, M1'de yapılır. Faz 0'daki Intel Mac ölçümleri kayıt olarak kalır.
+
+---
+
+## 2026-11-21: Rapor: görev kutuları, zaman çizgisi, takılma anları, araştırmacı notu
+
+Kaynak: Nezih'in test geri bildirimi, PM iş listesi. Durum: uygulandı (`faz1-core`).
+
+- **Görev kutusu:** her görev kendi kutusunda; başlıkta "Görev N", görev metni ve sonuç rozeti.
+- **Zaman çizgisi:** her görev için görevin başından saniye sayan yatay çizgi. Üstte ekran bölümleri (yol dışı kesikli), altında tıklamalar (çalışan mavi, tepkisiz kırmızı), sorular (◆), yorumlar (numaralı daire) ve süreli çubuklar olarak kamera davranışları. Soru ve yorum yazarken saat durduğu için o süre çizgide yok.
+- **Yüz davranışları görev saatinde:** davranışlar artık görev boyunca hesaplanıyor ve soru ya da yorum anında kesiliyor (bir davranış o anın iki yanına yayılmaz). Adım kartında "görev başından 24.–33. sn (10 sn): hiç tıklamadan hareketsiz kaldı" biçiminde.
+- **Sürtünme satırı:** işaret yoksa hiç gösterilmez; varsa sebepleri yazar.
+- **Takılma anları:** aynı ekranda 3 sn içinde birbirini izleyen sürtünme işaretleri (tepkisiz ya da art arda tıklama, geri dönüş, gidip gelme, kişisel normalin 2 katını ve 3 sn'yi aşan bekleme) tek an olarak birleşir. Yanına aynı saniyelerdeki (±2 sn) kamera davranışları, o ekrandaki yorumlar ve katılımcının o ekran için cevabı yazılır. Niyet ya da duygu yorumu yok. En fazla 6 an, en çok işareti olan önce.
+- **Araştırmacı notu:** her takılma anının ve adım kartının altında not alanı. Notlar bu tarayıcıda (localStorage) oturum başına saklanır, "Notlarla birlikte oturum dosyasını indir" ile dosyaya yazılır (`researcherNotes`), dosya açılınca geri gelir. PDF'te metin olarak, CSV'de `researcher_note` sütununda görünür.
+- **Kaydırılmış ekranda yorum:** Figma kaydırma bilgisini sadece tıklamayla gönderiyor. Yorumdan önce o ekranda kaydırmadan sonra tıklama yoksa konum bilinmiyor; rapor artık noktayı tek yere koymak yerine olabileceği dikey şeridi (kaydırılmamış ile sonuna kadar kaydırılmış arası) kesikli çiziyor. Lejantta yorum sayısı yazıyor.
+
+---
+
+## 2026-11-21: Görevler tek tek; prototip yüklenirken bekleme yazısı; "hareketsiz kaldı" tanımı
+
+Kaynak: Nezih'in kameralı test oturumu ve notları. Durum: uygulandı (`faz1-core`).
+
+- **Görevler tek tek:** hoş geldin ekranı artık tüm görev metinlerini listelemiyor, sadece görev sayısını söylüyor. Bir görevin metni, sonraki görevde ne yapılacağını ele veriyordu. Görev metni sadece kendi giriş ekranında görünür (oturum sonundaki "en zor görev" sorusunda liste kalır).
+- **Yükleme yazısı:** prototip ilk ekranını gösterene kadar iframe'in üstünde "Prototip yükleniyor, lütfen bekle…" katmanı var. Önceki yazı iframe'in arkasında kalıyordu ve katılımcı beyaz ekrana bakıyordu.
+- **"Hareketsiz kaldı":** ilk gerçek oturumda hareketsizlik değeri neredeyse hep 1'di (ekran başında oturan kişi zaten kıpırdamıyor), bu yüzden her ekranda uzun "hareketsiz" anları çıkıyordu. Artık sadece **tıklama olmayan** saniyeler sayılıyor ve süre en az max(5 sn, kişinin ilk tıklama süresinin 2 katı). Anlamı: hiçbir şey yapmadan hareketsiz durdu.
+
+---
+
+## 2026-11-21: Isınma sadeleşti; bağlam soruları; ekranda yorum; davranış zaman çizelgesi; 5 saniye testi
+
+Kaynak: Nezih'in onayı (PM üzerinden, A–E maddeleri) ve PM eki (yorum konumu). Durum: uygulandı (`faz1-core`).
+
+- **A. Isınma:** açıklama mesajı ile köşe tıklamaları birleşti. Önce kısa bir not (en az 12 sn ekranda), sonra ekranın dört köşesinde birer cümle ve "Tamam" butonu. Baseline ölçümü aynı (ilk tıklamaya kadar süre sadece cümle ekranlarında, kamera saniyeleri tüm ısınma boyunca). Toplam yaklaşık 30 sn. Metin kataloğu anahtarları `warmup.intro`, `warmup.welcome`, `warmup.s1`–`s4`, `warmup.ok`.
+- **B. Bağlam soruları:** `contextQuestions` (kısa metin ya da tek seçim), görevlerden önce, süre tutulmaz. Sınır yok; kurulum ekranı 5'ten fazlasında uyarır (`CONTEXT_QUESTIONS_SOFT_MAX`). Raporda oturumun başında "Katılımcı bilgisi".
+- **C. Ekranda yorum:** görev çubuğunda "Yorum ekle"; prototipin üstüne şeffaf bir katman gelir, katılımcı bir nokta seçip yazar, bu sırada saat durur (süre ölçümlerine girmez). Kayıt: ekran, durum node'u, iframe içindeki nokta ve iframe boyutu, zaman, metin, kaydırma ofseti, `precise`. Araştırmacı çalışmada kapatabilir (`comments: false`). Raporda adım kartının görüntüsünde numaralı işaret, altta metin; "Öne çıkan anlar"da "Yorum".
+  - **Kaydırma:** Figma kaydırma ofsetini (`nearestScrollingFrameOffset`) sadece tıklama mesajlarında gönderiyor; kaydırma olayı yok. Yorum, aynı ekrandaki son tıklamanın ofsetini kullanır. Son tıklama 10 sn içindeyse konum kesin, değilse ve ekran kaydırılabiliyorsa yaklaşık; raporda yaklaşık olanlar kesikli işaretlenir.
+  - **Ölçek:** iframe pikseli kare koordinatına, embed'in cihaz görüntüsünü iframe'e sığdırıp ortaladığı varsayımıyla çevrilir. Kaydırılan karelerde görünen yükseklik, aynı genişlikteki referans görüntülerin en sık yüksekliği kabul edilir.
+- **D. Davranış zaman çizelgesi:** kamera açıkken adım kartında "Davranış" satırı: hareketsiz kaldı (5 sn+), ekrana yaklaştı, kaş hareketi arttı, göz kırpması azaldı, kendi kendine konuştu, ekrandan uzaklaştı (2 sn+). Eşikler katılımcının ısınmadaki kendi değerlerine göre; blendshape'e dayananlar (hareketsizlik, yaklaşma, kaş, göz kırpma) sadece yüz sinyalleri açıkken. `packages/core/src/face.ts`, `faceTimeline`. Görüntü ve duygu etiketi yok. PM listesindeki "kaşlarını çattı" ifadesi 2026-11-20 madde 4 ile çeliştiği için nötr "kaş hareketi arttı" kullanıldı.
+- **E. 5 saniye testi:** `fiveSecondTests` (ekran, süre varsayılan 5 sn, 1–3 hatırlama sorusu). Görevlerden önce, bağlam sorularından sonra. Görüntü araştırmacının referans görüntülerinden gelir (`frames.local/`); görüntü yoksa test atlanır ve "gösterilmedi" kaydedilir. Kamera ve tıklama ölçülmez. Raporda ayrı bölüm. Kurulum ekranında editörü var.
+- Akış: hoş geldin → onay → kamera kontrolü → ısınma → bağlam soruları → 5 saniye testi → görevler.
+
+---
+
+## 2026-11-21: Kurulum ekranı v0; kamera açık ağ kontrolü; klavye ayarı
+
+Kaynak: PM iş sırası (Nezih bugün test yapamadığı için Nezih'e bağlı olmayan işler). Durum: uygulandı (`faz1-core`).
+
+- **Kurulum ekranı v0** (`apps/web/setup.html`, yerel): araştırmacı JSON yazmadan çalışma kurar. Çalışma (ad, Figma linki, bağlam, yüz sinyalleri), ekranlar (anahtar, ad, katılımcıya görünen ad, davranış, beklenen süre, takma adlar; bir oturum dosyasından ekranları içe alma), görevler (metin, başlangıç ve hedef ekran ya da durum, beklenen yol sıralı, kabul edilebilir sapmalar, ekran bazlı sorular, görevde farklı kart alanları). Canlı doğrulama `parseStudy` ile; çıktı çalışma düzeyinde biçimdeki JSON. Var olan bir dosya açılabilir (eski görev başına biçim otomatik çevrilir). Pilot çalışma dosyası bu ekranla açılıp kaydedilince birebir aynı çıkıyor ve aynı oturumdan aynı rapor üretiyor. Isınma soruları ve 5 saniye testi onaylanmadığı için yok.
+- **Kamera açık ağ kontrolü:** sahte kamera ve mikrofonla tam oturum; uygulama yalnızca kendi origin'inden GET yaptı (kameralıda ek olarak MediaPipe model ve wasm dosyaları), GET dışı istek, gövdeli istek ya da WebSocket yok. Ayrıntı `docs/privacy-audit-2026-11-20.md` ekinde. Bu kontrol için `?debug=1&keepCamera=1` test kancası eklendi (yüz bulunamasa da kamerayı açık tutar; sadece debug).
+- **Onay metni:** "Prototip Figma'dan yüklenir ve Figma kendi kullanım verilerini toplayabilir. Kamera görüntün ne Figma'ya ne bize gider."
+- **Klavye ayarı:** `disable-default-keyboard-nav=1` otomatik olarak doğrulanamadı; Figma embed'i headless Chrome'da ve uygulama içi tarayıcıda yüklenmedi. Nezih'in bir sonraki gerçek Chrome oturumunda ok tuşuyla denenecek; tıklamasız geçiş tespiti her durumda çalışıyor.
+
+---
+
+## 2026-11-21: İnsan diliyle rapor; görevler ekran paylaşır (allowedScreens)
+
+Kaynak: Nezih'in rapor geri bildirimi ("Bunları insan okuyacak"), PM brifi. Durum: uygulandı (`faz1-core`).
+
+- **Görevler ekran paylaşır:** bir görevin `expectedPath`'ine çalışmadaki her ekran girebilir (başka görevde kullanılmış olsa da). İsteğe bağlı `allowedScreens`: kabul edilebilir sapmalar; ölçülür ama "yol dışı" sayılmaz ve oradan dönmek "geri dönüş" sayılmaz.
+- **Görev özeti:** "Adım özeti" adı "Görev özeti" oldu; en altta toplam satırı (süre, ziyaret, geri, gidip gelme, tıklama, tepkisiz, art arda toplamları ve genel misclick oranı; skor sütunlarında "–").
+- **Birimli, açıklamalı etiketler:** görev satırı "Doğrudan başarı · Görev 33 sn sürdü. İlk 8 sn ilk ekranda etrafa bakınmakla geçti (ilk tıklamaya kadar), bu süre duraksama hesabına girmez."; duraksama 0-100 skor yerine saniye ve kişinin kendi normali ("İlk tıklamaya kadar 4,2 sn (bu katılımcının normali 2,1 sn)"), modelle aynı eşikte işaretlenir (normalin 2 katı ve en az 3 sn); sürtünme "Sorun işareti yok" ya da sebepler ("1 geri dönüş, 3 tepkisiz tıklama"); ziyaret "Bu ekrana 2 kez geldi, toplam 34 sn kaldı"; puanlar ölçek açıklamasıyla. Raporun başında katlanabilir "Bu rapor nasıl okunur?" kutusu, tablo başlıklarında kısa açıklamalar.
+- Toplu (çok katılımcılı) rapor sonraya kaldı.
+
+---
+
+## 2026-11-21: Adım kartları; tıklamasız geçiş (muhtemelen klavye)
+
+Kaynak: Nezih'in rapor geri bildirimi, PM işi. Durum: uygulandı (`faz1-core`).
+
+- **Adım adım:** raporda ekranlar ayrı tablolar yerine görev içinde ziyaret sırasına göre adım kartları olarak gösterilir. Solda ekran görüntüsü, tıklama noktaları ve açıklama; sağda o adımın Hipotez/Gözlem satırları, sorusu ve cevabı, ölçümleri (ziyaret, süre, duraksama/efor, sürtünme, geri, loop, misclick, rage). Yol dışı adımlar işaretli. "Öne çıkan anlar" en üstte ve her an ilgili karta bağlantılı. Eski tablo katlanmış "Adım özeti" (CSV ile aynı veri).
+- **Tıklamasız geçiş:** Figma prototiplerinde katılımcı klavyeyle (ok tuşları) ekran değiştirebiliyor. Embed olaylarından tespit edilebiliyor: `PRESENTED_NODE_CHANGED` olayının `interactionType` değeri `ON_CLICK` değilse ve öncesindeki 1 sn içinde tıklama yoksa geçiş "tıklamasız geçiş (muhtemelen klavye)" sayılır (`core/signals.ts` `clicklessTransitions`). Adım kartında rozet, sağlık bloğunda `clickless-transitions` bayrağı, raporda öne çıkan an. Hedefe tıklamasız geçiş içeren bir yoldan ulaşan görev doğrudan başarı sayılmaz (dolaylı).
+- Pilot prototipteki son oturumda 2 tıklamasız geçiş bulundu (bir ekranın katman durumundan ana durumuna dönüş, `interactionType: NONE`, öncesinde tıklama yok).
+- **Klavyeyi kapatma:** embed linkine `disable-default-keyboard-nav=1` eklendi. Figma'nın bu parametreyi destekleyip desteklemediği gerçek oturumda doğrulanacak; desteklemezse tespit ve bayrak yine çalışır.
+- Not (sonrası için): sürtünme algılanınca anlık "şu an ne düşünüyorsun?" sorusu seçeneği.
+
+---
+
+## 2026-11-21: Rapor okunabilirliği (P1, P2)
+
+Kaynak: Nezih'in rapor geri bildirimi, PM önceliklendirmesi, Nezih onayı. Durum: uygulandı (`faz1-core`); sadece rapor katmanı, `core` hesapları değişmedi.
+
+- Tıklama haritasının altında açıklamalı sayılar: çalışan, tepkisiz, "Tasarımın dışına tıklama". "Görüntüsü olmayan durum" satırı kalktı; konumu bilinmeyen tıklamalar varsa tek satırda sayılır.
+- Görev başlığının altında ayrı bir satır: beklenen zorluk → SEQ, sonuç, süre (yönelim süresiyle).
+- Sapmalar iki satır: "Hipotez: karar ekranı (seçenekleri tartması beklendi)" / "Gözlem: 3 sn'de geçti". "X bekledin" kalıbı raporda kullanılmıyor.
+- Yüz sinyalleri kapalıyken "Efor" sütunu "Duraksama" adını alır ve tablonun üstünde tek satır açıklama var. Ekran satırında ziyaret sayısı ve toplam süre ("2 ziyaret, toplam 34 sn"; aynı görevde tekrar gelince toplanır, başka görevde ayrı sayılır).
+- Sağlık bloğunda yüz sinyali durumu ("bu çalışmada kapalı" / "açık" / "bu oturumda kullanılmadı").
+- Her görevin başında "Öne çıkan anlar": en ağır 3 sapma, yarıda bırakılan ekran, art arda tıklama ve gidip gelme; her biri o ekran için verilen cevapla. Ham tablolar ve haritalar katlanmış bölümde; yazdırırken hepsi açılır.
+
+---
+
+## 2026-11-20: Tıklama haritası ve dışa aktarma (M3)
+
+Kaynak: Nezih onayı ("evet eklensin, dışa aktar, güvenlik önemli"), PM kapsamı. Durum: uygulandı (`faz1-core`); Figma görüntüleri Nezih'in bilgisayarına indirilince harita dolacak.
+
+- Araştırmacı raporu: `apps/web/report.html` (yerel). Oturum dosyaları tarayıcıda açılır, hiçbir yere gönderilmez. En üstte sağlık bloğu ve bayraklar; görev başına sonuç, görev ve yönelim süresi, beklenti → SEQ, sapma cümleleri, sorular ve cevaplar, ekran metrikleri (süre, efor, sürtünme, geri, loop, misclick, rage, yol dışı); birden fazla oturumda çalışma özeti (sonuç dağılımı, ekran başına drop-off hunisi).
+- Raporlar dosyadaki ham olaylardan güncel modelle ve güncel çalışma dosyasıyla yeniden hesaplanır; eski oturum dosyaları da aynı şekilde okunur.
+- Statik tıklama haritası "ekran referans görüntüsü" soyutlaması üzerinde: Figma sağlayıcısı gitignore'daki `frames.local/<node>.png` görüntülerini kullanır (1x; Figma frame koordinatları doğrudan piksellere oturur). Her tıklama, tıklandığı andaki durum node'unun görüntüsüne çizilir (`payload.node`); konumu iç kaydırma alanına göre olan ya da görüntüsü olmayan tıklamalar haritaya çizilmez, "görüntüsü olmayan durum" altında sayılır.
+- Dışa aktarma: metrik CSV'si (katılımcı × görev × ekran satırları) ve tarayıcının "PDF olarak kaydet" özelliğiyle yazdırılabilir görünüm.
+- Şirket ekranları (frame görüntüleri) ve indirme script'i gitignore'da: `frames.local/`, `*.local.sh`.
+
+---
+
 ## 2026-11-20: Platform sırası
 
 Kaynak: ürün yönetimi thread'i, Nezih onayı. Durum: kararlaştırıldı; bugün kodda değişiklik yok.

@@ -44,6 +44,12 @@ export class FigmaAdapter {
 
   /** Raw node id currently presented (a state variant when aliases are used). */
   private node: string | null = null
+  /** Raw node currently presented (state variant), for comments. */
+  get currentNode(): string | null {
+    return this.node
+  }
+  /** Scroll offset of the frame at the last click (Figma reports it only with clicks), for placing comments. */
+  lastScroll: { node: string; frameId: string; x: number; y: number; t: number } | null = null
 
   /** aliases: state-variant node id -> logical screen key (from the study's screen aliases, see aliasMap). */
   constructor(
@@ -105,6 +111,12 @@ export class FigmaAdapter {
       const target = str(data.targetNodeId)
       if (target) payload.targetNodeId = target
       if (typeof data.handled === 'boolean') payload.handled = data.handled
+      // For the click map: which state node was on screen, and which frame the position is relative to.
+      const presented = str(data.presentedNodeId) ?? this.node
+      if (presented && presented !== this.screenKey) payload.node = presented
+      const frameId = str(data.nearestScrollingFrameId)
+      if (frameId && num(so.x) !== undefined && num(so.y) !== undefined) this.lastScroll = { node: presented ?? frameId, frameId, x: num(so.x)!, y: num(so.y)!, t }
+      if (hasPos && frameId) payload.frameId = frameId
       const events = [this.ev(t, 'click', payload)]
       const pos = hasPos ? { x, y } : {}
       if (data.handled === false) events.push(this.ev(t, 'dead-click', { ...pos, ...(target ? { targetNodeId: target } : {}) }))

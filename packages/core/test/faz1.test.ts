@@ -162,6 +162,8 @@ describe('screen aliases (Figma state variants)', () => {
     ]
     expect(out.map((e) => `${e.type}:${e.screenKey}`)).toEqual(['screen:amount', 'state:amount', 'state:amount', 'screen:cards'])
     expect(out[3].payload).toMatchObject({ from: 'amount', node: 'cards-all' })
+    const click = a.push({ type: 'MOUSE_PRESS_OR_RELEASE', data: { handled: true, presentedNodeId: 'cards-all', nearestScrollingFrameId: 'cards-all', nearestScrollingFrameMousePosition: { x: 10, y: 20 } } }, 7).events[0]
+    expect(click).toMatchObject({ screenKey: 'cards', payload: { x: 10, y: 20, node: 'cards-all', frameId: 'cards-all' } })
   })
   it('the report keeps one visit per logical screen even from raw node events', () => {
     const raw: InteractionEvent[] = [ev(0, 'amount', 'screen'), ev(1, 'amount', 'click'), ev(3, 'amount-2', 'screen'), ev(5, 'amount-3', 'screen'), ev(9, 'cards', 'screen')]
@@ -200,6 +202,17 @@ describe('study-level screens, expected path, off-path visits, orientation', () 
     expect(r.study.tasks[1].expectedPath).toEqual(['home', 'orders'])
     expect(cardsFromTask(r.study.tasks[1])[1]).toMatchObject({ screenKey: 'orders', behavior: 'decide', expectedSec: [5, 20] })
     expect(c1[2]).toMatchObject({ screenKey: 'orders', behavior: 'flow' })
+  })
+  it('allowedScreens are acceptable detours (not off-path) and one screen can be on several tasks\' paths', () => {
+    const r = parseStudy({ ...study, tasks: [{ id: 'a', prompt: 'p', expectedPath: ['home', 'detail'], allowedScreens: ['orders'] }, { id: 'b', prompt: 'q', expectedPath: ['home', 'detail', 'orders'] }] })
+    if (!r.ok) throw new Error(r.errors.join())
+    expect(cardsFromTask(r.study.tasks[0]).map((c) => [c.screenKey, !!c.offPath])).toEqual([['home', false], ['detail', false], ['orders', false]])
+    expect(r.study.tasks[0].allowedScreens).toEqual(['orders'])
+    expect(cardsFromTask(r.study.tasks[1]).every((c) => !c.offPath)).toBe(true)
+    // Detour home → orders → detail: no off-path friction and no "back" for leaving the allowed screen.
+    const rep = computeScreenReport({ cards: cardsFromTask(r.study.tasks[0]), events: [ev(0, 'home', 'screen'), ev(1, 'home', 'click'), ev(2, 'orders', 'screen'), ev(3, 'orders', 'click'), ev(4, 'detail', 'screen'), ev(5, 'detail', 'click')], samples: [], baseline: computeBaseline([], []), endSec: 6, cameraEnabled: false })
+    expect(rep.screens.find((x) => x.screenKey === 'orders')).toMatchObject({ backs: 0, observed: { friction: 0 } })
+    expect(rep.offPathScreens).toEqual([])
   })
   it('rejects unknown keys in expectedPath and probes', () => {
     const r = parseStudy({ ...study, tasks: [{ id: 'a', prompt: 'p', expectedPath: ['home', 'nope'], probes: { zzz: 'q' } }] })
@@ -251,12 +264,18 @@ describe('metric set: loops, misclicks, outcome, orientation in over-time, funne
     expect(r2.mismatches.find((m) => m.kind === 'over-time')?.text).toBe('A: en fazla 10 sn bekledin, 13 sn sürdü.')
   })
   it('task outcome: direct, indirect, failed, dropped (with last screen)', () => {
-    const path = [ev(0, 'a', 'screen'), ev(1, 'b', 'screen'), ev(2, 't', 'screen'), ev(3, 't-done', 'screen')]
+    const clicked = (xs: InteractionEvent[]) => xs.flatMap((e, i) => (i ? [ev(e.t - 0.2, xs[i - 1].screenKey, 'click'), e] : [e]))
+    const path = clicked([ev(0, 'a', 'screen'), ev(1, 'b', 'screen'), ev(2, 't', 'screen'), ev(3, 't-done', 'screen')])
     const o = (events: InteractionEvent[], finished = true) => taskOutcome({ cards, events, targetScreen: 't-done', finished, endSec: 5 })
     expect(o(path).result).toBe('direct')
-    expect(o([ev(0, 'a', 'screen'), ev(1, 'x', 'screen'), ev(2, 't', 'screen'), ev(3, 't-done', 'screen')])).toMatchObject({ result: 'indirect', offPathVisited: ['x'] })
-    expect(o(path.slice(0, 3)).result).toBe('failed') // reached t but not the "done" state
-    expect(o(path.slice(0, 2), false)).toMatchObject({ result: 'dropped', lastScreen: 'b' })
+    expect(o(clicked([ev(0, 'a', 'screen'), ev(1, 'x', 'screen'), ev(2, 't', 'screen'), ev(3, 't-done', 'screen')]))).toMatchObject({ result: 'indirect', offPathVisited: ['x'] })
+    expect(o(path.slice(0, 5)).result).toBe('failed') // reached t but not the "done" state
+    expect(o(path.slice(0, 3), false)).toMatchObject({ result: 'dropped', lastScreen: 'b' })
+    // Reaching the target with a click-less (keyboard) transition is not a direct success.
+    expect(o([ev(0, 'a', 'screen'), ev(0.8, 'a', 'click'), ev(1, 'b', 'screen'), ev(2, 't', 'screen'), ev(3, 't-done', 'screen', { interactionType: 'ON_CLICK' })])).toMatchObject({ result: 'indirect', clicklessTransitions: 1 })
+    // Timed, hover and drag transitions are the prototype's design, not a skipped click (QA KA-15).
+    for (const it of ['AFTER_TIMEOUT', 'ON_HOVER', 'MOUSE_ENTER', 'ON_DRAG'])
+      expect(o([ev(0, 'a', 'screen'), ev(0.8, 'a', 'click'), ev(1, 'b', 'screen', { interactionType: 'ON_CLICK' }), ev(2, 't', 'screen', { interactionType: it }), ev(2.5, 't', 'click'), ev(3, 't-done', 'screen', { interactionType: 'ON_CLICK' })])).toMatchObject({ result: 'direct', clicklessTransitions: 0 })
   })
   it('task summary: results, drop-off funnel, rage and misclicks per screen, median orientation', () => {
     const run = (events: InteractionEvent[], finished: boolean) => {
@@ -264,11 +283,11 @@ describe('metric set: loops, misclicks, outcome, orientation in over-time, funne
       return { participant: 'p', report, outcome: taskOutcome({ cards, events, targetScreen: 't', finished, endSec: 10 }), taskSec: 10 }
     }
     const sum = summarizeTask(cards, [
-      run([ev(0, 'a', 'screen'), ev(2, 'a', 'click'), ev(3, 'b', 'screen'), ev(4, 't', 'screen')], true),
+      run([ev(0, 'a', 'screen'), ev(2, 'a', 'click'), ev(3, 'b', 'screen'), ev(3.5, 'b', 'click'), ev(4, 't', 'screen')], true),
       run([ev(0, 'a', 'screen'), ev(4, 'a', 'click'), ev(5, 'b', 'screen'), ev(6, 'b', 'rage-click'), ev(6, 'b', 'dead-click'), ev(6, 'b', 'click')], false)
     ])
     expect(sum.results).toEqual({ direct: 1, indirect: 0, failed: 0, dropped: 1 })
-    expect(sum.screens.find((s) => s.screenKey === 'b')).toMatchObject({ droppedHere: 1, rageClicks: 1, misclickRate: 1 })
+    expect(sum.screens.find((s) => s.screenKey === 'b')).toMatchObject({ droppedHere: 1, rageClicks: 1, misclickRate: 0.5 })
     expect(sum.medianOrientationSec).toBe(2)
   })
 })

@@ -3,6 +3,7 @@
 // so a broken session is spotted before its findings are read. Pure and deterministic.
 import { median, percentile } from './engine'
 import { MIN_SAMPLES } from './screens'
+import { clicklessTransitions } from './signals'
 import type { Baseline, InteractionEvent, SecondSample } from './types'
 
 export const HEALTH_MIN_FPS = 10
@@ -32,7 +33,7 @@ export interface HealthInput {
   lastStep: string
 }
 
-export type HealthFlag = 'low-fps' | 'face-missing' | 'unknown-screens' | 'missing-transitions' | 'baseline-invalid' | 'not-completed' | 'target-not-reached' | 'many-dont-remember'
+export type HealthFlag = 'clickless-transitions' | 'low-fps' | 'face-missing' | 'unknown-screens' | 'missing-transitions' | 'baseline-invalid' | 'not-completed' | 'target-not-reached' | 'many-dont-remember'
 
 export interface SessionHealth {
   sessionSec: number
@@ -40,7 +41,7 @@ export interface SessionHealth {
   lastStep: string
   camera: { on: boolean; fpsMedian: number | null; fpsP10: number | null; faceShare: number | null }
   warmup: { durationSec: number; clicks: number; baselineValid: boolean }
-  prototype: { unknownScreens: number; clicksWithoutTransition: number }
+  prototype: { unknownScreens: number; clicksWithoutTransition: number; clicklessTransitions: number }
   questions: { asked: number; skipped: number; dontRemember: number }
   tasks: { id: string; durationSec: number | null; reachedTarget: boolean | null }[]
   flags: HealthFlag[]
@@ -68,6 +69,7 @@ export function sessionHealth(h: HealthInput): SessionHealth {
   }
 
   let clicksWithoutTransition = 0
+  const clickless = h.tasks.reduce((a, t) => a + clicklessTransitions(t.events).length, 0)
   for (const t of h.tasks) {
     const changes = t.events.filter((e) => e.type === 'screen' || e.type === 'state').map((e) => e.t)
     for (const c of t.events)
@@ -84,6 +86,7 @@ export function sessionHealth(h: HealthInput): SessionHealth {
   if (camera.faceShare !== null && camera.faceShare < HEALTH_MIN_FACE_SHARE) flags.push('face-missing')
   if (unknown.size) flags.push('unknown-screens')
   if (clicksWithoutTransition) flags.push('missing-transitions')
+  if (clickless) flags.push('clickless-transitions')
   if (!warmup.baselineValid) flags.push('baseline-invalid')
   if (!completed) flags.push('not-completed')
   if (tasks.some((t) => t.reachedTarget === false)) flags.push('target-not-reached')
@@ -95,7 +98,7 @@ export function sessionHealth(h: HealthInput): SessionHealth {
     lastStep: h.lastStep,
     camera,
     warmup,
-    prototype: { unknownScreens: unknown.size, clicksWithoutTransition },
+    prototype: { unknownScreens: unknown.size, clicksWithoutTransition, clicklessTransitions: clickless },
     questions,
     tasks,
     flags

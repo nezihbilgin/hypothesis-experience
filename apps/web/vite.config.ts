@@ -1,4 +1,5 @@
 import react from '@vitejs/plugin-react'
+import { resolve } from 'node:path'
 import { defineConfig } from 'vite'
 export default defineConfig({
   base: './',
@@ -6,6 +7,6 @@ export default defineConfig({
   publicDir: '../spikes/public',
   plugins: [react()],
   worker: { format: 'es' },
-  build: { target: 'es2022' },
+  build: { target: 'es2022', rollupOptions: { input: { index: resolve(__dirname, 'index.html'), report: resolve(__dirname, 'report.html'), setup: resolve(__dirname, 'setup.html') } } },
   server: { port: 5180 }
 })
