@@ -1,0 +1,16 @@
+<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Think-aloud denemesi</title><link rel="stylesheet" href="./src/style.css"></head>
+<body><main>
+<h1>Think-aloud denemesi: cihaz üzerinde Whisper</h1>
+<p class="lead">Ses bu tarayıcıda metne çevrilir, bellekteki ses çevrildikten hemen sonra silinir. Model ve çalışma dosyaları bu bilgisayardan gelir; hiçbir şey gönderilmez. Metindeki isim, telefon, e-posta, adres ve kart numarası maskelenir.</p>
+<p>
+<label>Model <select id="model"><option>whisper-base</option><option>whisper-small</option><option>whisper-large-v3-turbo</option></select></label>
+<label>Cihaz <select id="device"><option value="webgpu">WebGPU</option><option value="wasm">WASM (CPU)</option></select></label>
+<label><input type="checkbox" id="camera"> Kamera analizi de açık (yük ölçümü)</label>
+</p>
+<p><label>Ses dosyası <input type="file" id="file" accept="audio/*"></label> <label>Mod <select id="mode"><option value="batch">Toplu (oturum sonunda)</option><option value="live">Canlı (10 sn'lik parçalar, gerçek zaman hızında)</option></select></label> <button id="run" disabled>Çevir</button></p>
+<p><button id="mic">Mikrofondan kaydet (bellekte)</button> <button id="micstop" disabled>Durdur ve çevir</button></p>
+<p id="status" class="lead"></p>
+<table><tbody id="stats"></tbody></table>
+<h2>Metin (maskeli)</h2>
+<div id="out"></div>
+</main><script type="module" src="./src/thinkaloud.ts"></script></body></html>

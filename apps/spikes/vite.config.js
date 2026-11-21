@@ -11,7 +11,8 @@ export default defineConfig({
         figma: resolve(__dirname, 'figma.html'),
         face: resolve(__dirname, 'face.html'),
         record: resolve(__dirname, 'record.html'),
-        sensing: resolve(__dirname, 'sensing.html')
+        sensing: resolve(__dirname, 'sensing.html'),
+        thinkaloud: resolve(__dirname, 'thinkaloud.html')
       }
     }
   }

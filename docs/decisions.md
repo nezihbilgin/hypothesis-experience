@@ -8,6 +8,32 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 
 ---
 
+## 2026-11-21: Think-aloud kapsamı ve soru modeli; pilot öncesi soru kuralları
+
+Kaynak: Nezih'in think-aloud soru-cevap onayları (PM thread'i, 21 Kasım), PM kararları (QA senaryo listesi v1 soruları 6–8). Durum: kararlaştırıldı. Think-aloud uygulaması M1 denemesinin sonucuna bağlı. 2026-11-20 "Sorular ekran geçişinde" girişindeki "ekranın ortasında asla" ve 2/6 sınırını **sadece think-aloud açıkken** geçersiz kılar.
+
+### Think-aloud (çalışma bazında, isteğe bağlı)
+- Ses sadece bellekte, cihazda yazıya dökülür; ses hiçbir yere gitmez ve saklanmaz. Kişisel bilgiler otomatik maskelenir, araştırmacı maskeyi kaldıramaz. Önce Türkçe, sonra İngilizce.
+- Isınma: yönerge sessiz okunur (katılımcı yüksek sesle okuması gerektiğini düşünmemeli), sonra kısa konuşma alıştırması ekranı.
+- Hatırlatma: takılma anında 8 sn ya da genel olarak 60 sn sessizlik; görev başına en fazla 2.
+- Konuşma süresi duraksama sayılmaz. Raporda alıntılar ve zaman çizgisinde konuşma şeridi.
+- Mikrofon verilmezse çalışma yazılı cevaplarla devam eder.
+
+### Soru modeli
+- **Think-aloud açıkken:** görevin ilk ekranına gelişte "Burada ne görüyorsun?" (varsayılan açık); sürtünmede anında soru, ekran başına en fazla 1, oturumda varsayılan 10 (saat durur); ekrandan çıkarken soru varsayılan kapalı.
+- **Think-aloud kapalıyken:** 2026-11-20 kuralı aynen geçerli: ekrandan çıkarken planlı ve sinyal tetikli sorular, görev başına 2, oturumda 6; anında soru varsayılan kapalı.
+- **Aynı ekran birden fazla görevde:** planlı sorular görev bazlıdır; her görevde kendi sorusu sorulur. Aynı görev içinde bir ekranda en fazla 1 soru; ekrana yeniden gelinirse tekrar sorulmaz. Oturum üst sınırı her durumda geçerli.
+- **Mikrofon reddi ya da kesintisi:** geçerli kuralı ayar değil, oturumun gerçek durumu belirler. Mikrofon en başta reddedilirse oturum baştan sona think-aloud kapalı kurallarla yürür (görev başına 2, oturumda 6 soru, ekrandan çıkarken soru açık). Oturum ortasında kesilirse kural değişikliği bir sonraki görevin başında olur; o ana kadar sorulan sorular 6'lık sınırdan düşülür, sınır dolduysa yeni soru sorulmaz. Rapor mod değişikliğini ve zamanını gösterir.
+- **Mod geçişi tek yönlüdür:** mikrofon kesildikten sonra geri gelse bile oturum think-aloud kapalı modda devam eder.
+- **Gelişte soru:** o ekrandaki tek soru hakkını kullanır, yani o ekranda ayrıca anında soru sorulmaz. 10'luk anında soru sınırından düşülmez.
+- **Katılımcı yükü paneli:** panel iki rakam gösterir. "Kesin" sayısı bağlam, 5 saniye, gelişte ve planlı çıkış sorularını kapsar. "En fazla" sayısı buna anında ve sinyal tetikli soru tavanlarını ekler. Uyarı yalnızca kesin soru sayısı 12'yi ya da tahmini süre 20 dakikayı aşarsa çıkar. Anında soru tavanı 10 olarak kalır. Beklenti ve SEQ ölçekleri sayılmaz.
+
+### Ölçüm ve gizlilik
+- **"%75 anlamlı cevap" kriteri:** payda sorulan tüm soru anlarıdır; "Geç", boş ve "Hatırlamıyorum" paydaya dahil, anlamlı sayılmaz. Raporda geçme oranı ayrıca gösterilir (soru anının katılımcıya maliyeti de bir sinyal).
+- **Yazılı cevaplarda maskeleme:** think-aloud transkriptine uygulanan `core` redact yazılı cevaplara ve yorumlara da uygulanır (pilot öncesi, gizlilik düzeltmesi sayılır, dondurmayı delmez).
+
+---
+
 ## 2026-11-21: Pilot öncesi özellik dondurma; haftalık karar incelemesi
 
 Kaynak: PM önerisi, Nezih'in onayı. Durum: geçerli.
