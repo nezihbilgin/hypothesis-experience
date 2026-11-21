@@ -1,22 +1,19 @@
-.setup section { margin: 22px 0; }
-.setup label { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; font-size: 0.9rem; }
-.setup label.check { flex-direction: row; align-items: center; }
-.setup input, .setup select, .setup textarea { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); }
-.setup input.n { width: 70px; }
-.setup .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-.setup .row.between { justify-content: space-between; }
-.setup table.edit { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-.setup table.edit th { text-align: left; font-weight: 600; padding: 4px; }
-.setup table.edit td { padding: 3px 4px; vertical-align: top; }
-.setup table.edit input, .setup table.edit select { width: 100%; }
+/* Setup screen layout. Fields are Untitled UI components (fields.tsx); only layout lives here. */
+.setup section { margin: 26px 0; }
+.setup .row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin: 10px 0; }
+.setup .row.between { justify-content: space-between; align-items: center; }
+.setup .stack { display: flex; flex-direction: column; gap: 12px; margin: 10px 0; }
+.setup .row .grow { flex: 1; min-width: 180px; }
+.setup table.edit { width: 100%; border-collapse: collapse; font-size: var(--text-sm); margin-top: 10px; }
+.setup table.edit th { text-align: left; font-weight: 600; padding: 4px; color: var(--color-text-secondary); vertical-align: bottom; }
+.setup table.edit td { padding: 3px 4px; vertical-align: middle; }
 .setup .nowrap { white-space: nowrap; }
-.setup .task-edit { border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin: 12px 0; }
-.setup ol.path li { margin: 10px 0; }
-.setup ol.path input { width: 100%; margin-top: 4px; }
-.setup .checks { display: flex; flex-wrap: wrap; gap: 4px 16px; }
-.setup .filebtn { display: inline-flex; flex-direction: row; padding: 8px 14px; border: 1px solid var(--line); border-radius: 9px; cursor: pointer; }
-.setup .filebtn input { display: none; }
-.setup pre { max-height: 400px; overflow: auto; background: var(--bg); padding: 10px; font-size: 0.8rem; }
-.setup .ok { color: #2e7d32; }
-.setup .errors { color: #b3261e; }
-.ctx-edit .grow, .row .grow { flex: 1; min-width: 160px; }
+.setup .task-edit { border: 1px solid var(--color-border-secondary); border-radius: 12px; padding: 14px 16px; margin: 14px 0; }
+.setup ol.path { padding-left: 22px; }
+.setup ol.path li { margin: 12px 0; }
+.setup .checks { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.setup .numlabel { display: flex; flex-direction: column; gap: 6px; font-size: var(--text-sm); font-weight: 500; color: var(--color-text-secondary); }
+.setup pre { max-height: 400px; overflow: auto; background: var(--color-bg-secondary); padding: 10px; font-size: 0.8rem; border-radius: 8px; }
+.setup .ok { color: var(--color-text-success-primary); }
+.setup .errors { color: var(--color-text-error-primary); }
+.setup .warn { background: var(--color-bg-warning-primary); color: var(--color-text-warning-primary); padding: 8px 12px; border-radius: 8px; }

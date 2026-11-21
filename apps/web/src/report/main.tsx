@@ -5,7 +5,13 @@ import { cardsFromTask, parseStudy, summarizeTask, type FaceMoment, type Hypothe
 import { createContext, Fragment, useContext, useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import example from '../studies/example.json'
-import '../style.css'
+import '../uui/index.css'
+import '../uui/theme-mode'
+import '../researcher.css'
+import { FileTrigger } from 'react-aria-components'
+import { Button } from '@/components/base/buttons/button'
+import { Badge } from '@/components/base/badges/badges'
+import { TextArea } from '@/components/base/textarea/textarea'
 import './report.css'
 import { atText, clickLegend, clicksByScreen, commentPosition, faceLine, FACE_LABEL, momentNoteId, sessionKey, stepNoteId, stuckMoments, stuckSignalsText, taskFaceMoments, typicalViewportHeight, type SessionComment, type StuckMoment, fmtSec, frictionText, highlights, metricsCsv, mismatchLines, parseSessionFile, pauseText, recompute, taskLine, taskTotals, visitText, type SessionFile, type SessionTask } from './data'
 import { allFrameSizes, figmaFrames, hasFigmaFrames, type ReferenceImageProvider } from './images'
@@ -63,7 +69,7 @@ function NoteField({ id, label }: { id: string; label: string }) {
   const v = notes.get(id)
   return (
     <div className="note">
-      <textarea className="no-print" rows={v ? 3 : 1} aria-label={label} placeholder="Araştırmacı notu…" value={v} onChange={(e) => notes.set(id, e.target.value)} />
+      <TextArea className="no-print mt-2" size="sm" rows={v ? 3 : 1} aria-label={label} placeholder="Araştırmacı notu…" value={v} onChange={(text) => notes.set(id, text)} />
       {v ? (
         <p className="print-only">
           <b>Araştırmacı notu:</b> {v}
@@ -182,8 +188,20 @@ function StepCard({ task, s, cards, normalSec, firstScreen, face }: { task: Sess
       <header>
         <b>{card?.screenName ?? s.screenKey}</b>
         {card?.participantName ? <span className="muted"> · katılımcıya: “{card.participantName}”</span> : null}
-        {s.offPath ? <span className="badge">yol dışı</span> : null}
-        {s.clicklessArrivals ? <span className="badge warn">{s.clicklessArrivals} tıklamasız geçiş (muhtemelen klavye)</span> : null}
+        {s.offPath || s.clicklessArrivals ? (
+          <span className="badges">
+            {s.offPath ? (
+              <Badge size="sm" color="gray">
+                yol dışı
+              </Badge>
+            ) : null}
+            {s.clicklessArrivals ? (
+              <Badge size="sm" color="warning">
+                {s.clicklessArrivals} tıklamasız geçiş (muhtemelen klavye)
+              </Badge>
+            ) : null}
+          </span>
+        ) : null}
       </header>
       <div className="step-body">
         <div className="step-map">
@@ -255,7 +273,7 @@ function StepCard({ task, s, cards, normalSec, firstScreen, face }: { task: Sess
   )
 }
 
-const TL_W = 1000
+const TL_W = 760
 const TL_LABEL = 150
 const TL_FACE: Record<FaceMoment['kind'], string> = { still: 'hareketsiz (tıklamasız)', 'lean-in': 'ekrana yaklaştı', brow: 'kaş hareketi arttı', talk: 'kendi kendine konuştu', away: 'ekrandan uzaklaştı', 'blink-drop': 'göz kırpması azaldı' }
 const TL_ROW = 22
@@ -556,8 +574,10 @@ function SessionView({ s, onNotes }: { s: SessionFile; onNotes: (notes: Record<s
         <h2>
           {s.participant || 'Katılımcı'} · {s.startedAt.slice(0, 16).replace('T', ' ')}
         </h2>
-        <div className="row no-print">
-          <button onClick={() => download(`hx-session-${s.participant || 'katilimci'}-notlu.json`, JSON.stringify({ ...s, researcherNotes: notes }, null, 2), 'application/json')}>Notlarla birlikte oturum dosyasını indir</button>
+        <div className="no-print mt-2 flex flex-wrap items-center gap-3">
+          <Button size="sm" color="secondary" onPress={() => download(`hx-session-${s.participant || 'katilimci'}-notlu.json`, JSON.stringify({ ...s, researcherNotes: notes }, null, 2), 'application/json')}>
+            Notlarla birlikte oturum dosyasını indir
+          </Button>
           <span className="muted small">Notlar bu tarayıcıda da saklanır; dosyayı başka bir yerde açınca notlar dosyadan gelir.</span>
         </div>
         <ParticipantInfo s={s} />
@@ -635,7 +655,19 @@ function Health({ s }: { s: SessionFile }) {
   if (!h) return <p className="muted small">{face} · Bu dosyada sağlık bloğu yok (eski sürüm).</p>
   return (
     <div className="health">
-      <div className="flags">{h.flags.length ? h.flags.map((f) => <span key={f} className="flag">{FLAG[f] ?? f}</span>) : <span className="flag ok">Sorun görünmüyor</span>}</div>
+      <div className="flags">
+        {h.flags.length ? (
+          h.flags.map((f) => (
+            <Badge key={f} size="md" color="error">
+              {FLAG[f] ?? f}
+            </Badge>
+          ))
+        ) : (
+          <Badge size="md" color="success">
+            Sorun görünmüyor
+          </Badge>
+        )}
+      </div>
       <p className="muted small">
         {face} · süre {n(h.sessionSec / 60)} dk · kamera {h.camera.on ? `açık, fps ${n(h.camera.fpsMedian, 0)} (p10 ${n(h.camera.fpsP10, 0)}), yüz %${Math.round((h.camera.faceShare ?? 0) * 100)}` : 'kapalı'} · ısınma {n(h.warmup.durationSec)} sn, {h.warmup.clicks} tıklama · tanımsız ekran {h.prototype.unknownScreens} · geçişsiz tıklama {h.prototype.clicksWithoutTransition} · tıklamasız geçiş {h.prototype.clicklessTransitions ?? '–'} · soru {h.questions.asked} (geç {h.questions.skipped}, hatırlamıyorum {h.questions.dontRemember})
       </p>
@@ -713,7 +745,7 @@ function App() {
     }
   }
   return (
-    <main className="card wide report">
+    <main className="card researcher report mx-auto my-[4vh] max-w-5xl rounded-2xl bg-primary p-8 shadow-xs ring-1 ring-secondary max-sm:m-4 max-sm:p-5">
       <h1>Rapor {study ? `· ${study.name}` : ''}</h1>
       <details className="howto">
         <summary>Bu rapor nasıl okunur?</summary>
@@ -752,13 +784,25 @@ function App() {
       </details>
       <div className="no-print">
         <p className="muted">Oturum dosyalarını seç (birden fazla seçebilirsin). Dosyalar bu tarayıcıda açılır, hiçbir yere gönderilmez.</p>
-        <input type="file" accept="application/json,.json" multiple onChange={(e) => void load(e.target.files)} />
+        <FileTrigger acceptedFileTypes={['application/json', '.json']} allowsMultiple onSelect={(files) => void load(files)}>
+          <Button size="md" color="primary">
+            Oturum dosyalarını seç
+          </Button>
+        </FileTrigger>
         {!hasFigmaFrames() ? <p className="muted small">Tıklama haritası için ekran görüntüleri bulunamadı (frames.local/).</p> : null}
-        {error ? <p className="hint">{error}</p> : null}
+        {error ? (
+          <p className="rounded-lg bg-error-primary px-3 py-2.5 text-error-primary" role="alert">
+            {error}
+          </p>
+        ) : null}
         {sessions.length ? (
-          <div className="row">
-            <button onClick={() => download('hx-metrikler.csv', csv, 'text/csv;charset=utf-8')}>CSV indir</button>
-            <button onClick={() => window.print()}>PDF olarak yazdır</button>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Button size="md" color="secondary" onPress={() => download('hx-metrikler.csv', csv, 'text/csv;charset=utf-8')}>
+              CSV indir
+            </Button>
+            <Button size="md" color="secondary" onPress={() => window.print()}>
+              PDF olarak yazdır
+            </Button>
           </div>
         ) : null}
       </div>

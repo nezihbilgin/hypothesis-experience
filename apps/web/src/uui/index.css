@@ -1,0 +1,56 @@
+/* Untitled UI React foundation (MIT, see LICENSE): Tailwind v4 + the Untitled UI theme tokens, with our own accent.
+   No web fonts are loaded (system font stack; nothing fetched from third parties). */
+@import "tailwindcss";
+@import "./styles/theme.css";
+
+@plugin "tailwindcss-react-aria-components";
+@plugin "tailwindcss-animate";
+
+@source "../";
+
+@custom-variant dark (&:where(.dark-mode, .dark-mode *));
+@custom-variant label (& [data-label]);
+@custom-variant focus-input-within (&:has(input:focus));
+
+/* Our accent instead of the Untitled UI purple (own design language, not a brand copy). */
+@theme {
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-display: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --color-brand-25: rgb(246 249 255);
+  --color-brand-50: rgb(238 243 255);
+  --color-brand-100: rgb(222 231 252);
+  --color-brand-200: rgb(193 210 248);
+  --color-brand-300: rgb(150 178 241);
+  --color-brand-400: rgb(104 141 230);
+  --color-brand-500: rgb(68 111 220);
+  --color-brand-600: rgb(47 91 211);
+  --color-brand-700: rgb(37 72 175);
+  --color-brand-800: rgb(32 60 141);
+  --color-brand-900: rgb(29 52 112);
+  --color-brand-950: rgb(19 33 72);
+}
+
+html,
+body {
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  @apply bg-secondary text-primary;
+}
+#root {
+  min-height: 100%;
+}
