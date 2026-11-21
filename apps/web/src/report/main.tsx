@@ -1,7 +1,7 @@
 // Researcher report (local, v1): load one or more session files, show the health block first, then per task the
 // outcome, times, questions, mismatches, screen metrics and a static click map on reference images.
 // Export: CSV of the metrics and a printable view (browser "Save as PDF"). Nothing is uploaded.
-import { cardsFromTask, parseStudy, summarizeTask, type HypothesisCard, type Study } from '@hx/core'
+import { cardsFromTask, parseStudy, summarizeTask, type HypothesisCard, type ScreenStats, type Study } from '@hx/core'
 import { useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import example from '../studies/example.json'
@@ -28,7 +28,8 @@ const FLAG: Record<string, string> = {
   'baseline-invalid': 'Baseline geçersiz',
   'not-completed': 'Oturum tamamlanmadı',
   'target-not-reached': 'Hedefe ulaşılmayan görev',
-  'many-dont-remember': 'Çok "Hatırlamıyorum"'
+  'many-dont-remember': 'Çok "Hatırlamıyorum"',
+  'clickless-transitions': 'Tıklamasız geçiş (muhtemelen klavye)'
 }
 const n = (v: number | null | undefined, d = 1): string => (v === null || v === undefined ? '–' : String(Math.round(v * 10 ** d) / 10 ** d))
 
@@ -78,25 +79,53 @@ function ClickMap({ screenKey, task, images }: { screenKey: string; task: Sessio
   )
 }
 
-function Mismatches({ task, cards }: { task: SessionTask; cards: HypothesisCard[] }) {
-  const r = task.report
-  if (!r?.mismatches.length) return null
-  const name = (k: string): string => cards.find((c) => c.screenKey === k)?.screenName ?? k
+const stepId = (taskId: string, screenKey: string): string => `step-${taskId}-${screenKey.replace(/[^\w-]/g, '-')}`
+const pct = (v: number | null | undefined): string => (v === null || v === undefined ? '–' : `%${Math.round(v * 100)}`)
+
+function StepCard({ task, s, cards, faceOn }: { task: SessionTask; s: ScreenStats; cards: HypothesisCard[]; faceOn: boolean }) {
+  const card = cards.find((c) => c.screenKey === s.screenKey)
+  const r = task.report!
+  const mms = r.mismatches.filter((m) => m.screenKey === s.screenKey)
+  const qs = task.questions.filter((q) => q.moment.screenKey === s.screenKey)
   return (
-    <ul className="mismatches">
-      {r.mismatches.map((m, i) => {
-        const l = mismatchLines(m, cards.find((c) => c.screenKey === m.screenKey), r.screens.find((x) => x.screenKey === m.screenKey))
-        return (
-          <li key={i}>
-            <b>{name(m.screenKey)}</b>
-            <br />
-            <span className="muted">Hipotez:</span> {l.hypothesis}
-            <br />
-            <span className="muted">Gözlem:</span> {l.observation}
-          </li>
-        )
-      })}
-    </ul>
+    <article className={s.offPath ? 'step offpath' : 'step'} id={stepId(task.id, s.screenKey)}>
+      <header>
+        <b>{card?.screenName ?? s.screenKey}</b>
+        {card?.participantName ? <span className="muted"> · katılımcıya: “{card.participantName}”</span> : null}
+        {s.offPath ? <span className="badge">yol dışı</span> : null}
+        {s.clicklessArrivals ? <span className="badge warn">{s.clicklessArrivals} tıklamasız geçiş (muhtemelen klavye)</span> : null}
+      </header>
+      <div className="step-body">
+        <div className="step-map">
+          <ClickMap screenKey={s.screenKey} task={task} images={figmaFrames} />
+        </div>
+        <div className="step-text">
+          {mms.length ? (
+            mms.map((m, i) => {
+              const l = mismatchLines(m, card, s)
+              return (
+                <p key={i}>
+                  <span className="muted">Hipotez:</span> {l.hypothesis}
+                  <br />
+                  <span className="muted">Gözlem:</span> {l.observation}
+                </p>
+              )
+            })
+          ) : (
+            <p className="muted">Hipotezle uyumlu.</p>
+          )}
+          {qs.map((q, i) => (
+            <p key={i} className="qa">
+              <span className="muted">{q.moment.source === 'planned' ? q.moment.probe : 'Sinyalle sorulan soru'}</span>
+              <br />“{q.answer ?? (q.dontRemember ? 'hatırlamıyorum' : 'geçti')}”
+            </p>
+          ))}
+          <p className="small">
+            {s.visits.length} ziyaret, toplam {n(s.durationSec, 0)} sn · {faceOn ? 'efor' : 'duraksama'} {s.observed.effort} · sürtünme {s.observed.friction} · geri {s.backs} · loop {s.loops ?? 0} · misclick {pct(s.misclickRate)} · rage {s.rageClicks}
+          </p>
+        </div>
+      </div>
+    </article>
   )
 }
 
@@ -105,7 +134,8 @@ function TaskSection({ task, faceOn }: { task: SessionTask; faceOn: boolean }) {
   const name = (k: string): string => cards.find((c) => c.screenKey === k)?.screenName ?? k
   const r = task.report
   const hl = highlights(task, cards)
-  const LABEL: Record<string, string> = { mismatch: 'Sapma', dropped: 'Yarıda bırakma', rage: 'Art arda tıklama', loop: 'Gidip gelme' }
+  const LABEL: Record<string, string> = { mismatch: 'Sapma', dropped: 'Yarıda bırakma', rage: 'Art arda tıklama', loop: 'Gidip gelme', keyboard: 'Tıklamasız geçiş' }
+  const steps = r ? [...r.screens].sort((a, b) => (a.visits[0]?.start ?? 0) - (b.visits[0]?.start ?? 0)) : []
   return (
     <section className="task-section">
       <h3>{task.prompt}</h3>
@@ -117,6 +147,7 @@ function TaskSection({ task, faceOn }: { task: SessionTask; faceOn: boolean }) {
         <span>
           {n(task.endSec, 0)} sn{r?.orientationSec != null ? ` (yönelim ${n(r.orientationSec, 0)} sn)` : ''}
         </span>
+        {task.outcome?.clicklessTransitions ? <span className="muted">yolda {task.outcome.clicklessTransitions} tıklamasız geçiş (muhtemelen klavye)</span> : null}
       </p>
       {hl.length ? (
         <div className="highlights">
@@ -124,7 +155,7 @@ function TaskSection({ task, faceOn }: { task: SessionTask; faceOn: boolean }) {
           <ul>
             {hl.map((h, i) => (
               <li key={i}>
-                <span className="hl-kind">{LABEL[h.kind]}</span> <b>{h.title}</b>
+                <span className="hl-kind">{LABEL[h.kind]}</span> <a href={`#${stepId(task.id, h.screenKey)}`}>{h.title}</a>
                 {h.hypothesis ? (
                   <>
                     <br />
@@ -146,40 +177,23 @@ function TaskSection({ task, faceOn }: { task: SessionTask; faceOn: boolean }) {
       ) : (
         <p className="muted">Öne çıkan bir an yok.</p>
       )}
-      <details>
-        <summary>Tüm sapmalar, sorular ve ekran ayrıntıları</summary>
-        <h4>Sapmalar</h4>
-        <Mismatches task={task} cards={cards} />
-        {task.questions.length ? (
-          <div className="answers">
-            <h4>Sorular</h4>
-            <ul>
-              {task.questions.map((q, i) => (
-                <li key={i}>
-                  <span className="muted">
-                    {name(q.moment.screenKey)} · {q.moment.source === 'planned' ? q.moment.probe : 'sinyalle sorulan soru'}
-                  </span>
-                  <br />
-                  {q.answer ?? (q.dontRemember ? '(hatırlamıyorum)' : '(geçti)')}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-        {r ? (
-          <>
-            <h4>Ekranlar</h4>
-            {!faceOn ? (
-              <p className="muted small">
-                Duraksama: ekranda ilk tıklamaya kadar geçen süre, katılımcının ısınmadaki kendi eşiğine göre 0-100. Görevin ilk ekranında yönelim süresi hariç.
-              </p>
-            ) : (
-              <p className="muted small">Efor: ilk tıklamaya kadar duraksama ve yüz sinyalleri (hareketsizlik, göz kırpma, ekrana yaklaşma), kendi ısınmasına göre 0-100.</p>
-            )}
+      {r ? (
+        <>
+          <h4>Adım adım</h4>
+          <p className="muted small">
+            {faceOn
+              ? 'Efor: ilk tıklamaya kadar duraksama ve yüz sinyalleri (hareketsizlik, göz kırpma, ekrana yaklaşma), kendi ısınmasına göre 0-100.'
+              : 'Duraksama: ekranda ilk tıklamaya kadar geçen süre, katılımcının ısınmadaki kendi eşiğine göre 0-100. Görevin ilk ekranında yönelim süresi hariç.'}
+          </p>
+          {steps.map((s) => (
+            <StepCard key={s.screenKey} task={task} s={s} cards={cards} faceOn={faceOn} />
+          ))}
+          <details>
+            <summary>Adım özeti (CSV ile aynı veri)</summary>
             <table className="metrics">
               <thead>
                 <tr>
-                  <th>Ekran</th>
+                  <th>Adım</th>
                   <th>Ziyaret, süre</th>
                   <th>{faceOn ? 'Efor' : 'Duraksama'}</th>
                   <th>Sürtünme</th>
@@ -190,7 +204,7 @@ function TaskSection({ task, faceOn }: { task: SessionTask; faceOn: boolean }) {
                 </tr>
               </thead>
               <tbody>
-                {r.screens.map((s) => (
+                {steps.map((s) => (
                   <tr key={s.screenKey} className={s.offPath ? 'offpath' : ''}>
                     <td>
                       {name(s.screenKey)}
@@ -203,21 +217,15 @@ function TaskSection({ task, faceOn }: { task: SessionTask; faceOn: boolean }) {
                     <td>{s.observed.friction}</td>
                     <td>{s.backs}</td>
                     <td>{s.loops ?? 0}</td>
-                    <td>{s.misclickRate === null || s.misclickRate === undefined ? '–' : `%${Math.round(s.misclickRate * 100)}`}</td>
+                    <td>{pct(s.misclickRate)}</td>
                     <td>{s.rageClicks}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            {r.screens.map((s) => (
-              <div key={s.screenKey} className="clickmap-block">
-                <h4>{name(s.screenKey)}</h4>
-                <ClickMap screenKey={s.screenKey} task={task} images={figmaFrames} />
-              </div>
-            ))}
-          </>
-        ) : null}
-      </details>
+          </details>
+        </>
+      ) : null}
     </section>
   )
 }
@@ -234,7 +242,7 @@ function Health({ s }: { s: SessionFile }) {
     <div className="health">
       <div className="flags">{h.flags.length ? h.flags.map((f) => <span key={f} className="flag">{FLAG[f] ?? f}</span>) : <span className="flag ok">Sorun görünmüyor</span>}</div>
       <p className="muted small">
-        {face} · süre {n(h.sessionSec / 60)} dk · kamera {h.camera.on ? `açık, fps ${n(h.camera.fpsMedian, 0)} (p10 ${n(h.camera.fpsP10, 0)}), yüz %${Math.round((h.camera.faceShare ?? 0) * 100)}` : 'kapalı'} · ısınma {n(h.warmup.durationSec)} sn, {h.warmup.clicks} tıklama · tanımsız ekran {h.prototype.unknownScreens} · geçişsiz tıklama {h.prototype.clicksWithoutTransition} · soru {h.questions.asked} (geç {h.questions.skipped}, hatırlamıyorum {h.questions.dontRemember})
+        {face} · süre {n(h.sessionSec / 60)} dk · kamera {h.camera.on ? `açık, fps ${n(h.camera.fpsMedian, 0)} (p10 ${n(h.camera.fpsP10, 0)}), yüz %${Math.round((h.camera.faceShare ?? 0) * 100)}` : 'kapalı'} · ısınma {n(h.warmup.durationSec)} sn, {h.warmup.clicks} tıklama · tanımsız ekran {h.prototype.unknownScreens} · geçişsiz tıklama {h.prototype.clicksWithoutTransition} · tıklamasız geçiş {h.prototype.clicklessTransitions ?? '–'} · soru {h.questions.asked} (geç {h.questions.skipped}, hatırlamıyorum {h.questions.dontRemember})
       </p>
     </div>
   )

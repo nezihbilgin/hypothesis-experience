@@ -5,6 +5,7 @@
 //   never create a mismatch on their own and only raise its severity. Camera-less mode is a complete mode.
 // Principle 1: sentences describe observed behaviour only, never emotion or intent.
 // Principle 2: thresholds come from the participant's own warm-up distribution.
+import { clicklessTransitions } from './signals'
 import { bucket, clamp, mean, median, mergeSameKind, percentile, personalThreshold, runs } from './engine'
 import {
   AXIS_LEVEL,
@@ -203,6 +204,7 @@ export function computeScreenReport(input: ScreenSessionInput): ScreenReport {
   const firstScreen = visits[0]?.screenKey
   let orientationSec: number | null = null
   const loops = loopsFrom(visits)
+  const clickless = clicklessTransitions(events)
   for (const card of cards) {
     const vs = visits.filter((v) => v.screenKey === card.screenKey)
     if (!vs.length) continue
@@ -286,6 +288,7 @@ export function computeScreenReport(input: ScreenSessionInput): ScreenReport {
       clicks,
       misclickRate: clicks ? Math.round((deads.length / clicks) * 100) / 100 : null,
       loops: loopCount,
+      clicklessArrivals: clickless.filter((c) => c.screenKey === card.screenKey).length,
       ...(orienting ? { orientationSec: r1(orientation), timedSec: r1(Math.max(0, durationSec - orientation)) } : {}),
       rageClicks: rages.length,
       awaySec,
@@ -350,7 +353,8 @@ export function computeScreenReport(input: ScreenSessionInput): ScreenReport {
     cameraCoverage: Math.round((covered / end) * 100) / 100,
     orientationSec,
     offPathScreens: stats.filter((s) => s.offPath).map((s) => s.screenKey),
-    loops: loops.map(({ screens, count }) => ({ screens, count }))
+    loops: loops.map(({ screens, count }) => ({ screens, count })),
+    clickless
   }
 }
 

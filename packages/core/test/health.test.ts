@@ -31,7 +31,7 @@ describe('session health', () => {
     const h = sessionHealth(base())
     expect(h.camera).toEqual({ on: true, fpsMedian: 15, fpsP10: 15, faceShare: 1 })
     expect(h.warmup).toEqual({ durationSec: 7, clicks: 3, baselineValid: true })
-    expect(h.prototype).toEqual({ unknownScreens: 0, clicksWithoutTransition: 1 }) // the handled click at 5 s led nowhere
+    expect(h.prototype).toEqual({ unknownScreens: 0, clicksWithoutTransition: 1, clicklessTransitions: 0 }) // the handled click at 5 s led nowhere
     expect(h.tasks).toEqual([{ id: 't1', durationSec: 10, reachedTarget: true }])
     expect(h.flags).toEqual(['missing-transitions'])
   })
@@ -50,5 +50,15 @@ describe('session health', () => {
     const h = sessionHealth(base({ cameraOn: false, warmup: { samples: [], events: warmEvents } }))
     expect(h.camera).toEqual({ on: false, fpsMedian: null, fpsP10: null, faceShare: null })
     expect(h.flags).not.toContain('low-fps')
+  })
+})
+
+describe('click-less transitions', () => {
+  it('flags screen changes without a click shortly before (probably keyboard)', () => {
+    const h = sessionHealth(
+      base({ tasks: [{ ...base().tasks[0], events: [ev(0, 'a', 'screen'), ev(3, 'b', 'screen'), ev(4, 'b', 'click', { handled: true }), ev(4.2, 'c', 'screen')] }] })
+    )
+    expect(h.prototype.clicklessTransitions).toBe(1)
+    expect(h.flags).toContain('clickless-transitions')
   })
 })

@@ -8,6 +8,18 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 
 ---
 
+## 2026-11-21: Adım kartları; tıklamasız geçiş (muhtemelen klavye)
+
+Kaynak: Nezih'in rapor geri bildirimi, PM işi. Durum: uygulandı (`faz1-core`).
+
+- **Adım adım:** raporda ekranlar ayrı tablolar yerine görev içinde ziyaret sırasına göre adım kartları olarak gösterilir. Solda ekran görüntüsü, tıklama noktaları ve açıklama; sağda o adımın Hipotez/Gözlem satırları, sorusu ve cevabı, ölçümleri (ziyaret, süre, duraksama/efor, sürtünme, geri, loop, misclick, rage). Yol dışı adımlar işaretli. "Öne çıkan anlar" en üstte ve her an ilgili karta bağlantılı. Eski tablo katlanmış "Adım özeti" (CSV ile aynı veri).
+- **Tıklamasız geçiş:** Figma prototiplerinde katılımcı klavyeyle (ok tuşları) ekran değiştirebiliyor. Embed olaylarından tespit edilebiliyor: `PRESENTED_NODE_CHANGED` olayının `interactionType` değeri `ON_CLICK` değilse ve öncesindeki 1 sn içinde tıklama yoksa geçiş "tıklamasız geçiş (muhtemelen klavye)" sayılır (`core/signals.ts` `clicklessTransitions`). Adım kartında rozet, sağlık bloğunda `clickless-transitions` bayrağı, raporda öne çıkan an. Hedefe tıklamasız geçiş içeren bir yoldan ulaşan görev doğrudan başarı sayılmaz (dolaylı).
+- Pilot prototipteki son oturumda 2 tıklamasız geçiş bulundu (bir ekranın katman durumundan ana durumuna dönüş, `interactionType: NONE`, öncesinde tıklama yok).
+- **Klavyeyi kapatma:** embed linkine `disable-default-keyboard-nav=1` eklendi. Figma'nın bu parametreyi destekleyip desteklemediği gerçek oturumda doğrulanacak; desteklemezse tespit ve bayrak yine çalışır.
+- Not (sonrası için): sürtünme algılanınca anlık "şu an ne düşünüyorsun?" sorusu seçeneği.
+
+---
+
 ## 2026-11-21: Rapor okunabilirliği (P1, P2)
 
 Kaynak: Nezih'in rapor geri bildirimi, PM önceliklendirmesi, Nezih onayı. Durum: uygulandı (`faz1-core`); sadece rapor katmanı, `core` hesapları değişmedi.

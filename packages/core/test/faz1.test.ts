@@ -253,12 +253,15 @@ describe('metric set: loops, misclicks, outcome, orientation in over-time, funne
     expect(r2.mismatches.find((m) => m.kind === 'over-time')?.text).toBe('A: en fazla 10 sn bekledin, 13 sn sürdü.')
   })
   it('task outcome: direct, indirect, failed, dropped (with last screen)', () => {
-    const path = [ev(0, 'a', 'screen'), ev(1, 'b', 'screen'), ev(2, 't', 'screen'), ev(3, 't-done', 'screen')]
+    const clicked = (xs: InteractionEvent[]) => xs.flatMap((e, i) => (i ? [ev(e.t - 0.2, xs[i - 1].screenKey, 'click'), e] : [e]))
+    const path = clicked([ev(0, 'a', 'screen'), ev(1, 'b', 'screen'), ev(2, 't', 'screen'), ev(3, 't-done', 'screen')])
     const o = (events: InteractionEvent[], finished = true) => taskOutcome({ cards, events, targetScreen: 't-done', finished, endSec: 5 })
     expect(o(path).result).toBe('direct')
-    expect(o([ev(0, 'a', 'screen'), ev(1, 'x', 'screen'), ev(2, 't', 'screen'), ev(3, 't-done', 'screen')])).toMatchObject({ result: 'indirect', offPathVisited: ['x'] })
-    expect(o(path.slice(0, 3)).result).toBe('failed') // reached t but not the "done" state
-    expect(o(path.slice(0, 2), false)).toMatchObject({ result: 'dropped', lastScreen: 'b' })
+    expect(o(clicked([ev(0, 'a', 'screen'), ev(1, 'x', 'screen'), ev(2, 't', 'screen'), ev(3, 't-done', 'screen')]))).toMatchObject({ result: 'indirect', offPathVisited: ['x'] })
+    expect(o(path.slice(0, 5)).result).toBe('failed') // reached t but not the "done" state
+    expect(o(path.slice(0, 3), false)).toMatchObject({ result: 'dropped', lastScreen: 'b' })
+    // Reaching the target with a click-less (keyboard) transition is not a direct success.
+    expect(o([ev(0, 'a', 'screen'), ev(0.8, 'a', 'click'), ev(1, 'b', 'screen'), ev(2, 't', 'screen'), ev(3, 't-done', 'screen', { interactionType: 'ON_CLICK' })])).toMatchObject({ result: 'indirect', clicklessTransitions: 1 })
   })
   it('task summary: results, drop-off funnel, rage and misclicks per screen, median orientation', () => {
     const run = (events: InteractionEvent[], finished: boolean) => {
@@ -266,11 +269,11 @@ describe('metric set: loops, misclicks, outcome, orientation in over-time, funne
       return { participant: 'p', report, outcome: taskOutcome({ cards, events, targetScreen: 't', finished, endSec: 10 }), taskSec: 10 }
     }
     const sum = summarizeTask(cards, [
-      run([ev(0, 'a', 'screen'), ev(2, 'a', 'click'), ev(3, 'b', 'screen'), ev(4, 't', 'screen')], true),
+      run([ev(0, 'a', 'screen'), ev(2, 'a', 'click'), ev(3, 'b', 'screen'), ev(3.5, 'b', 'click'), ev(4, 't', 'screen')], true),
       run([ev(0, 'a', 'screen'), ev(4, 'a', 'click'), ev(5, 'b', 'screen'), ev(6, 'b', 'rage-click'), ev(6, 'b', 'dead-click'), ev(6, 'b', 'click')], false)
     ])
     expect(sum.results).toEqual({ direct: 1, indirect: 0, failed: 0, dropped: 1 })
-    expect(sum.screens.find((s) => s.screenKey === 'b')).toMatchObject({ droppedHere: 1, rageClicks: 1, misclickRate: 1 })
+    expect(sum.screens.find((s) => s.screenKey === 'b')).toMatchObject({ droppedHere: 1, rageClicks: 1, misclickRate: 0.5 })
     expect(sum.medianOrientationSec).toBe(2)
   })
 })

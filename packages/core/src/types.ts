@@ -161,6 +161,8 @@ export interface ScreenStats {
   misclickRate: number | null
   /** Loops attributed to this screen (A→B→A→B: counted on B, the screen left backwards). */
   loops: number
+  /** Arrivals on this screen (or one of its states) without a click: probably keyboard navigation. */
+  clicklessArrivals?: number
   /** Task's first screen only: orientation seconds and the screen time without it (used for over-time). */
   orientationSec?: number
   timedSec?: number
@@ -218,4 +220,6 @@ export interface ScreenReport {
   offPathScreens: string[]
   /** Back-and-forth loops between two logical screens, reported separately from backs. */
   loops: { screens: [string, string]; count: number }[]
+  /** Screen/state changes without a click shortly before ("tıklamasız geçiş, muhtemelen klavye"). */
+  clickless: { t: number; screenKey: string; node: string; type: 'screen' | 'state' }[]
 }

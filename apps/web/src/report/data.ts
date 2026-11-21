@@ -145,7 +145,7 @@ export function mismatchLines(m: Mismatch, card: HypothesisCard | undefined, st:
 }
 
 export interface Highlight {
-  kind: 'mismatch' | 'dropped' | 'rage' | 'loop'
+  kind: 'mismatch' | 'dropped' | 'rage' | 'loop' | 'keyboard'
   screenKey: string
   title: string
   hypothesis?: string
@@ -178,6 +178,8 @@ export function highlights(task: SessionTask, cards: HypothesisCard[]): Highligh
       out.push({ kind: 'rage', screenKey: s.screenKey, title: name(s.screenKey), observation: `${times(s.rageClicks)} aynı yere art arda tıkladı`, answer: answerFor(s.screenKey) })
     if (s.loops && !seen.has(`${s.screenKey}|unexpected-friction`))
       out.push({ kind: 'loop', screenKey: s.screenKey, title: name(s.screenKey), observation: `${times(s.loops)} bir önceki ekranla arasında gidip geldi`, answer: answerFor(s.screenKey) })
+    if (s.clicklessArrivals)
+      out.push({ kind: 'keyboard', screenKey: s.screenKey, title: name(s.screenKey), observation: `${times(s.clicklessArrivals)} tıklamasız geçişle bu ekrana ya da durumuna geldi (muhtemelen klavye)` })
   }
   return out
 }

@@ -90,6 +90,9 @@ export function figmaEmbedUrl(raw: string, host: string, startNode?: string): st
   u.searchParams.set('hide-ui', '1')
   u.searchParams.set('footer', 'false')
   u.searchParams.set('hotspot-hints', '0')
+  // Keyboard navigation (arrow keys) lets participants skip screens without clicking; turn it off where the embed
+  // supports it. Click-less transitions are still detected and flagged in case it does not (decisions 2026-11-21).
+  u.searchParams.set('disable-default-keyboard-nav', '1')
   return u.toString()
 }
 

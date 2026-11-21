@@ -2,6 +2,7 @@
 // (target reached via off-path screens), failed (Done without the target), dropped (the task never ended: gave up,
 // tab closed, timeout). Pure; works on logical screens (aliases applied).
 import { aliasMap, logicalEvents } from './screens'
+import { clicklessTransitions } from './signals'
 import type { HypothesisCard, InteractionEvent } from './types'
 
 export type TaskResult = 'direct' | 'indirect' | 'failed' | 'dropped'
@@ -15,6 +16,8 @@ export interface TaskOutcome {
   endedAt: number | null
   /** Off-path screens visited before reaching the target (or before the end). */
   offPathVisited: string[]
+  /** Click-less transitions (probably keyboard) before reaching the target; any makes a success indirect. */
+  clicklessTransitions: number
 }
 
 export function taskOutcome(opts: {
@@ -37,10 +40,11 @@ export function taskOutcome(opts: {
   const offPathVisited = [...new Set(screens.filter((e) => e.type === 'screen' && e.t <= until && offPath.has(e.screenKey)).map((e) => e.screenKey))]
   const last = [...screens].reverse().find((e) => e.type === 'screen')
   const lastT = events.length ? events[events.length - 1].t : null
-  let result: TaskResult | null
+  let result: TaskResult | null | undefined
   if (!opts.finished) result = 'dropped'
   else if (!target) result = null
   else if (!reached) result = 'failed'
-  else result = offPathVisited.length ? 'indirect' : 'direct'
-  return { result, lastScreen: last?.screenKey ?? null, endedAt: opts.endSec ?? lastT, offPathVisited }
+  const clickless = clicklessTransitions(events).filter((c) => c.t <= until).length
+  if (result === undefined) result = offPathVisited.length || clickless ? 'indirect' : 'direct'
+  return { result, lastScreen: last?.screenKey ?? null, endedAt: opts.endSec ?? lastT, offPathVisited, clicklessTransitions: clickless }
 }

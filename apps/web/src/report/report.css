@@ -37,3 +37,15 @@ details summary { cursor: pointer; color: var(--accent); }
 .lg { margin-right: 10px; white-space: nowrap; }
 .dot-lg { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: rgba(47, 91, 211, 0.75); vertical-align: middle; }
 .dot-lg.dead { background: rgba(179, 38, 30, 0.85); }
+
+.step { border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin: 12px 0; scroll-margin-top: 16px; }
+.step.offpath { border-style: dashed; }
+.step header { margin-bottom: 8px; }
+.badge { display: inline-block; margin-left: 8px; font-size: 0.75rem; padding: 1px 8px; border-radius: 999px; background: var(--line); }
+.badge.warn { background: #f3d9a4; color: #4a3500; }
+.step-body { display: grid; grid-template-columns: minmax(180px, 240px) 1fr; gap: 16px; align-items: start; }
+.step-text p { margin: 0 0 10px; }
+.step-text .qa { border-left: 3px solid var(--line); padding-left: 8px; }
+.step .clickmap { width: 100%; }
+@media (max-width: 700px) { .step-body { grid-template-columns: 1fr; } }
+@media print { .step { break-inside: avoid; } }

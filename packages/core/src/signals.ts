@@ -4,6 +4,22 @@
 /** interaction_event schema version. 2 = mobile-ready fields (pointerType, viewport, orientation, streamId). */
 export const SCHEMA_VERSION = 2
 
+/**
+ * Screen/state changes with no click shortly before them: in Figma prototypes the participant can move with the
+ * keyboard (arrow keys), so these are "tıklamasız geçiş (muhtemelen klavye)". The task's first screen event is not
+ * a transition; Figma's interactionType ON_CLICK always counts as a click.
+ */
+export const CLICKLESS_WINDOW_SEC = 1
+export function clicklessTransitions(events: { t: number; type: string; screenKey: string; payload?: Record<string, unknown> }[]): { t: number; screenKey: string; node: string; type: 'screen' | 'state' }[] {
+  const ev = [...events].sort((a, b) => a.t - b.t)
+  const clicks = ev.filter((e) => e.type === 'click' || e.type === 'dead-click' || e.type === 'rage-click').map((e) => e.t)
+  const changes = ev.filter((e) => e.type === 'screen' || e.type === 'state')
+  return changes
+    .slice(1)
+    .filter((e) => e.payload?.interactionType !== 'ON_CLICK' && !clicks.some((c) => c <= e.t && e.t - c <= CLICKLESS_WINDOW_SEC))
+    .map((e) => ({ t: e.t, screenKey: e.screenKey, node: typeof e.payload?.node === 'string' ? e.payload.node : e.screenKey, type: e.type as 'screen' | 'state' }))
+}
+
 export const RAGE_WINDOW_MS = 1000
 export const RAGE_MIN_CLICKS = 3
 /** "Same area": every click of the burst within this distance (px) of the burst's first click. Taps land less
