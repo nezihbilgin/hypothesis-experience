@@ -222,7 +222,7 @@ export function computeScreenReport(input: ScreenSessionInput): ScreenReport {
     const backAt: number[] = []
     for (const v of vs) {
       const next = visits.find((x) => x.start === v.end)
-      if (!card.offPath && next && (order.get(next.screenKey) ?? Infinity) < card.order) backAt.push(v.end)
+      if (!card.offPath && !card.allowed && next && (order.get(next.screenKey) ?? Infinity) < card.order) backAt.push(v.end)
     }
     const deads = evs.filter((e) => e.type === 'dead-click')
     const rages = evs.filter((e) => e.type === 'rage-click')

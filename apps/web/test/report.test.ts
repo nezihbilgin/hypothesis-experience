@@ -45,3 +45,30 @@ describe('readable report text', () => {
     expect({ working: l.working, dead: l.dead, outside: l.outside }).toEqual({ working: 1, dead: 1, outside: 2 })
   })
 })
+
+import { fmtSec, frictionText, pauseText, taskLine, taskTotals, visitText } from '../src/report/data'
+
+describe('human labels with units', () => {
+  const st = (o: Record<string, unknown> = {}) => ({ screenKey: 'x', durationSec: 34, visits: [{ start: 0, end: 20 }, { start: 30, end: 44 }], firstActionSec: 4.24, hesitation: false, backs: 1, deadClicks: 3, rageClicks: 0, clicks: 6, misclickRate: 0.5, loops: 0, awaySec: 0, observed: { effort: 40, friction: 45 }, faceSupport: [], ...o }) as never
+  it('formats seconds Turkish-style', () => {
+    expect(fmtSec(4.24)).toBe('4,2 sn')
+    expect(fmtSec(33.4)).toBe('33 sn')
+    expect(fmtSec(null)).toBe('–')
+  })
+  it('task line explains time and orientation', () => {
+    const t = { id: 't', prompt: 'p', expectation: 4, seq: 7, events: [], endSec: 33, report: { orientationSec: 8 }, outcome: { result: 'direct', clicklessTransitions: 0 }, questions: [] }
+    expect(taskLine(t as never)).toEqual({ result: 'Doğrudan başarı', text: 'Görev 33 sn sürdü. İlk 8 sn ilk ekranda etrafa bakınmakla geçti (ilk tıklamaya kadar), bu süre duraksama hesabına girmez.' })
+  })
+  it('pause in seconds against the personal normal, flagged above 2x', () => {
+    expect(pauseText(st(), 2.1, false)).toEqual({ text: 'İlk tıklamaya kadar 4,2 sn (bu katılımcının normali 2,1 sn)', flagged: true })
+    expect(pauseText(st({ firstActionSec: 3 }), 2.1, false).flagged).toBe(false)
+    expect(pauseText(st({ firstActionSec: 2.3 }), 0.9, false).flagged).toBe(false) // under the 3 s floor
+    expect(pauseText(st({ orientationSec: 8 }), 2.1, true).text).toBe('İlk ekran: ilk tıklamaya kadar 8 sn etrafa bakındı (duraksama sayılmaz)')
+  })
+  it('friction as reasons, visits in words, totals', () => {
+    expect(frictionText(st())).toBe('1 geri dönüş, 3 tepkisiz tıklama')
+    expect(frictionText(st({ backs: 0, deadClicks: 0 }))).toBe('Sorun işareti yok')
+    expect(visitText(st())).toBe('Bu ekrana 2 kez geldi, toplam 34 sn kaldı')
+    expect(taskTotals([st(), st({ durationSec: 6, visits: [{ start: 0, end: 6 }], backs: 0, deadClicks: 0, clicks: 2, rageClicks: 1 })])).toEqual({ durationSec: 40, visits: 3, backs: 1, loops: 0, clicks: 8, dead: 3, rage: 1, misclickRate: 0.38 })
+  })
+})

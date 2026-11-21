@@ -1,5 +1,5 @@
 // Researcher report data helpers (pure, unit-tested): session files -> rows for tables, CSV and the click map.
-import { computeScreenReport, taskOutcome, type Baseline, type HypothesisCard, type InteractionEvent, type Mismatch, type ScreenReport, type ScreenStats, type SecondSample, type SessionHealth, type Study, type TaskOutcome } from '@hx/core'
+import { HESITATION_FLOOR_SEC, computeScreenReport, taskOutcome, type Baseline, type HypothesisCard, type InteractionEvent, type Mismatch, type ScreenReport, type ScreenStats, type SecondSample, type SessionHealth, type Study, type TaskOutcome } from '@hx/core'
 
 export interface SessionTask {
   id: string
@@ -190,4 +190,68 @@ export function clickLegend(points: ClickPoint[], size: { w: number; h: number }
   const fits = (p: ClickPoint): boolean => !size || (p.x >= 0 && p.y >= 0 && p.x <= size.w && p.y <= size.h)
   const drawable = points.filter((p) => inFrame(p) && fits(p))
   return { working: drawable.filter((p) => !p.dead).length, dead: drawable.filter((p) => p.dead).length, outside: points.length - drawable.length, drawable }
+}
+
+// ---- Human-readable labels with units (report layer) ---------------------------------------------------------
+/** Seconds in Turkish style: one decimal under 10 s ("4,2 sn"), whole seconds above ("34 sn"). */
+export function fmtSec(v: number | null | undefined): string {
+  if (v === null || v === undefined || !Number.isFinite(v)) return '–'
+  const x = v < 10 ? Math.round(v * 10) / 10 : Math.round(v)
+  return `${String(x).replace('.', ',')} sn`
+}
+
+const RESULT_TR: Record<string, string> = { direct: 'Doğrudan başarı', indirect: 'Dolaylı başarı', failed: 'Başarısız', dropped: 'Yarıda bıraktı' }
+
+/** "Doğrudan başarı · Görev 33 sn sürdü. İlk 8 sn ilk ekranda etrafa bakınmakla geçti (...)" */
+export function taskLine(task: SessionTask): { result: string; text: string } {
+  const result = task.outcome?.result ? RESULT_TR[task.outcome.result] : 'Sonuç yok'
+  const parts: string[] = []
+  if (task.endSec != null) parts.push(`Görev ${fmtSec(task.endSec)} sürdü.`)
+  const o = task.report?.orientationSec
+  if (o != null && o > 0) parts.push(`İlk ${fmtSec(o)} ilk ekranda etrafa bakınmakla geçti (ilk tıklamaya kadar), bu süre duraksama hesabına girmez.`)
+  if (task.outcome?.clicklessTransitions) parts.push(`Yolda ${task.outcome.clicklessTransitions} tıklamasız geçiş var (muhtemelen klavye).`)
+  return { result, text: parts.join(' ') }
+}
+
+/** Pause before the first click, in seconds, against the participant's own normal (warm-up p95). Flagged with the
+ * same threshold the model uses: more than 2× the normal and more than 3 s (Principle 2 floor). */
+export function pauseText(st: ScreenStats, normalSec: number, isFirstScreen: boolean): { text: string; flagged: boolean } {
+  if (isFirstScreen && st.orientationSec !== undefined) return { text: `İlk ekran: ilk tıklamaya kadar ${fmtSec(st.orientationSec)} etrafa bakındı (duraksama sayılmaz)`, flagged: false }
+  if (st.firstActionSec === null) return { text: 'Bu ekranda hiç tıklamadı', flagged: false }
+  const flagged = st.firstActionSec > Math.max(HESITATION_FLOOR_SEC, 2 * normalSec)
+  return { text: `İlk tıklamaya kadar ${fmtSec(st.firstActionSec)}${normalSec > 0 ? ` (bu katılımcının normali ${fmtSec(normalSec)})` : ''}`, flagged }
+}
+
+/** "Sorun işareti yok" or the reasons, e.g. "1 geri dönüş, 3 tepkisiz tıklama". */
+export function frictionText(st: ScreenStats): string {
+  const r: string[] = []
+  if (st.offPath) r.push('beklenen yolun dışında')
+  if (st.backs) r.push(`${st.backs} geri dönüş`)
+  if (st.deadClicks) r.push(`${st.deadClicks} tepkisiz tıklama`)
+  if (st.rageClicks) r.push(`${st.rageClicks} kez art arda tıklama`)
+  if (st.loops) r.push(`${st.loops} gidip gelme`)
+  return r.length ? r.join(', ') : 'Sorun işareti yok'
+}
+
+/** "Bu ekrana 2 kez geldi, toplam 34 sn kaldı" */
+export function visitText(st: ScreenStats): string {
+  const k = st.visits.length
+  return k > 1 ? `Bu ekrana ${k} kez geldi, toplam ${fmtSec(st.durationSec)} kaldı` : `Bu ekrana 1 kez geldi, ${fmtSec(st.durationSec)} kaldı`
+}
+
+/** Bottom row of "Görev özeti": sums of time and counts, overall misclick rate. */
+export function taskTotals(screens: ScreenStats[]): { durationSec: number; visits: number; backs: number; loops: number; clicks: number; dead: number; rage: number; misclickRate: number | null } {
+  const sum = (f: (s: ScreenStats) => number): number => screens.reduce((a, s) => a + f(s), 0)
+  const clicks = sum((s) => s.clicks ?? 0)
+  const dead = sum((s) => s.deadClicks)
+  return {
+    durationSec: Math.round(sum((s) => s.durationSec) * 10) / 10,
+    visits: sum((s) => s.visits.length),
+    backs: sum((s) => s.backs),
+    loops: sum((s) => s.loops ?? 0),
+    clicks,
+    dead,
+    rage: sum((s) => s.rageClicks),
+    misclickRate: clicks ? Math.round((dead / clicks) * 100) / 100 : null
+  }
 }

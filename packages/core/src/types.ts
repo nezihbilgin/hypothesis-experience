@@ -66,6 +66,8 @@ export interface HypothesisCard {
   aliases?: string[]
   /** Not on the task's expected path: a visit adds to friction ("beklenen yol dışı"). */
   offPath?: boolean
+  /** Acceptable detour (task allowedScreens): measured, not off-path, leaving it is not a "back". */
+  allowed?: boolean
 }
 
 export type InteractionType =

@@ -27,6 +27,8 @@ export interface StudyScreen {
   probe?: string
   /** Not on this task's expectedPath (new format); visiting it counts as leaving the expected path. */
   offPath?: boolean
+  /** In this task's allowedScreens: an acceptable detour (not off-path, no "back" when leaving it). */
+  allowed?: boolean
 }
 
 export interface StudyTask {
@@ -35,8 +37,10 @@ export interface StudyTask {
   /** In the order the researcher expects them; order is used to detect going back. In the new format: the
    * expectedPath screens first, then every other study screen with offPath: true. */
   screens: StudyScreen[]
-  /** New format: the expected screen order for this task. */
+  /** New format: the expected screen order for this task. Any study screen can be on several tasks' paths. */
   expectedPath?: string[]
+  /** New format: acceptable detours, measured but not marked "yol dışı". */
+  allowedScreens?: string[]
   /** Figma: node id the prototype starts from for this task (a flow's starting point), e.g. "26:7221".
    * Without it the link's own starting point is used. */
   startScreen?: string
@@ -179,6 +183,7 @@ export function parseStudy(input: unknown): ParseResult {
     if (!prompt) errors.push(multi ? `${tAt}prompt boş olamaz.` : 'Görev metni (taskPrompt) boş olamaz.')
     let screens: StudyScreen[]
     let expectedPath: string[] | undefined
+    let allowedScreens: string[] | undefined
     if (studyLevel) {
       const known = new Set(studyScreens.map((x) => x.key))
       const path = Array.isArray(t.expectedPath) ? (t.expectedPath as unknown[]).filter((k): k is string => typeof k === 'string' && !!k.trim()).map((k) => k.trim()) : []
@@ -211,16 +216,22 @@ export function parseStudy(input: unknown): ParseResult {
           ...(pr ? { probe: pr } : {})
         }
       }
+      // allowedScreens: acceptable detours, not on the path but not "yol dışı" either (e.g. a screen shared with
+      // another task that this task may pass through).
+      const allowed = Array.isArray(t.allowedScreens) ? (t.allowedScreens as unknown[]).filter((k): k is string => typeof k === 'string' && !!k.trim()).map((k) => k.trim()) : []
+      for (const k of allowed) if (!known.has(k)) errors.push(`${tAt}allowedScreens içindeki "${k}" tanımlı ekranlardan biri değil.`)
       const onPath = path.map((k) => studyScreens.find((x) => x.key === k)).filter((x): x is StudyScreen => !!x).map(withProbe)
-      const off = studyScreens.filter((x) => !path.includes(x.key)).map((x) => ({ ...withProbe(x), offPath: true }))
-      screens = [...onPath, ...off]
+      const ok = studyScreens.filter((x) => !path.includes(x.key) && allowed.includes(x.key)).map((x) => ({ ...withProbe(x), allowed: true }))
+      const off = studyScreens.filter((x) => !path.includes(x.key) && !allowed.includes(x.key)).map((x) => ({ ...withProbe(x), offPath: true }))
+      screens = [...onPath, ...ok, ...off]
+      if (allowed.length) allowedScreens = allowed
       expectedPath = path
     } else screens = parseScreens(t.screens, tAt)
     const startScreen = optText(t.startScreen)
     if (startScreen && !/^I?\d+:\d+$/.test(startScreen)) errors.push(`${tAt}startScreen bir Figma node id olmalı, örn. "26:7221".`)
     const targetScreen = optText(t.targetScreen)
     if (targetScreen && screens.length && !screens.some((x) => x.key === targetScreen || x.aliases?.includes(targetScreen))) errors.push(`${tAt}targetScreen "${targetScreen}" tanımlı ekranlardan biri olmalı.`)
-    tasks.push({ id, prompt: prompt ?? '', screens, ...(expectedPath ? { expectedPath } : {}), ...(startScreen ? { startScreen } : {}), ...(targetScreen ? { targetScreen } : {}) })
+    tasks.push({ id, prompt: prompt ?? '', screens, ...(expectedPath ? { expectedPath } : {}), ...(allowedScreens ? { allowedScreens } : {}), ...(startScreen ? { startScreen } : {}), ...(targetScreen ? { targetScreen } : {}) })
   })
 
   // Texts, scales, question points
@@ -290,6 +301,7 @@ export function cardsFromTask(task: StudyTask): HypothesisCard[] {
     ...(s.participantName ? { participantName: s.participantName } : {}),
     ...(s.aliases ? { aliases: s.aliases } : {}),
     ...(s.offPath ? { offPath: true } : {}),
+    ...(s.allowed ? { allowed: true } : {}),
     order: i + 1,
     behavior: s.behavior,
     expectedSec: s.expectedSec,

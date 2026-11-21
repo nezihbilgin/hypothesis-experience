@@ -7,7 +7,7 @@ import { createRoot } from 'react-dom/client'
 import example from '../studies/example.json'
 import '../style.css'
 import './report.css'
-import { clickLegend, clicksByScreen, highlights, metricsCsv, mismatchLines, parseSessionFile, recompute, type SessionFile, type SessionTask } from './data'
+import { clickLegend, clicksByScreen, fmtSec, frictionText, highlights, metricsCsv, mismatchLines, parseSessionFile, pauseText, recompute, taskLine, taskTotals, visitText, type SessionFile, type SessionTask } from './data'
 import { figmaFrames, hasFigmaFrames, type ReferenceImageProvider } from './images'
 
 const localStudies = import.meta.glob('../studies/*.local.json', { eager: true, import: 'default' })
@@ -19,7 +19,6 @@ const cardsOf = (taskId: string): HypothesisCard[] => {
   const t = study?.tasks.find((x) => x.id === taskId)
   return t ? cardsFromTask(t) : []
 }
-const RESULT: Record<string, string> = { direct: 'Doğrudan başarı', indirect: 'Dolaylı başarı', failed: 'Başarısız', dropped: 'Yarıda bıraktı' }
 const FLAG: Record<string, string> = {
   'low-fps': 'Düşük fps',
   'face-missing': 'Yüz sık kayboldu',
@@ -31,6 +30,7 @@ const FLAG: Record<string, string> = {
   'many-dont-remember': 'Çok "Hatırlamıyorum"',
   'clickless-transitions': 'Tıklamasız geçiş (muhtemelen klavye)'
 }
+const FACE: Record<string, string> = { 'blink-drop': 'göz kırpma azaldı', stillness: 'hareketsizlik arttı', 'lean-in': 'ekrana yaklaştı', brow: 'kaş hareketi arttı' }
 const n = (v: number | null | undefined, d = 1): string => (v === null || v === undefined ? '–' : String(Math.round(v * 10 ** d) / 10 ** d))
 
 function download(name: string, text: string, type: string): void {
@@ -82,7 +82,8 @@ function ClickMap({ screenKey, task, images }: { screenKey: string; task: Sessio
 const stepId = (taskId: string, screenKey: string): string => `step-${taskId}-${screenKey.replace(/[^\w-]/g, '-')}`
 const pct = (v: number | null | undefined): string => (v === null || v === undefined ? '–' : `%${Math.round(v * 100)}`)
 
-function StepCard({ task, s, cards, faceOn }: { task: SessionTask; s: ScreenStats; cards: HypothesisCard[]; faceOn: boolean }) {
+function StepCard({ task, s, cards, normalSec, firstScreen }: { task: SessionTask; s: ScreenStats; cards: HypothesisCard[]; normalSec: number; firstScreen: string | undefined }) {
+  const pause = pauseText(s, normalSec, s.screenKey === firstScreen)
   const card = cards.find((c) => c.screenKey === s.screenKey)
   const r = task.report!
   const mms = r.mismatches.filter((m) => m.screenKey === s.screenKey)
@@ -120,34 +121,55 @@ function StepCard({ task, s, cards, faceOn }: { task: SessionTask; s: ScreenStat
               <br />“{q.answer ?? (q.dontRemember ? 'hatırlamıyorum' : 'geçti')}”
             </p>
           ))}
-          <p className="small">
-            {s.visits.length} ziyaret, toplam {n(s.durationSec, 0)} sn · {faceOn ? 'efor' : 'duraksama'} {s.observed.effort} · sürtünme {s.observed.friction} · geri {s.backs} · loop {s.loops ?? 0} · misclick {pct(s.misclickRate)} · rage {s.rageClicks}
-          </p>
+          <dl className="facts">
+            <dt>Ziyaret</dt>
+            <dd>{visitText(s)}</dd>
+            <dt>Duraksama</dt>
+            <dd className={pause.flagged ? 'flagged' : ''}>
+              {pause.text}
+              {pause.flagged ? ' · normalinin 2 katını ve 3 sn\'yi aştı' : ''}
+            </dd>
+            <dt>Sürtünme</dt>
+            <dd>{frictionText(s)}</dd>
+            <dt>Tıklamalar</dt>
+            <dd>
+              {s.clicks ?? 0} tıklama, {s.deadClicks} tepkisiz{s.misclickRate != null ? ` (%${Math.round(s.misclickRate * 100)})` : ''}
+              {s.rageClicks ? `, ${s.rageClicks} kez art arda` : ''}
+            </dd>
+            {s.faceSupport.length ? (
+              <>
+                <dt>Yüz sinyalleri</dt>
+                <dd>{s.faceSupport.map((f) => FACE[f] ?? f).join(', ')}</dd>
+              </>
+            ) : null}
+          </dl>
         </div>
       </div>
     </article>
   )
 }
 
-function TaskSection({ task, faceOn }: { task: SessionTask; faceOn: boolean }) {
+function TaskSection({ task, normalSec }: { task: SessionTask; normalSec: number }) {
   const cards = cardsOf(task.id)
   const name = (k: string): string => cards.find((c) => c.screenKey === k)?.screenName ?? k
   const r = task.report
   const hl = highlights(task, cards)
   const LABEL: Record<string, string> = { mismatch: 'Sapma', dropped: 'Yarıda bırakma', rage: 'Art arda tıklama', loop: 'Gidip gelme', keyboard: 'Tıklamasız geçiş' }
   const steps = r ? [...r.screens].sort((a, b) => (a.visits[0]?.start ?? 0) - (b.visits[0]?.start ?? 0)) : []
+  const line = taskLine(task)
+  const sc = study?.scales.seq
+  const scaleText = sc ? `${sc.min}${sc.labels[sc.min] ? ' ' + sc.labels[sc.min].toLocaleLowerCase('tr') : ''}, ${sc.max}${sc.labels[sc.max] ? ' ' + sc.labels[sc.max].toLocaleLowerCase('tr') : ''}` : '1 çok zor, 7 çok kolay'
+  const firstScreen = steps[0]?.screenKey
+  const tot = taskTotals(steps)
   return (
     <section className="task-section">
       <h3>{task.prompt}</h3>
       <p className="task-summary">
-        <span>
-          Beklenen zorluk {task.expectation ?? '–'} → SEQ {task.seq ?? '–'}
+        <span className={`result ${task.outcome?.result ?? ''}`}>{line.result}</span> · {line.text}
+        <br />
+        <span className="muted">
+          Katılımcının kendi puanı ({scaleText}): görevden önce {task.expectation ?? '–'} bekledi, sonra {task.seq ?? '–'} verdi.
         </span>
-        <span className={`result ${task.outcome?.result ?? ''}`}>{task.outcome?.result ? RESULT[task.outcome.result] : 'Sonuç yok'}</span>
-        <span>
-          {n(task.endSec, 0)} sn{r?.orientationSec != null ? ` (yönelim ${n(r.orientationSec, 0)} sn)` : ''}
-        </span>
-        {task.outcome?.clicklessTransitions ? <span className="muted">yolda {task.outcome.clicklessTransitions} tıklamasız geçiş (muhtemelen klavye)</span> : null}
       </p>
       {hl.length ? (
         <div className="highlights">
@@ -180,27 +202,25 @@ function TaskSection({ task, faceOn }: { task: SessionTask; faceOn: boolean }) {
       {r ? (
         <>
           <h4>Adım adım</h4>
-          <p className="muted small">
-            {faceOn
-              ? 'Efor: ilk tıklamaya kadar duraksama ve yüz sinyalleri (hareketsizlik, göz kırpma, ekrana yaklaşma), kendi ısınmasına göre 0-100.'
-              : 'Duraksama: ekranda ilk tıklamaya kadar geçen süre, katılımcının ısınmadaki kendi eşiğine göre 0-100. Görevin ilk ekranında yönelim süresi hariç.'}
-          </p>
           {steps.map((s) => (
-            <StepCard key={s.screenKey} task={task} s={s} cards={cards} faceOn={faceOn} />
+            <StepCard key={s.screenKey} task={task} s={s} cards={cards} normalSec={normalSec} firstScreen={firstScreen} />
           ))}
           <details>
-            <summary>Adım özeti (CSV ile aynı veri)</summary>
+            <summary>Görev özeti (CSV ile aynı veri)</summary>
             <table className="metrics">
               <thead>
                 <tr>
-                  <th>Adım</th>
-                  <th>Ziyaret, süre</th>
-                  <th>{faceOn ? 'Efor' : 'Duraksama'}</th>
-                  <th>Sürtünme</th>
-                  <th>Geri</th>
-                  <th>Loop</th>
-                  <th>Misclick</th>
-                  <th>Rage</th>
+                  <th title="Ekran, görevdeki ilk ziyaret sırasıyla">Adım</th>
+                  <th title="Bu ekrana kaç kez geldi">Ziyaret</th>
+                  <th title="Bu ekranda toplam kalınan süre">Süre</th>
+                  <th title="Ekran açıldıktan ilk tıklamaya kadar geçen süre">İlk tıklamaya kadar</th>
+                  <th title="Geri dönüş, tepkisiz tıklama, art arda tıklama, gidip gelme, yol dışı">Sürtünme işaretleri</th>
+                  <th title="Beklenen sıradan geriye giden geçiş">Geri</th>
+                  <th title="Aynı iki ekran arasında A→B→A→B">Gidip gelme</th>
+                  <th>Tıklama</th>
+                  <th title="Prototipte karşılığı olmayan tıklama">Tepkisiz</th>
+                  <th title="Tepkisiz tıklama / tüm tıklama">Misclick</th>
+                  <th title="1 sn içinde aynı yere 3+ tıklama">Art arda</th>
                 </tr>
               </thead>
               <tbody>
@@ -210,17 +230,31 @@ function TaskSection({ task, faceOn }: { task: SessionTask; faceOn: boolean }) {
                       {name(s.screenKey)}
                       {s.offPath ? ' (yol dışı)' : ''}
                     </td>
-                    <td>
-                      {s.visits.length} ziyaret, toplam {n(s.durationSec, 0)} sn
-                    </td>
-                    <td>{s.observed.effort}</td>
-                    <td>{s.observed.friction}</td>
+                    <td>{s.visits.length}</td>
+                    <td>{fmtSec(s.durationSec)}</td>
+                    <td>{s.screenKey === firstScreen && s.orientationSec !== undefined ? `${fmtSec(s.orientationSec)} (yönelim)` : fmtSec(s.firstActionSec)}</td>
+                    <td className="left">{frictionText(s)}</td>
                     <td>{s.backs}</td>
                     <td>{s.loops ?? 0}</td>
+                    <td>{s.clicks ?? 0}</td>
+                    <td>{s.deadClicks}</td>
                     <td>{pct(s.misclickRate)}</td>
                     <td>{s.rageClicks}</td>
                   </tr>
                 ))}
+                <tr className="total">
+                  <td>Toplam</td>
+                  <td>{tot.visits}</td>
+                  <td>{fmtSec(tot.durationSec)}</td>
+                  <td>–</td>
+                  <td>–</td>
+                  <td>{tot.backs}</td>
+                  <td>{tot.loops}</td>
+                  <td>{tot.clicks}</td>
+                  <td>{tot.dead}</td>
+                  <td>{pct(tot.misclickRate)}</td>
+                  <td>{tot.rage}</td>
+                </tr>
               </tbody>
             </table>
           </details>
@@ -319,6 +353,29 @@ function App() {
   return (
     <main className="card wide report">
       <h1>Rapor {study ? `· ${study.name}` : ''}</h1>
+      <details className="howto">
+        <summary>Bu rapor nasıl okunur?</summary>
+        <ul>
+          <li>
+            <b>Hipotez / Gözlem:</b> hipotez, çalışma dosyasında o ekran için yazdığın beklenti (akış: takılmadan geçmesi; okuma: dikkatle okuması; karar: seçenekleri tartması). Gözlem, katılımcının o ekranda yaptığı.
+          </li>
+          <li>
+            <b>Duraksama:</b> ekran açıldıktan ilk tıklamaya kadar geçen saniye. Yanında katılımcının ısınma görevindeki kendi normali yazar; normalinin 2 katını ve 3 sn'yi geçerse işaretlenir. Görevin ilk ekranındaki bekleme (görevi okuyup etrafa bakınma) yönelim süresidir ve duraksama sayılmaz.
+          </li>
+          <li>
+            <b>Sürtünme:</b> geri dönüş, tepkisiz tıklama (prototipte karşılığı olmayan), art arda tıklama (1 sn içinde aynı yere 3+), iki ekran arasında gidip gelme ve beklenen yolun dışına çıkma. Hiçbiri yoksa "Sorun işareti yok".
+          </li>
+          <li>
+            <b>Sonuç:</b> doğrudan başarı (beklenen yoldan hedefe), dolaylı başarı (yol dışı ekranlardan ya da tıklamasız geçişle hedefe), başarısız (hedefe ulaşmadan bitirdi), yarıda bıraktı.
+          </li>
+          <li>
+            <b>Puanlar:</b> görevden önce beklediği zorluk ve görevden sonra verdiği puan, çalışmadaki ölçeğe göre (varsayılan 1 çok zor, 7 çok kolay).
+          </li>
+          <li>
+            <b>Tıklama haritası:</b> mavi nokta çalışan, kırmızı nokta tepkisiz tıklama. Tasarımın dışına yapılan tıklamalar sayı olarak yazılır.
+          </li>
+        </ul>
+      </details>
       <div className="no-print">
         <p className="muted">Oturum dosyalarını seç (birden fazla seçebilirsin). Dosyalar bu tarayıcıda açılır, hiçbir yere gönderilmez.</p>
         <input type="file" accept="application/json,.json" multiple onChange={(e) => void load(e.target.files)} />
@@ -337,7 +394,7 @@ function App() {
           <h2>{s.participant || 'Katılımcı'} · {s.startedAt.slice(0, 16).replace('T', ' ')}</h2>
           <Health s={s} />
           {s.tasks.filter((t): t is SessionTask => !!t).map((t) => (
-            <TaskSection key={t.id} task={t} faceOn={faceSignalsOn(s)} />
+            <TaskSection key={t.id} task={t} normalSec={s.baseline?.firstActionP95 ?? 0} />
           ))}
           {s.hardestTask?.answer ? <p><b>En zor görev:</b> {s.hardestTask.answer}</p> : null}
         </section>

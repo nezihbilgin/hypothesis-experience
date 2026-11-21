@@ -203,6 +203,17 @@ describe('study-level screens, expected path, off-path visits, orientation', () 
     expect(cardsFromTask(r.study.tasks[1])[1]).toMatchObject({ screenKey: 'orders', behavior: 'decide', expectedSec: [5, 20] })
     expect(c1[2]).toMatchObject({ screenKey: 'orders', behavior: 'flow' })
   })
+  it('allowedScreens are acceptable detours (not off-path) and one screen can be on several tasks\' paths', () => {
+    const r = parseStudy({ ...study, tasks: [{ id: 'a', prompt: 'p', expectedPath: ['home', 'detail'], allowedScreens: ['orders'] }, { id: 'b', prompt: 'q', expectedPath: ['home', 'detail', 'orders'] }] })
+    if (!r.ok) throw new Error(r.errors.join())
+    expect(cardsFromTask(r.study.tasks[0]).map((c) => [c.screenKey, !!c.offPath])).toEqual([['home', false], ['detail', false], ['orders', false]])
+    expect(r.study.tasks[0].allowedScreens).toEqual(['orders'])
+    expect(cardsFromTask(r.study.tasks[1]).every((c) => !c.offPath)).toBe(true)
+    // Detour home → orders → detail: no off-path friction and no "back" for leaving the allowed screen.
+    const rep = computeScreenReport({ cards: cardsFromTask(r.study.tasks[0]), events: [ev(0, 'home', 'screen'), ev(1, 'home', 'click'), ev(2, 'orders', 'screen'), ev(3, 'orders', 'click'), ev(4, 'detail', 'screen'), ev(5, 'detail', 'click')], samples: [], baseline: computeBaseline([], []), endSec: 6, cameraEnabled: false })
+    expect(rep.screens.find((x) => x.screenKey === 'orders')).toMatchObject({ backs: 0, observed: { friction: 0 } })
+    expect(rep.offPathScreens).toEqual([])
+  })
   it('rejects unknown keys in expectedPath and probes', () => {
     const r = parseStudy({ ...study, tasks: [{ id: 'a', prompt: 'p', expectedPath: ['home', 'nope'], probes: { zzz: 'q' } }] })
     expect(r.ok ? [] : r.errors).toEqual(['Görev 1: expectedPath içindeki "nope" tanımlı ekranlardan biri değil.', 'Görev 1: probes içindeki "zzz" tanımlı ekranlardan biri değil.'])

@@ -49,3 +49,12 @@ details summary { cursor: pointer; color: var(--accent); }
 .step .clickmap { width: 100%; }
 @media (max-width: 700px) { .step-body { grid-template-columns: 1fr; } }
 @media print { .step { break-inside: avoid; } }
+
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 10px; font-size: 0.88rem; margin: 6px 0 0; }
+.facts dt { color: var(--muted); font-weight: 400; margin: 0; }
+.facts dd { margin: 0; }
+.facts dd.flagged { color: #b3261e; }
+.metrics td.left { text-align: left; }
+.metrics tr.total td { font-weight: 600; border-top: 2px solid var(--line); }
+.howto { margin: 8px 0 16px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; }
+.howto li { margin: 6px 0; }

@@ -8,6 +8,17 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 
 ---
 
+## 2026-11-21: İnsan diliyle rapor; görevler ekran paylaşır (allowedScreens)
+
+Kaynak: Nezih'in rapor geri bildirimi ("Bunları insan okuyacak"), PM brifi. Durum: uygulandı (`faz1-core`).
+
+- **Görevler ekran paylaşır:** bir görevin `expectedPath`'ine çalışmadaki her ekran girebilir (başka görevde kullanılmış olsa da). İsteğe bağlı `allowedScreens`: kabul edilebilir sapmalar; ölçülür ama "yol dışı" sayılmaz ve oradan dönmek "geri dönüş" sayılmaz.
+- **Görev özeti:** "Adım özeti" adı "Görev özeti" oldu; en altta toplam satırı (süre, ziyaret, geri, gidip gelme, tıklama, tepkisiz, art arda toplamları ve genel misclick oranı; skor sütunlarında "–").
+- **Birimli, açıklamalı etiketler:** görev satırı "Doğrudan başarı · Görev 33 sn sürdü. İlk 8 sn ilk ekranda etrafa bakınmakla geçti (ilk tıklamaya kadar), bu süre duraksama hesabına girmez."; duraksama 0-100 skor yerine saniye ve kişinin kendi normali ("İlk tıklamaya kadar 4,2 sn (bu katılımcının normali 2,1 sn)"), modelle aynı eşikte işaretlenir (normalin 2 katı ve en az 3 sn); sürtünme "Sorun işareti yok" ya da sebepler ("1 geri dönüş, 3 tepkisiz tıklama"); ziyaret "Bu ekrana 2 kez geldi, toplam 34 sn kaldı"; puanlar ölçek açıklamasıyla. Raporun başında katlanabilir "Bu rapor nasıl okunur?" kutusu, tablo başlıklarında kısa açıklamalar.
+- Toplu (çok katılımcılı) rapor sonraya kaldı.
+
+---
+
 ## 2026-11-21: Adım kartları; tıklamasız geçiş (muhtemelen klavye)
 
 Kaynak: Nezih'in rapor geri bildirimi, PM işi. Durum: uygulandı (`faz1-core`).
