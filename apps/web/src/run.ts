@@ -190,7 +190,10 @@ export class SessionRun {
     if (ambient !== null && ambient > 0.02) hints.push('noise')
     this.quality = { ...d, hints }
     this.phase = 'idle'
-    if (!d.cameraEnabled) {
+    // Test hook for automated privacy checks with a fake camera (no face): keep the camera on. Debug only.
+    const keep = new URLSearchParams(location.search).has('debug') && new URLSearchParams(location.search).has('keepCamera')
+    if (keep && !d.cameraEnabled) this.quality = { ...this.quality, cameraEnabled: true, reason: 'ok' }
+    if (!d.cameraEnabled && !keep) {
       this.sensing.stop() // camera-less mode: release the camera right away
       this.sensing = null
     }

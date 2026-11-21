@@ -13,7 +13,7 @@ export const TEXTS_TR = {
   'consent.title': 'Başlamadan önce',
   'consent.stored': 'Saklananlar: tıklamaların, ekran geçişlerin, verdiğin puanlar ve yazdığın cevaplar.',
   'consent.notStored': 'Saklanmayanlar: kamera görüntüsü ve ses. Kamera açıksa görüntü sadece bu tarayıcıda işlenir; dışarı yalnızca saniyelik sayılar çıkar.',
-  'consent.thirdParty': 'Prototip Figma tarafından gösterilir; Figma kendi kullanım verilerini toplayabilir.',
+  'consent.thirdParty': 'Prototip Figma\'dan yüklenir ve Figma kendi kullanım verilerini toplayabilir. Kamera görüntün ne Figma\'ya ne bize gider.',
   'consent.camera': 'Kamera isteğe bağlı. Görüntü cihazından çıkmaz; sadece saniyelik sayılar kaydedilir.',
   'consent.cameraOption': 'Kamerayı kullanmayı kabul ediyorum',
   'consent.microphoneOption': 'Mikrofonu kullanmayı kabul ediyorum (ses kaydedilmez, sadece konuşup konuşmadığın sayılır)',
