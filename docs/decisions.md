@@ -8,6 +8,17 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 
 ---
 
+## 2026-11-21: Arayüz Untitled UI React'e taşındı (React Aria + Tailwind)
+
+Kaynak: Nezih ("Untitled UI iyi bence"), PM'in UI kütüphanesi araştırması. Durum: uygulandı (`untitled-ui` branch'i, ayrı PR).
+
+- **Ne değişti:** katılımcı akışı, rapor ve kurulum ekranı Untitled UI React'in ücretsiz, açık kaynak (MIT) bileşenlerini kullanıyor: Button, Checkbox, RadioGroup, Input, TextArea, NativeSelect, Badge (Pro bileşen yok). Bileşenler kütüphanenin önerdiği gibi kopyalanarak `apps/web/src/uui/` altına kondu (lisans dosyası yanında), `@/` takma adıyla içe alınıyor. Tema Untitled UI token'ları; marka rengi kendi mavimiz (mor değil), web fontu yüklenmiyor (sistem fontu, üçüncü tarafa istek yok). Açık/koyu tema sistem ayarını izliyor.
+- **Kalan özel CSS:** tıklama haritası, yorum işaretleri, zaman çizgisi, takılma anları ve yazdırma kuralları (`report.css`, `researcher.css`, `setup.css`), renkler Untitled UI token'larından. Eski `style.css` kaldırıldı.
+- **Kabul ölçümleri (M1, yeni cihaz alt sınırı):** kamera açık katılımcı sayfasında ana iş parçacığı 60 fps, kamera analizi 15 fps; geçişten önce de aynıydı (4x CPU yavaşlatmayla da aynı). Katılımcı sayfasının indirdiği JS+CSS (gzip) 88 kB'tan 146 kB'a çıktı (+58 kB: JS +45, CSS +13). Klavye: onay ekranı Tab, Boşluk ve Enter ile baştan sona kullanılabiliyor; ekran okuyucu ağacında onay kutuları, butonlar ve başlıklar adlarıyla görünüyor. Yazdırma: rapor PDF'inde butonlar ve not kutuları gizli, notlar metin olarak çıkıyor.
+- **Kapsam dışı:** Untitled UI Pro, grafik/tablo bileşenleri (zaman çizgisi kendi SVG'miz).
+
+---
+
 ## 2026-11-21: Cihaz alt sınırı: Apple Silicon ya da yaklaşık 2020 sonrası bilgisayar
 
 Kaynak: Nezih ("11 yıllık Intel Mac'i desteklemesek de olur"), PM. Durum: geçerli. 2026-11-20 M3 pilot kapısındaki "eski Intel Mac'te ≥ 10 fps" şartının yerine geçer.

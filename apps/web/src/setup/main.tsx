@@ -1,27 +1,28 @@
 // Setup screen v0 (researcher, local): build a study without writing JSON. Output is the study JSON the app reads
 // (study-level screens, tasks with expectedPath). Nothing is uploaded; save the file as
-// apps/web/src/studies/<name>.local.json (gitignored) to run it.
-import { BEHAVIOR_EXPECT, CONTEXT_QUESTIONS_SOFT_MAX, parseStudy, type Behavior } from '@hx/core'
+// apps/web/src/studies/<name>.local.json (gitignored) to run it. UI: Untitled UI React components (src/uui).
+import { CONTEXT_QUESTIONS_SOFT_MAX, parseStudy, type Behavior } from '@hx/core'
 import { useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import '../style.css'
+import '../uui/index.css'
+import '../uui/theme-mode'
+import '../researcher.css'
 import './setup.css'
+import { Area, Btn, Check, Field, FilePick, NumField, Select } from './fields'
 import { allNodes, emptyStudy, nodesFromSession, toEditor, toStudyJson, type EditorContextQuestion, type EditorFiveSecond, type EditorScreen, type EditorStudy, type EditorTask } from './model'
 
-const BEHAVIORS: { v: Behavior; label: string }[] = [
-  { v: 'flow', label: 'Akış (takılmadan geçmeli)' },
-  { v: 'read', label: 'Okuma (dikkatle okumalı)' },
-  { v: 'decide', label: 'Karar (seçenekleri tartmalı)' }
+const BEHAVIORS: { value: Behavior; label: string }[] = [
+  { value: 'flow', label: 'Akış (takılmadan geçmeli)' },
+  { value: 'read', label: 'Okuma (dikkatle okumalı)' },
+  { value: 'decide', label: 'Karar (seçenekleri tartmalı)' }
 ]
-void BEHAVIOR_EXPECT
-const CONTEXTS = [
-  { v: 'consumer', label: 'Tüketici' },
-  { v: 'workplace', label: 'İşyeri (yüz sinyalleri varsayılan kapalı)' },
-  { v: 'education', label: 'Eğitim (yüz sinyalleri varsayılan kapalı)' },
-  { v: 'other', label: 'Diğer' }
-] as const
+const CONTEXTS: { value: EditorStudy['context']; label: string }[] = [
+  { value: 'consumer', label: 'Tüketici' },
+  { value: 'workplace', label: 'İşyeri (yüz sinyalleri varsayılan kapalı)' },
+  { value: 'education', label: 'Eğitim (yüz sinyalleri varsayılan kapalı)' },
+  { value: 'other', label: 'Diğer' }
+]
 
-const num = (v: string): number => (Number.isFinite(Number(v)) ? Number(v) : 0)
 const list = (v: string): string[] =>
   v
     .split(/[,\s]+/)
@@ -46,11 +47,8 @@ function ScreensEditor({ s, set }: { s: EditorStudy; set: (s: EditorStudy) => vo
         Her ekran bir kez tanımlanır, görevler bu listeden seçer. Anahtar: Figma node id (örn. 1:2). Takma adlar: aynı ekranın başka durumlarının node id'leri (virgülle). Katılımcıya görünen ad sorularda kullanılır; boşsa ekran adı söylenmez.
       </p>
       <div className="row">
-        <button onClick={() => add([`yeni-${s.screens.length + 1}`])}>Ekran ekle</button>
-        <label className="filebtn">
-          Oturum dosyasından ekranları al
-          <input type="file" accept=".json,application/json" onChange={async (e) => e.target.files?.[0] && add(nodesFromSession(await readFile(e.target.files[0])))} />
-        </label>
+        <Btn onPress={() => add([`yeni-${s.screens.length + 1}`])}>Ekran ekle</Btn>
+        <FilePick label="Oturum dosyasından ekranları al" onFile={async (f) => add(nodesFromSession(await readFile(f)))} />
       </div>
       <table className="edit">
         <thead>
@@ -61,41 +59,37 @@ function ScreensEditor({ s, set }: { s: EditorStudy; set: (s: EditorStudy) => vo
             <th>Davranış</th>
             <th>Beklenen süre (sn)</th>
             <th>Takma adlar (durumlar)</th>
-            <th />
+            <th>
+              <span className="sr-only">İşlem</span>
+            </th>
           </tr>
         </thead>
         <tbody>
           {s.screens.map((x, i) => (
             <tr key={i}>
               <td>
-                <input value={x.key} onChange={(e) => up(i, { key: e.target.value.trim() })} />
+                <Field hideLabel label={`Ekran ${i + 1} anahtar`} value={x.key} onChange={(v) => up(i, { key: v.trim() })} />
               </td>
               <td>
-                <input value={x.name} onChange={(e) => up(i, { name: e.target.value })} />
+                <Field hideLabel label={`Ekran ${i + 1} ad`} value={x.name} onChange={(v) => up(i, { name: v })} />
               </td>
               <td>
-                <input value={x.participantName ?? ''} onChange={(e) => up(i, { participantName: e.target.value || undefined })} />
+                <Field hideLabel label={`Ekran ${i + 1} katılımcıya görünen ad`} value={x.participantName ?? ''} onChange={(v) => up(i, { participantName: v || undefined })} />
               </td>
               <td>
-                <select value={x.behavior} onChange={(e) => up(i, { behavior: e.target.value as Behavior })}>
-                  {BEHAVIORS.map((b) => (
-                    <option key={b.v} value={b.v}>
-                      {b.label}
-                    </option>
-                  ))}
-                </select>
+                <Select hideLabel label={`Ekran ${i + 1} davranış`} value={x.behavior} onChange={(v) => up(i, { behavior: v as Behavior })} options={BEHAVIORS} />
               </td>
               <td className="nowrap">
-                <input className="n" type="number" min={0} value={x.expectedSec[0]} onChange={(e) => up(i, { expectedSec: [num(e.target.value), x.expectedSec[1]] })} /> –{' '}
-                <input className="n" type="number" min={0} value={x.expectedSec[1]} onChange={(e) => up(i, { expectedSec: [x.expectedSec[0], num(e.target.value)] })} />
+                <NumField label={`Ekran ${i + 1} en az saniye`} min={0} value={x.expectedSec[0]} onChange={(v) => up(i, { expectedSec: [v ?? 0, x.expectedSec[1]] })} /> –{' '}
+                <NumField label={`Ekran ${i + 1} en çok saniye`} min={0} value={x.expectedSec[1]} onChange={(v) => up(i, { expectedSec: [x.expectedSec[0], v ?? 0] })} />
               </td>
               <td>
-                <input value={(x.aliases ?? []).join(', ')} onChange={(e) => up(i, { aliases: list(e.target.value) })} />
+                <Field hideLabel label={`Ekran ${i + 1} takma adlar`} value={(x.aliases ?? []).join(', ')} onChange={(v) => up(i, { aliases: list(v) })} />
               </td>
               <td>
-                <button className="link" onClick={() => set({ ...s, screens: s.screens.filter((_, j) => j !== i) })}>
+                <Btn color="link-destructive" onPress={() => set({ ...s, screens: s.screens.filter((_, j) => j !== i) })}>
                   Sil
-                </button>
+                </Btn>
               </td>
             </tr>
           ))}
@@ -116,45 +110,25 @@ function TaskEditor({ s, t, i, set }: { s: EditorStudy; t: EditorTask; i: number
     up({ expectedPath: p })
   }
   const offCandidates = s.screens.map((x) => x.key).filter((k) => !t.expectedPath.includes(k))
+  const nodeLabel = (k: string) => {
+    const owner = s.screens.find((x) => x.aliases?.includes(k))
+    return `${k}${name(k) !== k ? ` · ${name(k)}` : owner ? ` · ${owner.name} (durum)` : ''}`
+  }
   return (
     <div className="task-edit">
       <div className="row between">
         <h3>Görev {i + 1}</h3>
-        <button className="link" onClick={() => set({ ...s, tasks: s.tasks.filter((_, j) => j !== i) })}>
+        <Btn color="link-destructive" onPress={() => set({ ...s, tasks: s.tasks.filter((_, j) => j !== i) })}>
           Görevi sil
-        </button>
+        </Btn>
       </div>
-      <label>
-        Kimlik
-        <input value={t.id} onChange={(e) => up({ id: e.target.value.trim() })} />
-      </label>
-      <label>
-        Görev metni (katılımcıya)
-        <textarea rows={3} value={t.prompt} onChange={(e) => up({ prompt: e.target.value })} />
-      </label>
-      <div className="row">
-        <label>
-          Başlangıç ekranı
-          <select value={t.startScreen ?? ''} onChange={(e) => up({ startScreen: e.target.value || undefined })}>
-            <option value="">Linkin kendi başlangıcı</option>
-            {nodes.map((k) => (
-              <option key={k} value={k}>
-                {k} {name(k) !== k ? `· ${name(k)}` : ''}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Hedef ekran (ya da durum)
-          <select value={t.targetScreen ?? ''} onChange={(e) => up({ targetScreen: e.target.value || undefined })}>
-            <option value="">Yok</option>
-            {nodes.map((k) => (
-              <option key={k} value={k}>
-                {k} {name(k) !== k ? `· ${name(k)}` : s.screens.find((x) => x.aliases?.includes(k)) ? `· ${s.screens.find((x) => x.aliases?.includes(k))!.name} (durum)` : ''}
-              </option>
-            ))}
-          </select>
-        </label>
+      <div className="stack">
+        <Field label="Kimlik" value={t.id} onChange={(v) => up({ id: v.trim() })} />
+        <Area label="Görev metni (katılımcıya)" value={t.prompt} onChange={(v) => up({ prompt: v })} />
+        <div className="row">
+          <Select label="Başlangıç ekranı" value={t.startScreen ?? ''} onChange={(v) => up({ startScreen: v || undefined })} options={[{ value: '', label: 'Linkin kendi başlangıcı' }, ...nodes.map((k) => ({ value: k, label: nodeLabel(k) }))]} />
+          <Select label="Hedef ekran (ya da durum)" value={t.targetScreen ?? ''} onChange={(v) => up({ targetScreen: v || undefined })} options={[{ value: '', label: 'Yok' }, ...nodes.map((k) => ({ value: k, label: nodeLabel(k) }))]} />
+        </div>
       </div>
       <h4>Beklenen yol</h4>
       <ol className="path">
@@ -165,32 +139,25 @@ function TaskEditor({ s, t, i, set }: { s: EditorStudy; t: EditorTask; i: number
             <li key={k}>
               <div className="row">
                 <b>{name(k)}</b> <span className="muted">{k}</span>
-                <button className="link" disabled={j === 0} onClick={() => move(j, -1)}>
-                  ↑
-                </button>
-                <button className="link" disabled={j === t.expectedPath.length - 1} onClick={() => move(j, 1)}>
-                  ↓
-                </button>
-                <button className="link" onClick={() => up({ expectedPath: t.expectedPath.filter((x) => x !== k) })}>
+                <Btn color="tertiary" isDisabled={j === 0} onPress={() => move(j, -1)}>
+                  <span aria-label={`${name(k)} yukarı taşı`}>↑</span>
+                </Btn>
+                <Btn color="tertiary" isDisabled={j === t.expectedPath.length - 1} onPress={() => move(j, 1)}>
+                  <span aria-label={`${name(k)} aşağı taşı`}>↓</span>
+                </Btn>
+                <Btn color="link-destructive" onPress={() => up({ expectedPath: t.expectedPath.filter((x) => x !== k) })}>
                   Çıkar
-                </button>
+                </Btn>
               </div>
-              <input placeholder="Bu ekrandan çıkarken sorulacak soru (isteğe bağlı)" value={t.probes?.[k] ?? ''} onChange={(e) => up({ probes: { ...(t.probes ?? {}), [k]: e.target.value } })} />
+              <Field hideLabel label={`${name(k)}: bu ekrandan çıkarken sorulacak soru`} placeholder="Bu ekrandan çıkarken sorulacak soru (isteğe bağlı)" value={t.probes?.[k] ?? ''} onChange={(v) => up({ probes: { ...(t.probes ?? {}), [k]: v } })} />
               <details>
                 <summary className="small">Bu görevde farklı (isteğe bağlı)</summary>
                 <div className="row">
-                  <select value={ov.behavior ?? ''} onChange={(e) => setOv({ behavior: (e.target.value || undefined) as Behavior | undefined })}>
-                    <option value="">Davranış: ekrandaki gibi</option>
-                    {BEHAVIORS.map((b) => (
-                      <option key={b.v} value={b.v}>
-                        {b.label}
-                      </option>
-                    ))}
-                  </select>
-                  <input className="n" type="number" placeholder="min" value={ov.expectedSec?.[0] ?? ''} onChange={(e) => setOv({ expectedSec: e.target.value ? [num(e.target.value), ov.expectedSec?.[1] ?? num(e.target.value)] : undefined })} />
-                  <input className="n" type="number" placeholder="max" value={ov.expectedSec?.[1] ?? ''} onChange={(e) => setOv({ expectedSec: e.target.value ? [ov.expectedSec?.[0] ?? 0, num(e.target.value)] : undefined })} />
-                  <input placeholder="Ad" value={ov.name ?? ''} onChange={(e) => setOv({ name: e.target.value || undefined })} />
-                  <input placeholder="Katılımcıya görünen ad" value={ov.participantName ?? ''} onChange={(e) => setOv({ participantName: e.target.value || undefined })} />
+                  <Select hideLabel label="Bu görevde davranış" value={ov.behavior ?? ''} onChange={(v) => setOv({ behavior: (v || undefined) as Behavior | undefined })} options={[{ value: '', label: 'Davranış: ekrandaki gibi' }, ...BEHAVIORS]} />
+                  <NumField label="Bu görevde en az saniye" placeholder="min" value={ov.expectedSec?.[0]} onChange={(v) => setOv({ expectedSec: v !== undefined ? [v, ov.expectedSec?.[1] ?? v] : undefined })} />
+                  <NumField label="Bu görevde en çok saniye" placeholder="max" value={ov.expectedSec?.[1]} onChange={(v) => setOv({ expectedSec: v !== undefined ? [ov.expectedSec?.[0] ?? 0, v] : undefined })} />
+                  <Field hideLabel label="Bu görevde ad" placeholder="Ad" value={ov.name ?? ''} onChange={(v) => setOv({ name: v || undefined })} />
+                  <Field hideLabel label="Bu görevde katılımcıya görünen ad" placeholder="Katılımcıya görünen ad" value={ov.participantName ?? ''} onChange={(v) => setOv({ participantName: v || undefined })} />
                 </div>
               </details>
             </li>
@@ -198,27 +165,13 @@ function TaskEditor({ s, t, i, set }: { s: EditorStudy; t: EditorTask; i: number
         })}
       </ol>
       <div className="row">
-        <select value="" onChange={(e) => e.target.value && up({ expectedPath: [...t.expectedPath, e.target.value] })}>
-          <option value="">Yola ekran ekle…</option>
-          {offCandidates.map((k) => (
-            <option key={k} value={k}>
-              {name(k)} · {k}
-            </option>
-          ))}
-        </select>
+        <Select hideLabel label="Yola ekran ekle" value="" onChange={(v) => v && up({ expectedPath: [...t.expectedPath, v] })} options={[{ value: '', label: 'Yola ekran ekle…' }, ...offCandidates.map((k) => ({ value: k, label: `${name(k)} · ${k}` }))]} />
       </div>
       <h4>Kabul edilebilir sapmalar</h4>
       <p className="muted small">İşaretlenen ekranlar yolda değilse de "yol dışı" sayılmaz (örneğin başka bir görevle paylaşılan ekran).</p>
       <div className="checks">
         {offCandidates.map((k) => (
-          <label key={k} className="check">
-            <input
-              type="checkbox"
-              checked={t.allowedScreens?.includes(k) ?? false}
-              onChange={(e) => up({ allowedScreens: e.target.checked ? [...(t.allowedScreens ?? []), k] : (t.allowedScreens ?? []).filter((x) => x !== k) })}
-            />
-            {name(k)}
-          </label>
+          <Check key={k} label={name(k)} checked={t.allowedScreens?.includes(k) ?? false} onChange={(on) => up({ allowedScreens: on ? [...(t.allowedScreens ?? []), k] : (t.allowedScreens ?? []).filter((x) => x !== k) })} />
         ))}
       </div>
     </div>
@@ -233,21 +186,24 @@ function ContextEditor({ s, set }: { s: EditorStudy; set: (s: EditorStudy) => vo
     <section>
       <h2>Bağlam soruları</h2>
       <p className="muted small">Görevlerden önce sorulur, süre tutulmaz. Cevaplar raporun başında katılımcı bilgisi olarak görünür (örneğin "Bu uygulamayı ne sıklıkla kullanıyorsun?").</p>
-      {qs.length > CONTEXT_QUESTIONS_SOFT_MAX ? <p className="hint">{qs.length} soru var. {CONTEXT_QUESTIONS_SOFT_MAX}'ten fazla soru katılımcıyı görevlere başlamadan yorabilir.</p> : null}
+      {qs.length > CONTEXT_QUESTIONS_SOFT_MAX ? (
+        <p className="warn" role="status">
+          {qs.length} soru var. {CONTEXT_QUESTIONS_SOFT_MAX}'ten fazla soru katılımcıyı görevlere başlamadan yorabilir.
+        </p>
+      ) : null}
       {qs.map((q, i) => (
-        <div key={i} className="row ctx-edit">
-          <input className="grow" placeholder="Soru" value={q.text} onChange={(e) => up(i, { text: e.target.value })} />
-          <select value={q.type} onChange={(e) => up(i, { type: e.target.value as EditorContextQuestion['type'], options: e.target.value === 'choice' ? (q.options ?? []) : undefined })}>
-            <option value="text">Kısa metin</option>
-            <option value="choice">Tek seçim</option>
-          </select>
-          {q.type === 'choice' ? <input className="grow" placeholder="Seçenekler (virgülle)" value={(q.options ?? []).join(', ')} onChange={(e) => up(i, { options: e.target.value.split(',').map((x) => x.trim()).filter(Boolean) })} /> : null}
-          <button className="link" onClick={() => put(qs.filter((_, j) => j !== i))}>
+        <div key={i} className="row">
+          <Field hideLabel label={`Bağlam sorusu ${i + 1}`} placeholder="Soru" className="grow" value={q.text} onChange={(v) => up(i, { text: v })} />
+          <Select hideLabel label={`Bağlam sorusu ${i + 1} tipi`} value={q.type} onChange={(v) => up(i, { type: v as EditorContextQuestion['type'], options: v === 'choice' ? (q.options ?? []) : undefined })} options={[{ value: 'text', label: 'Kısa metin' }, { value: 'choice', label: 'Tek seçim' }]} />
+          {q.type === 'choice' ? <Field hideLabel label={`Bağlam sorusu ${i + 1} seçenekler`} placeholder="Seçenekler (virgülle)" className="grow" value={(q.options ?? []).join(', ')} onChange={(v) => up(i, { options: v.split(',').map((x) => x.trim()).filter(Boolean) })} /> : null}
+          <Btn color="link-destructive" onPress={() => put(qs.filter((_, j) => j !== i))}>
             Sil
-          </button>
+          </Btn>
         </div>
       ))}
-      <button onClick={() => put([...qs, { id: `q${qs.length + 1}`, text: '', type: 'text' }])}>Soru ekle</button>
+      <div className="row">
+        <Btn onPress={() => put([...qs, { id: `q${qs.length + 1}`, text: '', type: 'text' }])}>Soru ekle</Btn>
+      </div>
     </section>
   )
 }
@@ -267,37 +223,33 @@ function FiveSecondEditor({ s, set }: { s: EditorStudy; set: (s: EditorStudy) =>
       {ts.map((x, i) => (
         <div key={i} className="task-edit">
           <div className="row">
-            <label>
-              Ekran
-              <select value={x.screen} onChange={(e) => up(i, { screen: e.target.value })}>
-                <option value="">Seç…</option>
-                {nodes.map((k) => (
-                  <option key={k} value={k}>
-                    {k} {name(k) !== k ? `· ${name(k)}` : ''}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
+            <Select label="Ekran" value={x.screen} onChange={(v) => up(i, { screen: v })} options={[{ value: '', label: 'Seç…' }, ...nodes.map((k) => ({ value: k, label: `${k}${name(k) !== k ? ` · ${name(k)}` : ''}` }))]} />
+            <label className="numlabel">
               Süre (sn)
-              <input className="n" type="number" min={1} max={30} value={x.seconds ?? 5} onChange={(e) => up(i, { seconds: num(e.target.value) === 5 ? undefined : num(e.target.value) })} />
+              <NumField label="Süre (sn)" min={1} max={30} value={x.seconds ?? 5} onChange={(v) => up(i, { seconds: v === undefined || v === 5 ? undefined : v })} />
             </label>
-            <button className="link" onClick={() => put(ts.filter((_, j) => j !== i))}>
+            <Btn color="link-destructive" onPress={() => put(ts.filter((_, j) => j !== i))}>
               Testi sil
-            </button>
+            </Btn>
           </div>
           {x.questions.map((q, k) => (
             <div key={k} className="row">
-              <input className="grow" placeholder={`Soru ${k + 1}`} value={q} onChange={(e) => up(i, { questions: x.questions.map((y, m) => (m === k ? e.target.value : y)) })} />
-              <button className="link" onClick={() => up(i, { questions: x.questions.filter((_, m) => m !== k) })}>
+              <Field hideLabel label={`Soru ${k + 1}`} placeholder={`Soru ${k + 1}`} className="grow" value={q} onChange={(v) => up(i, { questions: x.questions.map((y, m) => (m === k ? v : y)) })} />
+              <Btn color="link-destructive" onPress={() => up(i, { questions: x.questions.filter((_, m) => m !== k) })}>
                 Sil
-              </button>
+              </Btn>
             </div>
           ))}
-          {x.questions.length < 3 ? <button onClick={() => up(i, { questions: [...x.questions, ''] })}>Soru ekle</button> : null}
+          {x.questions.length < 3 ? (
+            <div className="row">
+              <Btn onPress={() => up(i, { questions: [...x.questions, ''] })}>Soru ekle</Btn>
+            </div>
+          ) : null}
         </div>
       ))}
-      <button onClick={() => put([...ts, { id: `5sn-${ts.length + 1}`, screen: '', questions: ['Bu ekranda ne gördün?'] }])}>5 saniye testi ekle</button>
+      <div className="row">
+        <Btn onPress={() => put([...ts, { id: `5sn-${ts.length + 1}`, screen: '', questions: ['Bu ekranda ne gördün?'] }])}>5 saniye testi ekle</Btn>
+      </div>
     </section>
   )
 }
@@ -315,47 +267,29 @@ function App() {
     setTimeout(() => URL.revokeObjectURL(a.href), 1000)
   }
   return (
-    <main className="card wide setup">
+    <main className="card researcher setup mx-auto my-[4vh] max-w-6xl rounded-2xl bg-primary p-8 shadow-xs ring-1 ring-secondary max-sm:m-4 max-sm:p-5">
       <h1>Çalışma kurulumu</h1>
       <p className="muted">
         Bu sayfa çalışma dosyasını hazırlar; hiçbir şey bir yere gönderilmez. Bitince dosyayı kaydedip <code>apps/web/src/studies/</code> klasörüne koy (adı <code>.local.json</code> ile bitsin, repoya girmez).
       </p>
       <div className="row">
-        <label className="filebtn">
-          Var olan çalışma dosyasını aç
-          <input type="file" accept=".json,application/json" onChange={async (e) => e.target.files?.[0] && set(toEditor(await readFile(e.target.files[0])))} />
-        </label>
-        <button onClick={() => set(emptyStudy())}>Yeni çalışma</button>
+        <FilePick label="Var olan çalışma dosyasını aç" onFile={async (f) => set(toEditor(await readFile(f)))} />
+        <Btn onPress={() => set(emptyStudy())}>Yeni çalışma</Btn>
       </div>
 
       <section>
         <h2>Çalışma</h2>
-        <label>
-          Ad
-          <input value={s.name} onChange={(e) => set({ ...s, name: e.target.value })} />
-        </label>
-        <label>
-          Figma prototip linki
-          <input value={s.sourceUrl} placeholder="https://www.figma.com/proto/…" onChange={(e) => set({ ...s, sourceUrl: e.target.value.trim(), sourceType: 'figma' })} />
-        </label>
+        <div className="stack">
+          <Field label="Ad" value={s.name} onChange={(v) => set({ ...s, name: v })} />
+          <Field label="Figma prototip linki" value={s.sourceUrl} placeholder="https://www.figma.com/proto/…" onChange={(v) => set({ ...s, sourceUrl: v.trim(), sourceType: 'figma' })} />
+        </div>
         <p className="muted small">Figma'da dosya "Anyone with the link" ile paylaşılmış olmalı.</p>
         <div className="row">
-          <label>
-            Bağlam
-            <select value={s.context} onChange={(e) => set({ ...s, context: e.target.value as EditorStudy['context'], faceSignals: !['workplace', 'education'].includes(e.target.value) })}>
-              {CONTEXTS.map((c) => (
-                <option key={c.v} value={c.v}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="check">
-            <input type="checkbox" checked={s.faceSignals} onChange={(e) => set({ ...s, faceSignals: e.target.checked })} /> Yüz sinyalleri (katılımcıdan ayrıca onay istenir)
-          </label>
-          <label className="check">
-            <input type="checkbox" checked={s.comments !== false} onChange={(e) => set({ ...s, comments: e.target.checked ? undefined : false })} /> Katılımcı ekranda nokta seçip yorum ekleyebilsin
-          </label>
+          <Select label="Bağlam" value={s.context} onChange={(v) => set({ ...s, context: v as EditorStudy['context'], faceSignals: !['workplace', 'education'].includes(v) })} options={CONTEXTS} />
+        </div>
+        <div className="stack">
+          <Check label="Yüz sinyalleri (katılımcıdan ayrıca onay istenir)" checked={s.faceSignals} onChange={(v) => set({ ...s, faceSignals: v })} />
+          <Check label="Katılımcı ekranda nokta seçip yorum ekleyebilsin" checked={s.comments !== false} onChange={(v) => set({ ...s, comments: v ? undefined : false })} />
         </div>
       </section>
 
@@ -370,17 +304,33 @@ function App() {
         {s.tasks.map((t, i) => (
           <TaskEditor key={i} s={s} t={t} i={i} set={set} />
         ))}
-        <button onClick={() => set({ ...s, tasks: [...s.tasks, { id: `gorev-${s.tasks.length + 1}`, prompt: '', expectedPath: [] }] })}>Görev ekle</button>
+        <div className="row">
+          <Btn onPress={() => set({ ...s, tasks: [...s.tasks, { id: `gorev-${s.tasks.length + 1}`, prompt: '', expectedPath: [] }] })}>Görev ekle</Btn>
+        </div>
       </section>
 
       <section className="out">
         <h2>Dosya</h2>
-        {check.ok ? <p className="ok">Dosya geçerli: {check.study.tasks.length} görev, {s.screens.length} ekran.</p> : <ul className="errors">{check.errors.map((e) => <li key={e}>{e}</li>)}</ul>}
+        <div role="status">
+          {check.ok ? (
+            <p className="ok">
+              Dosya geçerli: {check.study.tasks.length} görev, {s.screens.length} ekran.
+            </p>
+          ) : (
+            <ul className="errors">
+              {check.errors.map((e) => (
+                <li key={e}>{e}</li>
+              ))}
+            </ul>
+          )}
+        </div>
         <div className="row">
-          <button className="primary" disabled={!check.ok} onClick={save}>
+          <Btn color="primary" size="md" isDisabled={!check.ok} onPress={save}>
             Çalışma dosyasını kaydet
-          </button>
-          <button onClick={() => void navigator.clipboard?.writeText(text)}>Panoya kopyala</button>
+          </Btn>
+          <Btn size="md" onPress={() => void navigator.clipboard?.writeText(text)}>
+            Panoya kopyala
+          </Btn>
         </div>
         <details>
           <summary>JSON'u göster</summary>

@@ -1,0 +1,24 @@
+/* Researcher pages (report, setup): text styles on Untitled UI tokens. Components come from src/uui. */
+.researcher { font-size: 15px; line-height: 1.55; color: var(--color-text-secondary); }
+.researcher h1 { font-size: var(--text-display-xs); line-height: 1.3; font-weight: 600; color: var(--color-text-primary); margin: 0 0 16px; }
+.researcher h2 { font-size: var(--text-xl); font-weight: 600; color: var(--color-text-primary); margin: 28px 0 8px; }
+.researcher h3 { font-size: var(--text-lg); font-weight: 600; color: var(--color-text-primary); margin: 18px 0 6px; }
+.researcher h4 { font-size: var(--text-md); font-weight: 600; color: var(--color-text-primary); margin: 14px 0 6px; }
+.researcher p { margin: 8px 0; }
+.researcher ul, .researcher ol { padding-left: 22px; }
+.researcher ul { list-style: disc; }
+.researcher ol { list-style: decimal; }
+.researcher code { font-family: var(--font-mono); font-size: 0.9em; }
+.muted { color: var(--color-text-tertiary); }
+.small { font-size: var(--text-sm); }
+.researcher details { margin-top: 12px; }
+.researcher details summary { cursor: pointer; color: var(--color-text-brand-secondary); font-weight: 500; }
+.researcher details summary:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; border-radius: 4px; }
+.researcher dl dt { font-weight: 600; margin-top: 12px; color: var(--color-text-primary); }
+.researcher dl dd { margin: 4px 0 0; }
+.researcher a { color: var(--color-text-brand-secondary); }
+@media print {
+  .no-print { display: none !important; }
+  html, body { background: #fff !important; color: #000; }
+  .card { box-shadow: none !important; margin: 0 !important; max-width: none !important; padding: 0 !important; --tw-ring-shadow: 0 0 #0000 !important; }
+}

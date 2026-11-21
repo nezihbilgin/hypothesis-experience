@@ -4,19 +4,25 @@ import type { QuestionMoment } from '@hx/core'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { downloadJson, figmaEmbedUrl, type QualityResult, type SessionRun } from './run'
 import { figmaFrames } from './report/images'
-import { AnswerBox, Card, Rating, useT } from './ui'
+import { Button } from '@/components/base/buttons/button'
+import { Checkbox } from '@/components/base/checkbox/checkbox'
+import { Input } from '@/components/base/input/input'
+import { RadioButton, RadioGroup } from '@/components/base/radio-buttons/radio-buttons'
+import { TextArea } from '@/components/base/textarea/textarea'
+import { cx } from '@/utils/cx'
+import { AnswerBox, Card, H1, H2, Hint, P, Primary, Rating, Row, useT } from './ui'
 
 export function Welcome({ run, next }: { run: SessionRun; next: () => void }) {
   const t = useT()
   return (
     <Card>
-      <h1>{t('welcome.title')}</h1>
-      <p>{t('welcome.body')}</p>
+      <H1>{t('welcome.title')}</H1>
+      <P>{t('welcome.body')}</P>
       {/* Task prompts are shown one at a time (task intro); listing them all here gave away later tasks (pilot feedback). */}
-      <p>{t('welcome.tasks', { count: run.study.tasks.length })}</p>
-      <button className="primary" onClick={next}>
-        {t('welcome.start')}
-      </button>
+      <P>{t('welcome.tasks', { count: run.study.tasks.length })}</P>
+      <Row>
+        <Primary onPress={next}>{t('welcome.start')}</Primary>
+      </Row>
     </Card>
   )
 }
@@ -28,31 +34,26 @@ export function Consent({ run, next }: { run: SessionRun; next: () => void }) {
   const [face, setFace] = useState(false)
   return (
     <Card>
-      <h1>{t('consent.title')}</h1>
-      <p>{t('consent.stored')}</p>
-      <p>{t('consent.notStored')}</p>
-      {run.study.sourceType === 'figma' ? <p className="muted">{t('consent.thirdParty')}</p> : null}
-      <p className="muted">{t('consent.camera')}</p>
-      <label className="check">
-        <input type="checkbox" checked={camera} onChange={(e) => setCamera(e.target.checked)} /> {t('consent.cameraOption')}
-      </label>
-      <label className={camera ? 'check' : 'check off'}>
-        <input type="checkbox" disabled={!camera} checked={camera && mic} onChange={(e) => setMic(e.target.checked)} /> {t('consent.microphoneOption')}
-      </label>
-      {run.study.faceSignals ? (
-        <label className={camera ? 'check' : 'check off'}>
-          <input type="checkbox" disabled={!camera} checked={camera && face} onChange={(e) => setFace(e.target.checked)} /> {t('consent.faceSignals')}
-        </label>
-      ) : null}
-      <button
-        className="primary"
-        onClick={() => {
-          run.consent = { camera, microphone: camera && mic, faceSignals: camera && face && run.study.faceSignals, at: new Date().toISOString() }
-          next()
-        }}
-      >
-        {t('consent.accept')}
-      </button>
+      <H1>{t('consent.title')}</H1>
+      <P>{t('consent.stored')}</P>
+      <P>{t('consent.notStored')}</P>
+      {run.study.sourceType === 'figma' ? <P muted>{t('consent.thirdParty')}</P> : null}
+      <P muted>{t('consent.camera')}</P>
+      <div className="mt-4 flex flex-col gap-4">
+        <Checkbox size="md" isSelected={camera} onChange={setCamera} label={t('consent.cameraOption')} />
+        <Checkbox size="md" isDisabled={!camera} isSelected={camera && mic} onChange={setMic} label={t('consent.microphoneOption')} />
+        {run.study.faceSignals ? <Checkbox size="md" isDisabled={!camera} isSelected={camera && face} onChange={setFace} label={t('consent.faceSignals')} /> : null}
+      </div>
+      <Row>
+        <Primary
+          onPress={() => {
+            run.consent = { camera, microphone: camera && mic, faceSignals: camera && face && run.study.faceSignals, at: new Date().toISOString() }
+            next()
+          }}
+        >
+          {t('consent.accept')}
+        </Primary>
+      </Row>
     </Card>
   )
 }
@@ -74,13 +75,15 @@ export function CameraCheck({ run, next }: { run: SessionRun; next: () => void }
   }, [q, run, next])
   return (
     <Card>
-      <h1>{t('check.title')}</h1>
-      {!q ? <p className="pulse">{t('check.running')}</p> : <p>{q.cameraEnabled ? t('check.ok') : t('check.cameraOff')}</p>}
-      {q?.hints.includes('dark') ? <p className="hint">{t('check.hintDark')}</p> : null}
-      {q?.hints.includes('noise') ? <p className="hint">{t('check.hintNoise')}</p> : null}
-      <button className="primary" disabled={!q} onClick={next}>
-        {t('common.next')}
-      </button>
+      <H1>{t('check.title')}</H1>
+      <div aria-live="polite">{!q ? <P className="animate-pulse">{t('check.running')}</P> : <P>{q.cameraEnabled ? t('check.ok') : t('check.cameraOff')}</P>}</div>
+      {q?.hints.includes('dark') ? <Hint>{t('check.hintDark')}</Hint> : null}
+      {q?.hints.includes('noise') ? <Hint>{t('check.hintNoise')}</Hint> : null}
+      <Row>
+        <Primary isDisabled={!q} onPress={next}>
+          {t('common.next')}
+        </Primary>
+      </Row>
     </Card>
   )
 }
@@ -118,32 +121,32 @@ export function Warmup({ run, next }: { run: SessionRun; next: () => void }) {
   if (step === 0)
     return (
       <Card>
-        <p className="muted">{t('warmup.intro')}</p>
-        <p className="reading">{t('warmup.welcome')}</p>
-        <button className="primary" disabled={!canContinue} onClick={click}>
-          {t('common.next')}
-        </button>
+        <P muted>{t('warmup.intro')}</P>
+        <p className="my-3 text-lg leading-relaxed text-secondary">{t('warmup.welcome')}</p>
+        <Row>
+          <Primary isDisabled={!canContinue} onPress={click}>
+            {t('common.next')}
+          </Primary>
+        </Row>
       </Card>
     )
   if (step <= SPOTS.length) {
     const sp = SPOTS[step - 1]
     return (
-      <div className="stage">
-        <div className="spot-note" style={{ left: `${sp.x}%`, top: `${sp.y}%` }}>
-          <p>{t(sp.key)}</p>
-          <button className="primary" onClick={click}>
-            {t('warmup.ok')}
-          </button>
+      <div className="fixed inset-0">
+        <div className="absolute max-w-72 -translate-x-1/2 -translate-y-1/2 rounded-xl bg-primary px-4 py-3.5 text-center shadow-xs ring-1 ring-secondary" style={{ left: `${sp.x}%`, top: `${sp.y}%` }}>
+          <p className="mb-3 text-md text-secondary">{t(sp.key)}</p>
+          <Primary onPress={click}>{t('warmup.ok')}</Primary>
         </div>
       </div>
     )
   }
   return (
     <Card>
-      <p>{t('warmup.done')}</p>
-      <button className="primary" onClick={next}>
-        {t('common.next')}
-      </button>
+      <P>{t('warmup.done')}</P>
+      <Row>
+        <Primary onPress={next}>{t('common.next')}</Primary>
+      </Row>
     </Card>
   )
 }
@@ -159,32 +162,31 @@ export function ContextQuestions({ run, next }: { run: SessionRun; next: () => v
   if (!qs.length) return null
   return (
     <Card>
-      <h1>{t('context.title')}</h1>
+      <H1>{t('context.title')}</H1>
       {qs.map((q) => (
-        <div key={q.id} className="ctx-q">
-          <p className="q">{q.text}</p>
+        <div key={q.id} className="my-5">
           {q.type === 'choice' ? (
-            (q.options ?? []).map((o) => (
-              <label key={o} className="check">
-                <input type="radio" name={q.id} checked={answers[q.id] === o} onChange={() => setAnswers({ ...answers, [q.id]: o })} /> {o}
-              </label>
-            ))
+            <RadioGroup size="md" aria-label={q.text} value={answers[q.id] ?? null} onChange={(v) => setAnswers({ ...answers, [q.id]: v })} className="gap-3">
+              <p className="text-md font-semibold text-primary">{q.text}</p>
+              {(q.options ?? []).map((o) => (
+                <RadioButton key={o} value={o} label={o} />
+              ))}
+            </RadioGroup>
           ) : (
-            <input className="text" value={answers[q.id] ?? ''} onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })} />
+            <Input size="md" label={q.text} value={answers[q.id] ?? ''} onChange={(v) => setAnswers({ ...answers, [q.id]: v })} />
           )}
         </div>
       ))}
-      <div className="row">
-        <button
-          className="primary"
-          onClick={() => {
+      <Row>
+        <Primary
+          onPress={() => {
             run.contextAnswers = qs.map((q) => ({ id: q.id, text: q.text, answer: answers[q.id]?.trim() || null }))
             next()
           }}
         >
           {t('common.next')}
-        </button>
-      </div>
+        </Primary>
+      </Row>
     </Card>
   )
 }
@@ -225,30 +227,29 @@ export function FiveSecondTests({ run, next }: { run: SessionRun; next: () => vo
   if (phase === 'intro')
     return (
       <Card>
-        <p>{t('fivesec.intro')}</p>
-        <button className="primary" onClick={() => setPhase('show')}>
-          {t('fivesec.start')}
-        </button>
+        <P>{t('fivesec.intro')}</P>
+        <Row>
+          <Primary onPress={() => setPhase('show')}>{t('fivesec.start')}</Primary>
+        </Row>
       </Card>
     )
   if (phase === 'show')
     return (
-      <div className="fivesec-stage">
-        <img src={img.url} alt="" />
+      <div className="fixed inset-0 flex items-center justify-center bg-gray-950">
+        <img src={img.url} alt="" className="max-h-[96vh] max-w-[96vw]" />
       </div>
     )
   return (
     <Card>
-      <p className="muted">{t('fivesec.after')}</p>
+      <P muted>{t('fivesec.after')}</P>
       {test.questions.map((q, k) => (
-        <div key={k} className="ctx-q">
-          <p className="q">{q}</p>
-          <textarea rows={2} value={answers[k] ?? ''} onChange={(e) => setAnswers(Object.assign([...answers], { [k]: e.target.value }))} />
+        <div key={k} className="my-5">
+          <TextArea label={q} rows={2} value={answers[k] ?? ''} onChange={(v) => setAnswers(Object.assign([...answers], { [k]: v }))} />
         </div>
       ))}
-      <button className="primary" onClick={() => finish(true)}>
-        {t('common.next')}
-      </button>
+      <Row>
+        <Primary onPress={() => finish(true)}>{t('common.next')}</Primary>
+      </Row>
     </Card>
   )
 }
@@ -261,8 +262,8 @@ export function TaskIntro({ run, index, next }: { run: SessionRun; index: number
   }, [run, index])
   return (
     <Card>
-      <p className="muted">{t('task.intro', { index: index + 1, total: run.study.tasks.length })}</p>
-      <h1 className="prompt">{task.prompt}</h1>
+      <P muted>{t('task.intro', { index: index + 1, total: run.study.tasks.length })}</P>
+      <H1 className="text-xl">{task.prompt}</H1>
       {run.study.questions.preTaskRating ? (
         <Rating
           scale={run.study.scales.expectation}
@@ -274,9 +275,9 @@ export function TaskIntro({ run, index, next }: { run: SessionRun; index: number
           }}
         />
       ) : (
-        <button className="primary" onClick={next}>
-          {t('task.start')}
-        </button>
+        <Row>
+          <Primary onPress={next}>{t('task.start')}</Primary>
+        </Row>
       )}
     </Card>
   )
@@ -323,85 +324,89 @@ export function TaskRun({ run, next }: { run: SessionRun; next: (retro: Question
   const card = question ? run.cards().find((c) => c.screenKey === question.screenKey) : undefined
   const screen = card?.participantName
   return (
-    <div className="task">
-      <header className={reached ? 'taskbar reached' : 'taskbar'}>
-        <span className="task-prompt">
+    <div className="fixed inset-0 flex flex-col">
+      <header className={cx('flex items-center gap-4 border-b border-secondary px-4 py-2', reached ? 'bg-brand-primary' : 'bg-primary')}>
+        <span className="flex-1 text-sm text-primary">
           {run.task.prompt}
-          <span className="task-hint">{reached ? t('task.reachedHint') : hasTarget ? '' : t('task.doneHint')}</span>
+          <span className={cx('block text-sm', reached ? 'font-semibold text-primary' : 'text-tertiary')}>{reached ? t('task.reachedHint') : hasTarget ? '' : t('task.doneHint')}</span>
         </span>
         {run.study.comments ? (
-          <button
-            disabled={!!question || !!comment}
-            onClick={() => {
+          <Button
+            size="md"
+            color="secondary"
+            isDisabled={!!question || !!comment}
+            onPress={() => {
               run.startComment()
               setComment({ mode: 'pick' })
             }}
           >
             {t('comment.add')}
-          </button>
+          </Button>
         ) : null}
-        <button className={reached ? 'primary glow' : 'primary'} disabled={!!question || !!comment} onClick={() => next(run.finishTask())}>
+        <Button size="md" color="primary" className={reached ? 'ring-4 ring-brand' : undefined} isDisabled={!!question || !!comment} onPress={() => next(run.finishTask())}>
           {t('task.done')}
-        </button>
+        </Button>
       </header>
-      <div className="proto-wrap">
-        <iframe ref={frameRef} className="proto" src={src} title="prototype" allow="clipboard-write" />
+      <div className="relative flex flex-1">
+        <iframe ref={frameRef} className="w-full flex-1 border-0 bg-[#2c2c2c]" src={src} title="prototype" allow="clipboard-write" />
         {!loaded ? (
-          <div className="loading" role="status">
-            <p className="pulse">{t('task.loading')}</p>
+          <div className="absolute inset-0 flex items-center justify-center bg-[#2c2c2c] p-6 text-center text-lg text-gray-200" role="status">
+            <p className="m-0 animate-pulse">{t('task.loading')}</p>
           </div>
         ) : null}
         {comment?.mode === 'pick' ? (
           <div
-            className="pick-layer"
+            className="absolute inset-0 cursor-crosshair bg-black/10"
             onClick={(e) => {
               const r = e.currentTarget.getBoundingClientRect()
               setComment({ mode: 'write', point: { ix: Math.round(e.clientX - r.left), iy: Math.round(e.clientY - r.top), iw: Math.round(r.width), ih: Math.round(r.height) } })
             }}
           >
-            <p className="pick-hint">{t('comment.pick')}</p>
+            <p className="absolute top-3 left-1/2 m-0 -translate-x-1/2 rounded-lg bg-primary px-3 py-1.5 text-sm text-primary shadow-xs ring-1 ring-secondary">{t('comment.pick')}</p>
           </div>
         ) : null}
-        {comment?.mode === 'write' ? <span className="pin" style={{ left: comment.point.ix, top: comment.point.iy }} /> : null}
+        {comment?.mode === 'write' ? <span className="pointer-events-none absolute -mt-2 -ml-2 size-4 rounded-full border-2 border-white bg-warning-solid" style={{ left: comment.point.ix, top: comment.point.iy }} /> : null}
       </div>
       {comment?.mode === 'write' ? (
-        <div className="comment-box">
-          <p className="q">{t('comment.prompt')}</p>
-          <textarea rows={3} autoFocus value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder={t('probe.placeholder')} />
-          <p className="muted small">{t('probe.dictationHint')}</p>
-          <div className="row">
-            <button
-              className="primary"
-              disabled={!commentText.trim()}
-              onClick={() => {
+        <div className="fixed right-4 bottom-4 w-[340px] rounded-xl bg-primary p-4 shadow-lg ring-1 ring-secondary" role="dialog" aria-label={t('comment.prompt')}>
+          <TextArea label={t('comment.prompt')} rows={3} autoFocus value={commentText} onChange={setCommentText} placeholder={t('probe.placeholder')} />
+          <p className="mt-1.5 text-sm text-tertiary">{t('probe.dictationHint')}</p>
+          <Row className="mt-3">
+            <Button
+              size="md"
+              color="primary"
+              isDisabled={!commentText.trim()}
+              onPress={() => {
                 run.endComment(comment.point, commentText)
                 setComment(null)
                 setCommentText('')
               }}
             >
               {t('comment.save')}
-            </button>
-            <button
-              onClick={() => {
+            </Button>
+            <Button
+              size="md"
+              color="secondary"
+              onPress={() => {
                 run.endComment(null, null)
                 setComment(null)
                 setCommentText('')
               }}
             >
               {t('common.cancel')}
-            </button>
-          </div>
+            </Button>
+          </Row>
         </div>
       ) : null}
       {blocked ? (
-        <div className="overlay">
+        <div className="fixed inset-0 flex items-start justify-center overflow-auto bg-black/88 backdrop-blur-md">
           <Card>
-            <p>{t('task.blocked')}</p>
+            <P>{t('task.blocked')}</P>
           </Card>
         </div>
       ) : null}
       {question ? (
-        <div className="overlay">
+        <div className="fixed inset-0 flex items-start justify-center overflow-auto bg-black/88 backdrop-blur-md">
           <Card>
             <AnswerBox
               intro={question.source === 'planned' ? (screen ? t('probe.planned', { screen }) : t('probe.plannedNoName')) : undefined}
@@ -472,7 +477,7 @@ export function Hardest({ run, next }: { run: SessionRun; next: () => void }) {
   if (!run.study.questions.sessionEnd) return null
   return (
     <Card>
-      <ol className="muted">
+      <ol className="mb-4 list-decimal space-y-1 pl-6 text-md text-tertiary">
         {run.study.tasks.map((x) => (
           <li key={x.id}>{x.prompt}</li>
         ))}
@@ -494,7 +499,7 @@ export function Summary({ run }: { run: SessionRun }) {
   if (deleted)
     return (
       <Card>
-        <p>{t('session.deleted')}</p>
+        <P>{t('session.deleted')}</P>
       </Card>
     )
   const answers = run.tasks.flatMap((x) => x.questions.map((q) => q.answer).filter((a): a is string => !!a))
@@ -502,8 +507,8 @@ export function Summary({ run }: { run: SessionRun }) {
   const download = () => downloadJson(`hx-session-${run.participant || 'katilimci'}-${run.startedAt.slice(0, 19).replace(/[:T]/g, '-')}.json`, run.toJSON())
   return (
     <Card>
-      <h1>{t('session.summary')}</h1>
-      <dl>
+      <H1>{t('session.summary')}</H1>
+      <dl className="text-md text-secondary [&_dd]:mt-1 [&_dt]:mt-3 [&_dt]:font-semibold [&_dt]:text-primary [&_ul]:list-disc [&_ul]:pl-5">
         <dt>{t('session.summaryCamera')}</dt>
         <dd>{run.cameraOn ? t('common.yes') : t('common.no')}</dd>
         <dt>{t('session.summaryRatings')}</dt>
@@ -523,12 +528,12 @@ export function Summary({ run }: { run: SessionRun }) {
           </ul>
         </dd>
       </dl>
-      <div className="row">
-        <button className="primary" onClick={download}>
-          {t('session.download')}
-        </button>
-        <button
-          onClick={() => {
+      <Row>
+        <Primary onPress={download}>{t('session.download')}</Primary>
+        <Button
+          size="lg"
+          color="secondary"
+          onPress={() => {
             if (!confirm(t('session.deleteConfirm'))) return
             run.wipe()
             delete (window as unknown as { __hxRun?: SessionRun }).__hxRun
@@ -536,8 +541,8 @@ export function Summary({ run }: { run: SessionRun }) {
           }}
         >
           {t('session.delete')}
-        </button>
-      </div>
+        </Button>
+      </Row>
     </Card>
   )
 }

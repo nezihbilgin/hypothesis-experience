@@ -11,8 +11,9 @@ const localPick = new URLSearchParams(location.search).get('local')
 const localStudy = (localPick ? localStudies[`./studies/${localPick}.local.json`] : undefined) ?? Object.entries(localStudies).sort(([a], [b]) => a.localeCompare(b))[0]?.[1]
 import { SessionRun } from './run'
 import { CameraCheck, Consent, ContextQuestions, FiveSecondTests, Hardest, Retro, Seq, Summary, TaskIntro, TaskRun, Warmup, Welcome } from './steps'
-import { TextsCtx } from './ui'
-import './style.css'
+import { Card, H1, TextsCtx } from './ui'
+import './uui/index.css'
+import './uui/theme-mode'
 
 type Step =
   | { k: 'welcome' }
@@ -104,14 +105,14 @@ function App() {
   if (!state) return null
   if (state.errors)
     return (
-      <main className="card">
-        <h1>Çalışma dosyasında sorun var</h1>
-        <ul>
+      <Card>
+        <H1>Çalışma dosyasında sorun var</H1>
+        <ul className="list-disc pl-5 text-md text-secondary">
           {state.errors.map((e) => (
             <li key={e}>{e}</li>
           ))}
         </ul>
-      </main>
+      </Card>
     )
   return <Flow study={state.study!} participant={params.get('p') ?? ''} />
 }
