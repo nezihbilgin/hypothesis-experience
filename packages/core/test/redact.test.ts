@@ -11,6 +11,10 @@ describe('redact (think-aloud transcripts)', () => {
     expect(redact('Merhaba, adım Tarkan Güvenç, başlıyorum.').text).toBe('Merhaba, adım [isim], başlıyorum.')
     expect(redact('ismim Zorlu').text).toBe('ismim [isim]')
   })
+  it('catches the spellings speech-to-text produced in the M1 trial', () => {
+    expect(redact('Alıcının adı Ayşe Yılmaz, telefonu 0532 1234567. Adres Kadıköy moda caddesi numara 5.').text).toBe('Alıcının adı [isim], telefonu [telefon]. [adres].') // over-masking the word "Adres" is acceptable
+    expect(redact('telefonu 05-132-123-45-67').text).toBe('telefonu [telefon]')
+  })
   it('leaves ordinary words, screen names and numbers alone', () => {
     const t = 'Hediye kartı ekranında 2 kart seçtim, 150 TL ödedim. Siparişlerim butonu çalışmadı.'
     expect(redact(t).text).toBe(t)

@@ -40,11 +40,11 @@ const RULES: Rule[] = [
   // 13-19 digits in groups (a card number), before phone numbers.
   { kind: 'card', re: /\b(?:\d[ -]?){12,18}\d\b/g },
   // Turkish mobile/landline: +90 / 0 prefix, 10 digits in groups; also bare 10-11 digit runs.
-  { kind: 'phone', re: /(?:\+\s?90[ -]?|\b0[ -]?|\b)\(?[2-5]\d{2}\)?[ -]?\d{3}[ -]?\d{2}[ -]?\d{2}\b/g },
+  { kind: 'phone', re: /(?<!\d)(?:\+\s?90[ -]?)?\d(?:[ -]?\d){9,11}(?!\d)/g },
   {
     kind: 'address',
     re: new RegExp(
-      `(?:(?:${WORD}|\\d+\\.?)\\s+){0,3}(?:Mahallesi|Mahalle|Mah\\.|Caddesi|Cadde|Cad\\.|Sokağı|Sokak|Sok\\.|Sk\\.|Bulvarı|Blv\\.|Street|St\\.|Avenue|Ave\\.|Road)` +
+      `(?:(?:[${UP}][${LO}]+|\\d+\\.?)\\s+(?:[${UP}${LO}]+\\s+){0,2})?(?:[Mm]ahallesi|[Mm]ahalle|[Mm]ah\\.|[Cc]addesi|[Cc]adde|[Cc]ad\\.|[Ss]okağı|[Ss]okak|[Ss]ok\\.|[Ss]k\\.|[Bb]ulvarı|[Bb]lv\\.|Street|St\\.|Avenue|Ave\\.|Road)` +
         `(?:\\s*,?\\s*(?:[Nn]o|[Nn]umara|[Dd]aire|[Kk]at|[Aa]pt\\.?|[Aa]partmanı)\\s*[:.]?\\s*\\d+[A-Za-z]?)*`,
       'gu'
     )

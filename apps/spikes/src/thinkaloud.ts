@@ -146,7 +146,7 @@ async function run(audio: Float32Array): Promise<void> {
     }
     await Promise.all(jobs)
   }
-  audio.fill(0) // the page's copy of the audio is wiped as well
+  if (audio.buffer.byteLength) audio.fill(0) // the page's copy (live mode keeps it; batch mode transferred it to the worker)
   pcm = null
   state.totalMs = Math.round(performance.now() - t0)
   stop()
@@ -209,3 +209,4 @@ $('#micstop').addEventListener('click', async () => {
   ;($('#micstop') as HTMLButtonElement).disabled = true
   void run(all)
 })
+;(window as unknown as { __cam: () => Promise<void> }).__cam = startCamera
