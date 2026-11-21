@@ -8,6 +8,17 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 
 ---
 
+## 2026-11-21: Kurulum ekranı v0; kamera açık ağ kontrolü; klavye ayarı
+
+Kaynak: PM iş sırası (Nezih bugün test yapamadığı için Nezih'e bağlı olmayan işler). Durum: uygulandı (`faz1-core`).
+
+- **Kurulum ekranı v0** (`apps/web/setup.html`, yerel): araştırmacı JSON yazmadan çalışma kurar. Çalışma (ad, Figma linki, bağlam, yüz sinyalleri), ekranlar (anahtar, ad, katılımcıya görünen ad, davranış, beklenen süre, takma adlar; bir oturum dosyasından ekranları içe alma), görevler (metin, başlangıç ve hedef ekran ya da durum, beklenen yol sıralı, kabul edilebilir sapmalar, ekran bazlı sorular, görevde farklı kart alanları). Canlı doğrulama `parseStudy` ile; çıktı çalışma düzeyinde biçimdeki JSON. Var olan bir dosya açılabilir (eski görev başına biçim otomatik çevrilir). Pilot çalışma dosyası bu ekranla açılıp kaydedilince birebir aynı çıkıyor ve aynı oturumdan aynı rapor üretiyor. Isınma soruları ve 5 saniye testi onaylanmadığı için yok.
+- **Kamera açık ağ kontrolü:** sahte kamera ve mikrofonla tam oturum; uygulama yalnızca kendi origin'inden GET yaptı (kameralıda ek olarak MediaPipe model ve wasm dosyaları), GET dışı istek, gövdeli istek ya da WebSocket yok. Ayrıntı `docs/privacy-audit-2026-11-20.md` ekinde. Bu kontrol için `?debug=1&keepCamera=1` test kancası eklendi (yüz bulunamasa da kamerayı açık tutar; sadece debug).
+- **Onay metni:** "Prototip Figma'dan yüklenir ve Figma kendi kullanım verilerini toplayabilir. Kamera görüntün ne Figma'ya ne bize gider."
+- **Klavye ayarı:** `disable-default-keyboard-nav=1` otomatik olarak doğrulanamadı; Figma embed'i headless Chrome'da ve uygulama içi tarayıcıda yüklenmedi. Nezih'in bir sonraki gerçek Chrome oturumunda ok tuşuyla denenecek; tıklamasız geçiş tespiti her durumda çalışıyor.
+
+---
+
 ## 2026-11-21: İnsan diliyle rapor; görevler ekran paylaşır (allowedScreens)
 
 Kaynak: Nezih'in rapor geri bildirimi ("Bunları insan okuyacak"), PM brifi. Durum: uygulandı (`faz1-core`).

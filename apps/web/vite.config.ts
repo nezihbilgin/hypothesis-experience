@@ -7,6 +7,6 @@ export default defineConfig({
   publicDir: '../spikes/public',
   plugins: [react()],
   worker: { format: 'es' },
-  build: { target: 'es2022', rollupOptions: { input: { index: resolve(__dirname, 'index.html'), report: resolve(__dirname, 'report.html') } } },
+  build: { target: 'es2022', rollupOptions: { input: { index: resolve(__dirname, 'index.html'), report: resolve(__dirname, 'report.html'), setup: resolve(__dirname, 'setup.html') } } },
   server: { port: 5180 }
 })

@@ -1,0 +1,21 @@
+.setup section { margin: 22px 0; }
+.setup label { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; font-size: 0.9rem; }
+.setup label.check { flex-direction: row; align-items: center; }
+.setup input, .setup select, .setup textarea { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); }
+.setup input.n { width: 70px; }
+.setup .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.setup .row.between { justify-content: space-between; }
+.setup table.edit { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.setup table.edit th { text-align: left; font-weight: 600; padding: 4px; }
+.setup table.edit td { padding: 3px 4px; vertical-align: top; }
+.setup table.edit input, .setup table.edit select { width: 100%; }
+.setup .nowrap { white-space: nowrap; }
+.setup .task-edit { border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin: 12px 0; }
+.setup ol.path li { margin: 10px 0; }
+.setup ol.path input { width: 100%; margin-top: 4px; }
+.setup .checks { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.setup .filebtn { display: inline-flex; flex-direction: row; padding: 8px 14px; border: 1px solid var(--line); border-radius: 9px; cursor: pointer; }
+.setup .filebtn input { display: none; }
+.setup pre { max-height: 400px; overflow: auto; background: var(--bg); padding: 10px; font-size: 0.8rem; }
+.setup .ok { color: #2e7d32; }
+.setup .errors { color: #b3261e; }
