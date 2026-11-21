@@ -84,7 +84,11 @@ function ClickMap({ screenKey, task, images }: { screenKey: string; task: Sessio
     return [
       <figure key={node} className="clickmap">
         <div className="clickmap-frame">
-          <img src={img.url} alt={node} onLoad={(e) => setSize((s) => ({ ...s, [node]: { w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight } }))} />
+          <img src={img.url} alt={node} onLoad={(e) => {
+              // Read the size now: the state updater may run later, when the event's currentTarget is already null.
+              const z = { w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight }
+              setSize((s) => ({ ...s, [node]: z }))
+            }} />
           {sz ? l.drawable.map((p, i) => <span key={i} className={p.dead ? 'dot dead' : 'dot'} style={{ left: `${(p.x / sz.w) * 100}%`, top: `${(p.y / sz.h) * 100}%` }} />) : null}
           {sz
             ? (commentsOf.get(node) ?? []).map((c, i) => {
