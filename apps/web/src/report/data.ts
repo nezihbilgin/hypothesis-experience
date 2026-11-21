@@ -11,7 +11,21 @@ export interface SessionTask {
   endSec: number | null
   report: ScreenReport | null
   outcome?: TaskOutcome
+  comments?: SessionComment[]
   questions: { moment: { screenKey: string; source: string; probe?: string; mismatch?: { kind: string; text: string } }; answer: string | null; dontRemember: boolean; skipped: boolean }[]
+}
+
+export interface SessionComment {
+  t: number
+  screenKey: string
+  node: string
+  /** Point picked inside the prototype iframe, and the iframe's size, CSS px. */
+  point: { ix: number; iy: number; iw: number; ih: number }
+  /** Scroll offset of the frame from the last click on the same node, if any. */
+  scroll: { x: number; y: number } | null
+  /** Last click on the same node was at most 10 s before: the scroll offset is current. */
+  precise: boolean
+  text: string
 }
 
 export interface SessionFile {
@@ -23,6 +37,8 @@ export interface SessionFile {
   capabilities?: { hasCamera: boolean; hasHover: boolean; hasScreenVideo: boolean }
   consent?: { faceSignals: boolean }
   tasks: (SessionTask | null)[]
+  contextAnswers?: { id: string; text: string; answer: string | null }[]
+  fiveSecondResults?: { id: string; screen: string; shown: boolean; answers: { question: string; answer: string | null }[] }[]
   hardestTask?: { answer: string | null; dontRemember: boolean; skipped: boolean } | null
 }
 
@@ -145,13 +161,40 @@ export function mismatchLines(m: Mismatch, card: HypothesisCard | undefined, st:
 }
 
 export interface Highlight {
-  kind: 'mismatch' | 'dropped' | 'rage' | 'loop' | 'keyboard'
+  kind: 'mismatch' | 'dropped' | 'rage' | 'loop' | 'keyboard' | 'comment'
   screenKey: string
   title: string
   hypothesis?: string
   observation: string
   /** Answer the participant gave about this screen, if any. */
   answer?: string
+}
+
+/**
+ * Comment position on the frame's reference image (frame coordinates = image pixels at 1x). The embed shows the
+ * device viewport (frame width x viewportH) scaled down to fit the iframe and centred; the frame's scroll offset
+ * is added. Approximate when the scroll offset may be stale (no click on this screen in the last 10 s) or unknown
+ * on a frame taller than the viewport.
+ */
+export function commentPosition(c: SessionComment, img: { w: number; h: number }, viewportH: number): { x: number; y: number; approximate: boolean } {
+  const vw = img.w
+  const vh = Math.min(img.h, viewportH > 0 ? viewportH : img.h)
+  const { ix, iy, iw, ih } = c.point
+  const s = Math.min(1, iw / vw, ih / vh)
+  const x = (ix - (iw - vw * s) / 2) / s + (c.scroll?.x ?? 0)
+  const y = (iy - (ih - vh * s) / 2) / s + (c.scroll?.y ?? 0)
+  const scrolls = img.h > vh + 1
+  return { x: Math.round(x), y: Math.round(y), approximate: !c.precise && scrolls }
+}
+
+/** Most common height among reference images of the same width: the device viewport for scrolling frames. */
+export function typicalViewportHeight(sizes: { w: number; h: number }[], width: number): number {
+  const count = new Map<number, number>()
+  for (const z of sizes) if (z.w === width) count.set(z.h, (count.get(z.h) ?? 0) + 1)
+  let best = 0
+  let n = 0
+  for (const [h, c] of count) if (c > n || (c === n && h < best)) [best, n] = [h, c]
+  return best
 }
 
 /** "Öne çıkan anlar": the 3 heaviest mismatches, the drop-off screen, rage clicks and loops, with answers. */
@@ -171,6 +214,7 @@ export function highlights(task: SessionTask, cards: HypothesisCard[]): Highligh
     out.push({ kind: 'mismatch', screenKey: m.screenKey, title: name(m.screenKey), ...l, answer: answerFor(m.screenKey) })
     seen.add(`${m.screenKey}|${m.kind}`)
   }
+  for (const c of task.comments ?? []) out.push({ kind: 'comment', screenKey: c.screenKey, title: name(c.screenKey), observation: `yorum bıraktı: “${c.text}”` })
   if (task.outcome?.result === 'dropped' && task.outcome.lastScreen)
     out.push({ kind: 'dropped', screenKey: task.outcome.lastScreen, title: name(task.outcome.lastScreen), observation: 'görevi bu ekranda yarıda bıraktı', answer: answerFor(task.outcome.lastScreen) })
   for (const s of r.screens) {

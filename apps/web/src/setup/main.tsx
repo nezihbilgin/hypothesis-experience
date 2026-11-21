@@ -1,13 +1,12 @@
 // Setup screen v0 (researcher, local): build a study without writing JSON. Output is the study JSON the app reads
 // (study-level screens, tasks with expectedPath). Nothing is uploaded; save the file as
-// apps/web/src/studies/<name>.local.json (gitignored) to run it. Warm-up questions and the 5-second test are not
-// approved yet and are intentionally absent.
-import { BEHAVIOR_EXPECT, parseStudy, type Behavior } from '@hx/core'
+// apps/web/src/studies/<name>.local.json (gitignored) to run it.
+import { BEHAVIOR_EXPECT, CONTEXT_QUESTIONS_SOFT_MAX, parseStudy, type Behavior } from '@hx/core'
 import { useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import '../style.css'
 import './setup.css'
-import { allNodes, emptyStudy, nodesFromSession, toEditor, toStudyJson, type EditorScreen, type EditorStudy, type EditorTask } from './model'
+import { allNodes, emptyStudy, nodesFromSession, toEditor, toStudyJson, type EditorContextQuestion, type EditorFiveSecond, type EditorScreen, type EditorStudy, type EditorTask } from './model'
 
 const BEHAVIORS: { v: Behavior; label: string }[] = [
   { v: 'flow', label: 'Akış (takılmadan geçmeli)' },
@@ -226,6 +225,83 @@ function TaskEditor({ s, t, i, set }: { s: EditorStudy; t: EditorTask; i: number
   )
 }
 
+function ContextEditor({ s, set }: { s: EditorStudy; set: (s: EditorStudy) => void }) {
+  const qs = s.contextQuestions ?? []
+  const put = (next: EditorContextQuestion[]) => set({ ...s, contextQuestions: next })
+  const up = (i: number, patch: Partial<EditorContextQuestion>) => put(qs.map((q, j) => (j === i ? { ...q, ...patch } : q)))
+  return (
+    <section>
+      <h2>Bağlam soruları</h2>
+      <p className="muted small">Görevlerden önce sorulur, süre tutulmaz. Cevaplar raporun başında katılımcı bilgisi olarak görünür (örneğin "Bu uygulamayı ne sıklıkla kullanıyorsun?").</p>
+      {qs.length > CONTEXT_QUESTIONS_SOFT_MAX ? <p className="hint">{qs.length} soru var. {CONTEXT_QUESTIONS_SOFT_MAX}'ten fazla soru katılımcıyı görevlere başlamadan yorabilir.</p> : null}
+      {qs.map((q, i) => (
+        <div key={i} className="row ctx-edit">
+          <input className="grow" placeholder="Soru" value={q.text} onChange={(e) => up(i, { text: e.target.value })} />
+          <select value={q.type} onChange={(e) => up(i, { type: e.target.value as EditorContextQuestion['type'], options: e.target.value === 'choice' ? (q.options ?? []) : undefined })}>
+            <option value="text">Kısa metin</option>
+            <option value="choice">Tek seçim</option>
+          </select>
+          {q.type === 'choice' ? <input className="grow" placeholder="Seçenekler (virgülle)" value={(q.options ?? []).join(', ')} onChange={(e) => up(i, { options: e.target.value.split(',').map((x) => x.trim()).filter(Boolean) })} /> : null}
+          <button className="link" onClick={() => put(qs.filter((_, j) => j !== i))}>
+            Sil
+          </button>
+        </div>
+      ))}
+      <button onClick={() => put([...qs, { id: `q${qs.length + 1}`, text: '', type: 'text' }])}>Soru ekle</button>
+    </section>
+  )
+}
+
+function FiveSecondEditor({ s, set }: { s: EditorStudy; set: (s: EditorStudy) => void }) {
+  const ts = s.fiveSecondTests ?? []
+  const put = (next: EditorFiveSecond[]) => set({ ...s, fiveSecondTests: next })
+  const up = (i: number, patch: Partial<EditorFiveSecond>) => put(ts.map((x, j) => (j === i ? { ...x, ...patch } : x)))
+  const nodes = allNodes(s)
+  const name = (k: string) => s.screens.find((x) => x.key === k)?.name ?? k
+  return (
+    <section>
+      <h2>5 saniye testi</h2>
+      <p className="muted small">
+        Görevlerden önce seçilen ekranın görüntüsü 5 saniye gösterilir, sonra 1 ile 3 arasında hatırlama sorusu sorulur. Kamera ve tıklama ölçülmez. Ekran görüntüsü <code>frames.local/</code> klasöründe olmalı.
+      </p>
+      {ts.map((x, i) => (
+        <div key={i} className="task-edit">
+          <div className="row">
+            <label>
+              Ekran
+              <select value={x.screen} onChange={(e) => up(i, { screen: e.target.value })}>
+                <option value="">Seç…</option>
+                {nodes.map((k) => (
+                  <option key={k} value={k}>
+                    {k} {name(k) !== k ? `· ${name(k)}` : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Süre (sn)
+              <input className="n" type="number" min={1} max={30} value={x.seconds ?? 5} onChange={(e) => up(i, { seconds: num(e.target.value) === 5 ? undefined : num(e.target.value) })} />
+            </label>
+            <button className="link" onClick={() => put(ts.filter((_, j) => j !== i))}>
+              Testi sil
+            </button>
+          </div>
+          {x.questions.map((q, k) => (
+            <div key={k} className="row">
+              <input className="grow" placeholder={`Soru ${k + 1}`} value={q} onChange={(e) => up(i, { questions: x.questions.map((y, m) => (m === k ? e.target.value : y)) })} />
+              <button className="link" onClick={() => up(i, { questions: x.questions.filter((_, m) => m !== k) })}>
+                Sil
+              </button>
+            </div>
+          ))}
+          {x.questions.length < 3 ? <button onClick={() => up(i, { questions: [...x.questions, ''] })}>Soru ekle</button> : null}
+        </div>
+      ))}
+      <button onClick={() => put([...ts, { id: `5sn-${ts.length + 1}`, screen: '', questions: ['Bu ekranda ne gördün?'] }])}>5 saniye testi ekle</button>
+    </section>
+  )
+}
+
 function App() {
   const [s, set] = useState<EditorStudy>(emptyStudy())
   const json = useMemo(() => toStudyJson(s), [s])
@@ -277,10 +353,17 @@ function App() {
           <label className="check">
             <input type="checkbox" checked={s.faceSignals} onChange={(e) => set({ ...s, faceSignals: e.target.checked })} /> Yüz sinyalleri (katılımcıdan ayrıca onay istenir)
           </label>
+          <label className="check">
+            <input type="checkbox" checked={s.comments !== false} onChange={(e) => set({ ...s, comments: e.target.checked ? undefined : false })} /> Katılımcı ekranda nokta seçip yorum ekleyebilsin
+          </label>
         </div>
       </section>
 
+      <ContextEditor s={s} set={set} />
+
       <ScreensEditor s={s} set={set} />
+
+      <FiveSecondEditor s={s} set={set} />
 
       <section>
         <h2>Görevler</h2>

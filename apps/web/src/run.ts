@@ -64,9 +64,32 @@ export interface TaskRecord {
   outcome?: TaskOutcome
   /** Session time the target screen was first reached (null if never or no target defined). */
   reachedTargetAt: number | null
+  /** Comments the participant pinned on the prototype (clock paused while writing). */
+  comments: CommentRecord[]
   /** Screens seen that the study JSON does not define (helps the researcher fill in node ids). */
   unknownScreens: string[]
   blocked: string | null
+}
+
+export interface CommentRecord {
+  t: number
+  screenKey: string
+  /** State node shown when commenting (Figma), else the screen key. */
+  node: string
+  /** Point in the prototype iframe, CSS px, and the iframe size (the report maps it onto the frame image). */
+  point: { ix: number; iy: number; iw: number; ih: number }
+  /** Scroll offset of that frame from the last click on it (Figma sends it only with clicks), or null. */
+  scroll: { x: number; y: number } | null
+  /** true when the scroll offset is known from a click on the same node shortly before; otherwise approximate. */
+  precise: boolean
+  text: string
+}
+
+export interface FiveSecondResult {
+  id: string
+  screen: string
+  shown: boolean
+  answers: { question: string; answer: string | null }[]
 }
 
 export interface QualityResult extends QualityDecision {
@@ -111,6 +134,9 @@ export class SessionRun {
   /** First few raw Figma messages per type (ids and numbers only), to check the embed payload format. */
   figmaRaw: Record<string, unknown[]> = {}
   hardestTask: { answer: string | null; dontRemember: boolean; skipped: boolean } | null = null
+  /** Context questions (after the warm-up, not timed). */
+  contextAnswers: { id: string; text: string; answer: string | null }[] = []
+  fiveSecondResults: FiveSecondResult[] = []
   asked: AskedSoFar = { inTask: [], inSession: [] }
   private phase: 'idle' | 'quality' | 'warmup' | 'task' = 'idle'
   private probe: QualityProbe | null = null
@@ -221,7 +247,7 @@ export class SessionRun {
   prepareTask(i: number): TaskRecord {
     this.taskIndex = i
     const t = this.study.tasks[i]
-    const rec: TaskRecord = { id: t.id, prompt: t.prompt, expectation: null, seq: null, events: [], samples: [], questions: [], endSec: null, report: null, reachedTargetAt: null, unknownScreens: [], blocked: null }
+    const rec: TaskRecord = { id: t.id, prompt: t.prompt, expectation: null, seq: null, events: [], samples: [], questions: [], endSec: null, report: null, reachedTargetAt: null, comments: [], unknownScreens: [], blocked: null }
     this.tasks[i] = rec
     this.asked = { inTask: [], inSession: this.asked.inSession }
     return rec
@@ -314,6 +340,27 @@ export class SessionRun {
   }
 
   /** The session clock stops while a question is on screen; the screen's measurement is already closed. */
+  /** Comment mode: the clock stops while the participant picks a point and writes. */
+  startComment(): void {
+    this.sensing?.flush()
+    this.clock.pause()
+  }
+
+  /** Saves a comment (or cancels when text is null) and resumes the clock. */
+  endComment(point: CommentRecord['point'] | null, text: string | null): void {
+    if (point && text?.trim() && this.task) {
+      const t = this.clock.t()
+      const lastScreen = [...this.task.events].reverse().find((e) => e.type === 'screen' || e.type === 'state')
+      const screenKey = this.adapter?.screenKey ?? lastScreen?.screenKey ?? ''
+      const node = this.adapter?.currentNode ?? screenKey
+      const ls = this.adapter?.lastScroll
+      const scroll = ls && ls.node === node ? { x: ls.x, y: ls.y } : null
+      const precise = !!(ls && ls.node === node && t - ls.t <= 10)
+      this.task.comments.push({ t: Math.round(t * 1000) / 1000, screenKey, node, point, scroll, precise, text: text.trim() })
+    }
+    this.clock.resume()
+  }
+
   pauseForQuestion(): void {
     this.sensing?.flush()
     this.clock.pause()
@@ -391,6 +438,8 @@ export class SessionRun {
     this.tasks = []
     this.figmaRaw = {}
     this.hardestTask = null
+    this.contextAnswers = []
+    this.fiveSecondResults = []
     this.asked = { inTask: [], inSession: [] }
     this.wiped = true
   }
@@ -419,6 +468,8 @@ export class SessionRun {
       // Evidence for "nothing leaves the device": every request this page made (iframe internals not included),
       // grouped by origin and type. A fetch/xhr/beacon entry here would be an upload.
       network: networkSummary(),
+      contextAnswers: this.contextAnswers,
+      fiveSecondResults: this.fiveSecondResults,
       hardestTask: this.hardestTask
     }
   }

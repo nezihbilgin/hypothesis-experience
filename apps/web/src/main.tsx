@@ -10,7 +10,7 @@ const localStudies = import.meta.glob('./studies/*.local.json', { eager: true, i
 const localPick = new URLSearchParams(location.search).get('local')
 const localStudy = (localPick ? localStudies[`./studies/${localPick}.local.json`] : undefined) ?? Object.entries(localStudies).sort(([a], [b]) => a.localeCompare(b))[0]?.[1]
 import { SessionRun } from './run'
-import { CameraCheck, Consent, Hardest, Retro, Seq, Summary, TaskIntro, TaskRun, Warmup, Welcome } from './steps'
+import { CameraCheck, Consent, ContextQuestions, FiveSecondTests, Hardest, Retro, Seq, Summary, TaskIntro, TaskRun, Warmup, Welcome } from './steps'
 import { TextsCtx } from './ui'
 import './style.css'
 
@@ -19,6 +19,8 @@ type Step =
   | { k: 'consent' }
   | { k: 'check' }
   | { k: 'warmup' }
+  | { k: 'context' }
+  | { k: 'fivesec' }
   | { k: 'intro'; i: number }
   | { k: 'task'; i: number }
   | { k: 'retro'; i: number; moments: QuestionMoment[] }
@@ -57,7 +59,13 @@ function Flow({ study, participant }: { study: Study; participant: string }) {
       view = <CameraCheck run={run} next={() => go({ k: 'warmup' })} />
       break
     case 'warmup':
-      view = <Warmup run={run} next={() => go({ k: 'intro', i: 0 })} />
+      view = <Warmup run={run} next={() => go({ k: 'context' })} />
+      break
+    case 'context':
+      view = <ContextQuestions run={run} next={() => go({ k: 'fivesec' })} />
+      break
+    case 'fivesec':
+      view = <FiveSecondTests run={run} next={() => go({ k: 'intro', i: 0 })} />
       break
     case 'intro':
       view = <TaskIntro key={`intro-${step.i}`} run={run} index={step.i} next={() => go({ k: 'task', i: step.i })} />

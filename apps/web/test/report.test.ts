@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clicksByScreen, metricsCsv, parseSessionFile } from '../src/report/data'
+import { clicksByScreen, commentPosition, typicalViewportHeight, metricsCsv, parseSessionFile } from '../src/report/data'
 
 describe('report data', () => {
   it('groups clicks by screen with the state node and frame', () => {
@@ -71,4 +71,13 @@ describe('human labels with units', () => {
     expect(visitText(st())).toBe('Bu ekrana 2 kez geldi, toplam 34 sn kaldı')
     expect(taskTotals([st(), st({ durationSec: 6, visits: [{ start: 0, end: 6 }], backs: 0, deadClicks: 0, clicks: 2, rageClicks: 1 })])).toEqual({ durationSec: 40, visits: 3, backs: 1, loops: 0, clicks: 8, dead: 3, rage: 1, misclickRate: 0.38 })
   })
+  it('places comments on the reference image, with the scroll offset, and marks stale ones approximate', () => {
+    // 414 x 896 viewport shown at 0.5 scale in a 400 x 448 iframe (centred: 96.5 px each side).
+    const base = { t: 3, screenKey: 'a', node: 'a', text: 'x', point: { ix: 96.5 + 100, iy: 50, iw: 400, ih: 448 } }
+    expect(commentPosition({ ...base, scroll: null, precise: false }, { w: 414, h: 896 }, 896)).toEqual({ x: 200, y: 100, approximate: false })
+    expect(commentPosition({ ...base, scroll: { x: 0, y: 150 }, precise: true }, { w: 414, h: 1156 }, 896)).toEqual({ x: 200, y: 250, approximate: false })
+    expect(commentPosition({ ...base, scroll: { x: 0, y: 150 }, precise: false }, { w: 414, h: 1156 }, 896).approximate).toBe(true)
+    expect(typicalViewportHeight([{ w: 414, h: 896 }, { w: 414, h: 1156 }, { w: 414, h: 896 }, { w: 375, h: 812 }], 414)).toBe(896)
+  })
 })
+

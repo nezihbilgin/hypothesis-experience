@@ -1,14 +1,14 @@
 // Researcher report (local, v1): load one or more session files, show the health block first, then per task the
 // outcome, times, questions, mismatches, screen metrics and a static click map on reference images.
 // Export: CSV of the metrics and a printable view (browser "Save as PDF"). Nothing is uploaded.
-import { cardsFromTask, parseStudy, summarizeTask, type HypothesisCard, type ScreenStats, type Study } from '@hx/core'
-import { useMemo, useState } from 'react'
+import { cardsFromTask, faceTimeline, parseStudy, summarizeTask, type Baseline, type FaceMoment, type HypothesisCard, type ScreenStats, type Study } from '@hx/core'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import example from '../studies/example.json'
 import '../style.css'
 import './report.css'
-import { clickLegend, clicksByScreen, fmtSec, frictionText, highlights, metricsCsv, mismatchLines, parseSessionFile, pauseText, recompute, taskLine, taskTotals, visitText, type SessionFile, type SessionTask } from './data'
-import { figmaFrames, hasFigmaFrames, type ReferenceImageProvider } from './images'
+import { clickLegend, clicksByScreen, commentPosition, typicalViewportHeight, type SessionComment, fmtSec, frictionText, highlights, metricsCsv, mismatchLines, parseSessionFile, pauseText, recompute, taskLine, taskTotals, visitText, type SessionFile, type SessionTask } from './data'
+import { allFrameSizes, figmaFrames, hasFigmaFrames, type ReferenceImageProvider } from './images'
 
 const localStudies = import.meta.glob('../studies/*.local.json', { eager: true, import: 'default' })
 const pick = new URLSearchParams(location.search).get('local')
@@ -41,12 +41,37 @@ function download(name: string, text: string, type: string): void {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000)
 }
 
+const MOMENT: Record<FaceMoment['kind'], (sec: number) => string> = {
+  still: (sec) => `${sec} sn hareketsiz kaldı`,
+  'lean-in': (sec) => `ekrana yaklaştı (${sec} sn)`,
+  brow: (sec) => `kaş hareketi arttı (${sec} sn)`,
+  'blink-drop': () => 'göz kırpması azaldı',
+  talk: (sec) => `kendi kendine konuştu (${sec} sn)`,
+  away: (sec) => `ekrandan uzaklaştı (${sec} sn)`
+}
+
+/** Reference image sizes, for the viewport height of scrolling frames (comment positions). */
+function useFrameSizes(): { w: number; h: number }[] {
+  const [sizes, setSizes] = useState<{ w: number; h: number }[]>([])
+  useEffect(() => {
+    void allFrameSizes().then(setSizes)
+  }, [])
+  return sizes
+}
+
 function ClickMap({ screenKey, task, images }: { screenKey: string; task: SessionTask; images: ReferenceImageProvider }) {
-  const group = clicksByScreen(task.events).get(screenKey)
+  const group = clicksByScreen(task.events).get(screenKey) ?? { points: [], noPosition: 0 }
   const [size, setSize] = useState<Record<string, { w: number; h: number }>>({})
-  if (!group || (!group.points.length && !group.noPosition)) return null
+  const sizes = useFrameSizes()
+  const comments = (task.comments ?? []).filter((c) => c.screenKey === screenKey)
+  if (!group.points.length && !group.noPosition && !comments.length) return null
   const byNode = new Map<string, typeof group.points>()
   for (const p of group.points) byNode.set(p.node, [...(byNode.get(p.node) ?? []), p])
+  const commentsOf = new Map<string, SessionComment[]>()
+  for (const c of comments) {
+    commentsOf.set(c.node, [...(commentsOf.get(c.node) ?? []), c])
+    if (!byNode.has(c.node)) byNode.set(c.node, [])
+  }
   let unknown = group.noPosition
   const maps = [...byNode].flatMap(([node, pts]) => {
     const img = images.image(node)
@@ -61,12 +86,25 @@ function ClickMap({ screenKey, task, images }: { screenKey: string; task: Sessio
         <div className="clickmap-frame">
           <img src={img.url} alt={node} onLoad={(e) => setSize((s) => ({ ...s, [node]: { w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight } }))} />
           {sz ? l.drawable.map((p, i) => <span key={i} className={p.dead ? 'dot dead' : 'dot'} style={{ left: `${(p.x / sz.w) * 100}%`, top: `${(p.y / sz.h) * 100}%` }} />) : null}
+          {sz
+            ? (commentsOf.get(node) ?? []).map((c, i) => {
+                const pos = commentPosition(c, sz, typicalViewportHeight(sizes, sz.w))
+                const x = Math.min(Math.max(pos.x, 0), sz.w)
+                const y = Math.min(Math.max(pos.y, 0), sz.h)
+                return (
+                  <span key={`c${i}`} className={pos.approximate ? 'cpin approx' : 'cpin'} style={{ left: `${(x / sz.w) * 100}%`, top: `${(y / sz.h) * 100}%` }} title={c.text}>
+                    {comments.indexOf(c) + 1}
+                  </span>
+                )
+              })
+            : null}
         </div>
         <figcaption>
           {node === screenKey ? null : <span className="muted">Ekranın başka bir durumu · </span>}
           <span className="lg"><i className="dot-lg" /> {l.working} çalışan</span>
           <span className="lg"><i className="dot-lg dead" /> {l.dead} tepkisiz</span>
           {l.outside ? <span className="lg">Tasarımın dışına tıklama: {l.outside}</span> : null}
+          {commentsOf.get(node)?.length ? <span className="lg"><i className="cpin-lg" /> yorum</span> : null}
         </figcaption>
       </figure>
     ]
@@ -75,6 +113,15 @@ function ClickMap({ screenKey, task, images }: { screenKey: string; task: Sessio
     <div className="clickmaps">
       {maps}
       {unknown ? <p className="muted small">Konumu bilinmeyen tıklama: {unknown}</p> : null}
+      {comments.length ? (
+        <ol className="comments">
+          {comments.map((c, i) => (
+            <li key={i}>
+              “{c.text}” <span className="muted small">({fmtSec(c.t)}{!images.image(c.node) ? ', ekran görüntüsü yok' : size[c.node] && commentPosition(c, size[c.node], typicalViewportHeight(sizes, size[c.node].w)).approximate ? ', konum yaklaşık' : ''})</span>
+            </li>
+          ))}
+        </ol>
+      ) : null}
     </div>
   )
 }
@@ -82,7 +129,9 @@ function ClickMap({ screenKey, task, images }: { screenKey: string; task: Sessio
 const stepId = (taskId: string, screenKey: string): string => `step-${taskId}-${screenKey.replace(/[^\w-]/g, '-')}`
 const pct = (v: number | null | undefined): string => (v === null || v === undefined ? '–' : `%${Math.round(v * 100)}`)
 
-function StepCard({ task, s, cards, normalSec, firstScreen }: { task: SessionTask; s: ScreenStats; cards: HypothesisCard[]; normalSec: number; firstScreen: string | undefined }) {
+function StepCard({ task, s, cards, normalSec, firstScreen, face }: { task: SessionTask; s: ScreenStats; cards: HypothesisCard[]; normalSec: number; firstScreen: string | undefined; face: { baseline: Baseline; signals: boolean } | null }) {
+  const inVisit = (t: number): boolean => s.visits.some((v) => t >= Math.floor(v.start) && t < v.end)
+  const moments = face && task.samples?.length ? faceTimeline(task.samples.filter((x) => inVisit(x.t)), face.baseline, face.signals) : []
   const pause = pauseText(s, normalSec, s.screenKey === firstScreen)
   const card = cards.find((c) => c.screenKey === s.screenKey)
   const r = task.report!
@@ -142,6 +191,20 @@ function StepCard({ task, s, cards, normalSec, firstScreen }: { task: SessionTas
                 <dd>{s.faceSupport.map((f) => FACE[f] ?? f).join(', ')}</dd>
               </>
             ) : null}
+            {moments.length ? (
+              <>
+                <dt>Davranış</dt>
+                <dd>
+                  <ul className="timeline">
+                    {moments.map((m, i) => (
+                      <li key={i}>
+                        <span className="muted">{fmtSec(m.t)}:</span> {MOMENT[m.kind](m.sec)}
+                      </li>
+                    ))}
+                  </ul>
+                </dd>
+              </>
+            ) : null}
           </dl>
         </div>
       </div>
@@ -149,12 +212,12 @@ function StepCard({ task, s, cards, normalSec, firstScreen }: { task: SessionTas
   )
 }
 
-function TaskSection({ task, normalSec }: { task: SessionTask; normalSec: number }) {
+function TaskSection({ task, normalSec, face }: { task: SessionTask; normalSec: number; face: { baseline: Baseline; signals: boolean } | null }) {
   const cards = cardsOf(task.id)
   const name = (k: string): string => cards.find((c) => c.screenKey === k)?.screenName ?? k
   const r = task.report
   const hl = highlights(task, cards)
-  const LABEL: Record<string, string> = { mismatch: 'Sapma', dropped: 'Yarıda bırakma', rage: 'Art arda tıklama', loop: 'Gidip gelme', keyboard: 'Tıklamasız geçiş' }
+  const LABEL: Record<string, string> = { mismatch: 'Sapma', dropped: 'Yarıda bırakma', rage: 'Art arda tıklama', loop: 'Gidip gelme', keyboard: 'Tıklamasız geçiş', comment: 'Yorum' }
   const steps = r ? [...r.screens].sort((a, b) => (a.visits[0]?.start ?? 0) - (b.visits[0]?.start ?? 0)) : []
   const line = taskLine(task)
   const sc = study?.scales.seq
@@ -203,7 +266,7 @@ function TaskSection({ task, normalSec }: { task: SessionTask; normalSec: number
         <>
           <h4>Adım adım</h4>
           {steps.map((s) => (
-            <StepCard key={s.screenKey} task={task} s={s} cards={cards} normalSec={normalSec} firstScreen={firstScreen} />
+            <StepCard key={s.screenKey} task={task} s={s} cards={cards} normalSec={normalSec} firstScreen={firstScreen} face={face} />
           ))}
           <details>
             <summary>Görev özeti (CSV ile aynı veri)</summary>
@@ -266,6 +329,64 @@ function TaskSection({ task, normalSec }: { task: SessionTask; normalSec: number
 
 function faceSignalsOn(s: SessionFile): boolean {
   return !!study?.faceSignals && !!s.consent?.faceSignals && !!s.capabilities?.hasCamera
+}
+
+/** Behaviour timeline needs a camera and a valid baseline; blendshape moments also need face signals on. */
+function faceOf(s: SessionFile): { baseline: Baseline; signals: boolean } | null {
+  return s.capabilities?.hasCamera && s.baseline ? { baseline: s.baseline, signals: faceSignalsOn(s) } : null
+}
+
+function ParticipantInfo({ s }: { s: SessionFile }) {
+  const a = (s.contextAnswers ?? []).filter((x) => x.answer)
+  if (!a.length) return null
+  return (
+    <div className="participant-info">
+      <h4>Katılımcı bilgisi</h4>
+      <dl className="facts">
+        {a.map((x) => (
+          <Fragment key={x.id}>
+            <dt>{x.text}</dt>
+            <dd>{x.answer}</dd>
+          </Fragment>
+        ))}
+      </dl>
+    </div>
+  )
+}
+
+function FiveSecondSection({ s }: { s: SessionFile }) {
+  const rs = s.fiveSecondResults ?? []
+  if (!rs.length) return null
+  return (
+    <section className="fivesec-report">
+      <h3>5 saniye testi</h3>
+      <p className="muted small">Ekran 5 saniye gösterildi, sonra hatırladıkları soruldu. Kamera ve tıklama ölçülmez.</p>
+      {rs.map((r) => {
+        const img = figmaFrames.image(r.screen)
+        const name = study?.tasks.flatMap((t) => t.screens).find((x) => x.key === r.screen)?.name ?? r.screen
+        return (
+          <div key={r.id} className="fivesec-item">
+            {img ? <img src={img.url} alt={name} /> : null}
+            <div>
+              <b>{name}</b>
+              {r.shown ? (
+                <dl className="facts">
+                  {r.answers.map((q, i) => (
+                    <Fragment key={i}>
+                      <dt>{q.question}</dt>
+                      <dd>{q.answer ? `“${q.answer}”` : 'boş bıraktı'}</dd>
+                    </Fragment>
+                  ))}
+                </dl>
+              ) : (
+                <p className="muted">Ekran görüntüsü olmadığı için gösterilmedi.</p>
+              )}
+            </div>
+          </div>
+        )
+      })}
+    </section>
+  )
 }
 
 function Health({ s }: { s: SessionFile }) {
@@ -374,6 +495,12 @@ function App() {
           <li>
             <b>Tıklama haritası:</b> mavi nokta çalışan, kırmızı nokta tepkisiz tıklama. Tasarımın dışına yapılan tıklamalar sayı olarak yazılır.
           </li>
+          <li>
+            <b>Yorumlar:</b> numaralı işaret, katılımcının ekranda seçip yorum yazdığı nokta. Kaydırılan ekranlarda kaydırma bilgisi Figma'dan sadece tıklamayla gelir; son 10 sn içinde o ekranda tıklama yoksa konum yaklaşıktır ve kesikli çizilir.
+          </li>
+          <li>
+            <b>Davranış:</b> kamera açıksa ekranda gözlenen hareketler (hareketsiz kalma, ekrana yaklaşma, kendi kendine konuşma, ekrandan uzaklaşma), katılımcının ısınmadaki kendi normaline göre. Duygu ya da niyet çıkarımı yapılmaz.
+          </li>
         </ul>
       </details>
       <div className="no-print">
@@ -392,9 +519,11 @@ function App() {
       {sessions.map((s, i) => (
         <section key={i} className="session">
           <h2>{s.participant || 'Katılımcı'} · {s.startedAt.slice(0, 16).replace('T', ' ')}</h2>
+          <ParticipantInfo s={s} />
           <Health s={s} />
+          <FiveSecondSection s={s} />
           {s.tasks.filter((t): t is SessionTask => !!t).map((t) => (
-            <TaskSection key={t.id} task={t} normalSec={s.baseline?.firstActionP95 ?? 0} />
+            <TaskSection key={t.id} task={t} normalSec={s.baseline?.firstActionP95 ?? 0} face={faceOf(s)} />
           ))}
           {s.hardestTask?.answer ? <p><b>En zor görev:</b> {s.hardestTask.answer}</p> : null}
         </section>

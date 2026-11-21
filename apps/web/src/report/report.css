@@ -58,3 +58,14 @@ details summary { cursor: pointer; color: var(--accent); }
 .metrics tr.total td { font-weight: 600; border-top: 2px solid var(--line); }
 .howto { margin: 8px 0 16px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; }
 .howto li { margin: 6px 0; }
+
+/* Comments pinned by the participant (decisions 2026-11-21) */
+.cpin { position: absolute; transform: translate(-50%, -50%); min-width: 18px; height: 18px; border-radius: 9px; background: #f2a900; color: #1a1a1a; font: 600 11px/18px system-ui, sans-serif; text-align: center; border: 2px solid #fff; box-shadow: 0 0 0 1px #f2a900; }
+.cpin.approx { background: #fff3d1; border-style: dashed; border-color: #b07a00; }
+.cpin-lg { display: inline-block; width: 10px; height: 10px; border-radius: 5px; background: #f2a900; margin-right: 2px; vertical-align: middle; }
+ol.comments { margin: 6px 0 0; padding-left: 20px; }
+ul.timeline { margin: 0; padding-left: 16px; }
+.participant-info { margin: 8px 0 12px; }
+.fivesec-report { margin: 16px 0; }
+.fivesec-item { display: flex; gap: 16px; align-items: flex-start; margin: 8px 0; }
+.fivesec-item img { width: 160px; border: 1px solid #ddd; border-radius: 6px; }

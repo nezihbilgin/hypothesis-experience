@@ -19,3 +19,4 @@
 .setup pre { max-height: 400px; overflow: auto; background: var(--bg); padding: 10px; font-size: 0.8rem; }
 .setup .ok { color: #2e7d32; }
 .setup .errors { color: #b3261e; }
+.ctx-edit .grow, .row .grow { flex: 1; min-width: 160px; }

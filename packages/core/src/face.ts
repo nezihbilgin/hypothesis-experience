@@ -1,0 +1,67 @@
+// Face behaviour timeline for the report (decisions 2026-11-21, item D): behaviour moments only, each against the
+// participant's own warm-up baseline. No emotion labels and no images (Principle 1). Pure and deterministic.
+import { mean } from './engine'
+import { MIN_BLINK_SAMPLES, MIN_SAMPLES } from './screens'
+import type { Baseline, SecondSample } from './types'
+
+export type FaceMomentKind = 'still' | 'lean-in' | 'brow' | 'blink-drop' | 'talk' | 'away'
+
+export interface FaceMoment {
+  kind: FaceMomentKind
+  /** Start, task seconds. */
+  t: number
+  sec: number
+}
+
+export const FACE_STILL_MIN_SEC = 5
+export const FACE_RUN_MIN_SEC = 2
+const STILL_LEVEL = 0.9
+const LEAN_RATIO = 1.1
+const BROW_RISE = 0.1
+const BLINK_DROP_RATIO = 0.6
+const TALK_LEVEL = 0.3
+
+function runs(seconds: SecondSample[], test: (s: SecondSample) => boolean, minSec: number, kind: FaceMomentKind): FaceMoment[] {
+  const out: FaceMoment[] = []
+  let start: number | null = null
+  let last = -Infinity
+  const close = (): void => {
+    if (start !== null && last - start + 1 >= minSec) out.push({ kind, t: start, sec: last - start + 1 })
+    start = null
+  }
+  for (const s of seconds) {
+    if (test(s) && (start === null || s.t === last + 1)) {
+      if (start === null) start = s.t
+      last = s.t
+    } else {
+      close()
+      if (test(s)) {
+        start = s.t
+        last = s.t
+      }
+    }
+  }
+  close()
+  return out
+}
+
+/**
+ * Moments within one screen's seconds. `faceSignals` gates the blendshape/pose moments (still, lean-in, brow,
+ * blink-drop); 'away' needs only the camera and 'talk' the microphone.
+ */
+export function faceTimeline(samples: SecondSample[], baseline: Baseline, faceSignals: boolean): FaceMoment[] {
+  const sec = [...samples].filter((s) => s.samples >= MIN_SAMPLES).sort((a, b) => a.t - b.t)
+  const faced = (s: SecondSample): boolean => s.face
+  const out: FaceMoment[] = []
+  out.push(...runs(sec, (s) => !s.face, FACE_RUN_MIN_SEC, 'away'))
+  out.push(...runs(sec, (s) => faced(s) && (s.talking ?? 0) >= TALK_LEVEL, FACE_RUN_MIN_SEC, 'talk'))
+  if (faceSignals) {
+    out.push(...runs(sec, (s) => faced(s) && (s.stillness ?? 0) >= STILL_LEVEL, FACE_STILL_MIN_SEC, 'still'))
+    if (baseline.faceWidthMedian > 0) out.push(...runs(sec, (s) => faced(s) && (s.faceWidthRatio ?? 0) >= baseline.faceWidthMedian * LEAN_RATIO, FACE_RUN_MIN_SEC, 'lean-in'))
+    out.push(...runs(sec, (s) => faced(s) && s.browDown != null && s.browDown - baseline.browDownMedian >= BROW_RISE, FACE_RUN_MIN_SEC, 'brow'))
+    const blink = sec.filter((s) => faced(s) && s.samples >= MIN_BLINK_SAMPLES && s.blinkRate != null)
+    if (baseline.blinkRateMedian > 0 && blink.length >= 5 && mean(blink.map((s) => s.blinkRate!)) < baseline.blinkRateMedian * BLINK_DROP_RATIO)
+      out.push({ kind: 'blink-drop', t: blink[0].t, sec: blink.length })
+  }
+  return out.sort((a, b) => a.t - b.t || a.kind.localeCompare(b.kind))
+}

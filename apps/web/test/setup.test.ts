@@ -28,4 +28,12 @@ describe('setup model', () => {
     expect(nodesFromSession(session)).toEqual(['1:1', '1:2', '1:3'])
     expect(allNodes(toEditor(v3like))).toEqual(['1:1', '1:2', '1:3'])
   })
+  it('keeps context questions, 5-second tests and the comments switch, and the result parses', () => {
+    const ed = { ...toEditor({ name: 'x', sourceType: 'figma', sourceUrl: 'https://www.figma.com/proto/abc', screens: [{ key: '1:2', name: 'A', behavior: 'flow', expectedSec: [1, 5] }], tasks: [{ id: 't', prompt: 'p', expectedPath: ['1:2'] }] }), contextQuestions: [{ id: 'q1', text: 'Ne sıklıkla?', type: 'choice' as const, options: ['Her gün', 'Haftada bir'] }], fiveSecondTests: [{ id: '5sn-1', screen: '1:2', questions: ['Ne gördün?'] }], comments: false }
+    const r = parseStudy(toStudyJson(ed))
+    expect(r.ok && r.study.contextQuestions[0].options).toEqual(['Her gün', 'Haftada bir'])
+    expect(r.ok && r.study.fiveSecondTests[0]).toMatchObject({ screen: '1:2', seconds: 5 })
+    expect(r.ok && r.study.comments).toBe(false)
+  })
 })
+

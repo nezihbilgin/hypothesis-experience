@@ -8,6 +8,21 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 
 ---
 
+## 2026-11-21: Isınma sadeleşti; bağlam soruları; ekranda yorum; davranış zaman çizelgesi; 5 saniye testi
+
+Kaynak: Nezih'in onayı (PM üzerinden, A–E maddeleri) ve PM eki (yorum konumu). Durum: uygulandı (`faz1-core`).
+
+- **A. Isınma:** açıklama mesajı ile köşe tıklamaları birleşti. Önce kısa bir not (en az 12 sn ekranda), sonra ekranın dört köşesinde birer cümle ve "Tamam" butonu. Baseline ölçümü aynı (ilk tıklamaya kadar süre sadece cümle ekranlarında, kamera saniyeleri tüm ısınma boyunca). Toplam yaklaşık 30 sn. Metin kataloğu anahtarları `warmup.intro`, `warmup.welcome`, `warmup.s1`–`s4`, `warmup.ok`.
+- **B. Bağlam soruları:** `contextQuestions` (kısa metin ya da tek seçim), görevlerden önce, süre tutulmaz. Sınır yok; kurulum ekranı 5'ten fazlasında uyarır (`CONTEXT_QUESTIONS_SOFT_MAX`). Raporda oturumun başında "Katılımcı bilgisi".
+- **C. Ekranda yorum:** görev çubuğunda "Yorum ekle"; prototipin üstüne şeffaf bir katman gelir, katılımcı bir nokta seçip yazar, bu sırada saat durur (süre ölçümlerine girmez). Kayıt: ekran, durum node'u, iframe içindeki nokta ve iframe boyutu, zaman, metin, kaydırma ofseti, `precise`. Araştırmacı çalışmada kapatabilir (`comments: false`). Raporda adım kartının görüntüsünde numaralı işaret, altta metin; "Öne çıkan anlar"da "Yorum".
+  - **Kaydırma:** Figma kaydırma ofsetini (`nearestScrollingFrameOffset`) sadece tıklama mesajlarında gönderiyor; kaydırma olayı yok. Yorum, aynı ekrandaki son tıklamanın ofsetini kullanır. Son tıklama 10 sn içindeyse konum kesin, değilse ve ekran kaydırılabiliyorsa yaklaşık; raporda yaklaşık olanlar kesikli işaretlenir.
+  - **Ölçek:** iframe pikseli kare koordinatına, embed'in cihaz görüntüsünü iframe'e sığdırıp ortaladığı varsayımıyla çevrilir. Kaydırılan karelerde görünen yükseklik, aynı genişlikteki referans görüntülerin en sık yüksekliği kabul edilir.
+- **D. Davranış zaman çizelgesi:** kamera açıkken adım kartında "Davranış" satırı: hareketsiz kaldı (5 sn+), ekrana yaklaştı, kaş hareketi arttı, göz kırpması azaldı, kendi kendine konuştu, ekrandan uzaklaştı (2 sn+). Eşikler katılımcının ısınmadaki kendi değerlerine göre; blendshape'e dayananlar (hareketsizlik, yaklaşma, kaş, göz kırpma) sadece yüz sinyalleri açıkken. `packages/core/src/face.ts`, `faceTimeline`. Görüntü ve duygu etiketi yok. PM listesindeki "kaşlarını çattı" ifadesi 2026-11-20 madde 4 ile çeliştiği için nötr "kaş hareketi arttı" kullanıldı.
+- **E. 5 saniye testi:** `fiveSecondTests` (ekran, süre varsayılan 5 sn, 1–3 hatırlama sorusu). Görevlerden önce, bağlam sorularından sonra. Görüntü araştırmacının referans görüntülerinden gelir (`frames.local/`); görüntü yoksa test atlanır ve "gösterilmedi" kaydedilir. Kamera ve tıklama ölçülmez. Raporda ayrı bölüm. Kurulum ekranında editörü var.
+- Akış: hoş geldin → onay → kamera kontrolü → ısınma → bağlam soruları → 5 saniye testi → görevler.
+
+---
+
 ## 2026-11-21: Kurulum ekranı v0; kamera açık ağ kontrolü; klavye ayarı
 
 Kaynak: PM iş sırası (Nezih bugün test yapamadığı için Nezih'e bağlı olmayan işler). Durum: uygulandı (`faz1-core`).

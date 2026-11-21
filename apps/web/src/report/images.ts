@@ -23,3 +23,20 @@ export const figmaFrames: ReferenceImageProvider = {
 }
 
 export const hasFigmaFrames = (): boolean => Object.keys(figmaFiles).length > 0
+
+/** Natural sizes of all reference images (loaded once, in the browser). */
+let sizesPromise: Promise<{ w: number; h: number }[]> | null = null
+export function allFrameSizes(): Promise<{ w: number; h: number }[]> {
+  sizesPromise ??= Promise.all(
+    Object.values(figmaFiles).map(
+      (url) =>
+        new Promise<{ w: number; h: number } | null>((ok) => {
+          const img = new Image()
+          img.onload = () => ok({ w: img.naturalWidth, h: img.naturalHeight })
+          img.onerror = () => ok(null)
+          img.src = url
+        })
+    )
+  ).then((xs) => xs.filter((x): x is { w: number; h: number } => !!x))
+  return sizesPromise
+}

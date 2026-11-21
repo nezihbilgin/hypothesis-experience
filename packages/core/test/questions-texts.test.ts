@@ -164,6 +164,17 @@ describe('study definition (tasks, settings)', () => {
     const bad = parseStudy({ ...base, tasks: [{ prompt: 'x', screens: [screen], targetScreen: '9:9' }] })
     expect(bad.ok ? [] : bad.errors).toEqual(['Görev 1: targetScreen "9:9" tanımlı ekranlardan biri olmalı.'])
   })
+  it('parses context questions, 5-second tests and the comments switch', () => {
+    const r = parseStudy({ ...base, taskPrompt: 'x', screens: [screen], comments: false,
+      contextQuestions: [{ text: 'Bu uygulamayı ne sıklıkla kullanıyorsun?', type: 'choice', options: ['Her gün', 'Haftada bir', 'Daha az'] }, { id: 'rol', text: 'Rolün nedir?' }],
+      fiveSecondTests: [{ screen: '1:2', questions: ['Bu ekran ne ile ilgiliydi?'] }] })
+    if (!r.ok) throw new Error(r.errors.join())
+    expect(r.study.contextQuestions).toEqual([{ id: 'q1', text: 'Bu uygulamayı ne sıklıkla kullanıyorsun?', type: 'choice', options: ['Her gün', 'Haftada bir', 'Daha az'] }, { id: 'rol', text: 'Rolün nedir?', type: 'text' }])
+    expect(r.study.fiveSecondTests).toEqual([{ id: '5s-1', screen: '1:2', seconds: 5, questions: ['Bu ekran ne ile ilgiliydi?'] }])
+    expect(r.study.comments).toBe(false)
+    const bad = parseStudy({ ...base, taskPrompt: 'x', screens: [screen], contextQuestions: [{ text: 'a', type: 'choice', options: ['x'] }], fiveSecondTests: [{ screen: '1:2', questions: [] }] })
+    expect(bad.ok ? [] : bad.errors).toEqual(['Bağlam sorusu 1: tek seçimli soruda en az 2 seçenek olmalı.', '5 saniye testi 1: 1 ile 3 arasında soru olmalı.'])
+  })
   it('face signals default off for workplace and education studies', () => {
     for (const context of ['workplace', 'education']) {
       const r = parseStudy({ ...base, context, taskPrompt: 'x', screens: [screen] })

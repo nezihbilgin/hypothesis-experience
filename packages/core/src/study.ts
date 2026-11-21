@@ -76,7 +76,34 @@ export interface Study {
   questions: QuestionPoints
   /** Participant-facing texts: defaults + this study's overrides. */
   texts: TextCatalog
+  /** Context questions asked after the warm-up, before the tasks; not timed. No limit (setup warns above 5). */
+  contextQuestions: ContextQuestion[]
+  /** 5-second tests before the tasks: a screen image for 5 s, then 1-3 recall questions. No camera/click metrics. */
+  fiveSecondTests: FiveSecondTest[]
+  /** Participant may pin a comment on the prototype at any time (default on). */
+  comments: boolean
 }
+
+export interface ContextQuestion {
+  id: string
+  text: string
+  type: 'text' | 'choice'
+  /** For 'choice': the options (single choice). */
+  options?: string[]
+}
+
+export interface FiveSecondTest {
+  id: string
+  /** Screen key or node id whose reference image is shown. */
+  screen: string
+  /** Seconds the image is shown (default 5). */
+  seconds: number
+  /** 1-3 recall questions. */
+  questions: string[]
+}
+
+/** Above this many context questions the setup screen shows a soft warning (no hard limit). */
+export const CONTEXT_QUESTIONS_SOFT_MAX = 5
 
 export type ParseResult = { ok: true; study: Study } | { ok: false; errors: string[] }
 
@@ -274,6 +301,34 @@ export function parseStudy(input: unknown): ParseResult {
     limits: { perTask: limit('perTask'), endOfTask: limit('endOfTask'), perSession: limit('perSession') }
   }
 
+  // Context questions, 5-second tests, comments
+  const contextQuestions: ContextQuestion[] = []
+  if (o.contextQuestions !== undefined && !Array.isArray(o.contextQuestions)) errors.push('contextQuestions bir liste olmalı.')
+  ;(Array.isArray(o.contextQuestions) ? o.contextQuestions : []).forEach((raw, i) => {
+    const q = isObj(raw) ? raw : {}
+    const at = `Bağlam sorusu ${i + 1}`
+    const text = optText(q.text)
+    if (!text) errors.push(`${at}: text boş olamaz.`)
+    const type = q.type === 'choice' ? 'choice' : q.type === undefined || q.type === 'text' ? 'text' : null
+    if (!type) errors.push(`${at}: type "text" ya da "choice" olmalı.`)
+    const options = Array.isArray(q.options) ? (q.options as unknown[]).map((x) => optText(x)).filter((x): x is string => !!x) : []
+    if (type === 'choice' && options.length < 2) errors.push(`${at}: tek seçimli soruda en az 2 seçenek olmalı.`)
+    contextQuestions.push({ id: optText(q.id) ?? `q${i + 1}`, text: text ?? '', type: type ?? 'text', ...(type === 'choice' ? { options } : {}) })
+  })
+  const fiveSecondTests: FiveSecondTest[] = []
+  if (o.fiveSecondTests !== undefined && !Array.isArray(o.fiveSecondTests)) errors.push('fiveSecondTests bir liste olmalı.')
+  ;(Array.isArray(o.fiveSecondTests) ? o.fiveSecondTests : []).forEach((raw, i) => {
+    const f = isObj(raw) ? raw : {}
+    const at = `5 saniye testi ${i + 1}`
+    const screen = optText(f.screen)
+    if (!screen) errors.push(`${at}: screen (ekran ya da durum node id) boş olamaz.`)
+    const qs = Array.isArray(f.questions) ? (f.questions as unknown[]).map((x) => optText(x)).filter((x): x is string => !!x) : []
+    if (qs.length < 1 || qs.length > 3) errors.push(`${at}: 1 ile 3 arasında soru olmalı.`)
+    const secs = typeof f.seconds === 'number' && f.seconds > 0 && f.seconds <= 30 ? f.seconds : 5
+    fiveSecondTests.push({ id: optText(f.id) ?? `5s-${i + 1}`, screen: screen ?? '', seconds: secs, questions: qs })
+  })
+  if (o.comments !== undefined && typeof o.comments !== 'boolean') errors.push('comments true ya da false olmalı.')
+
   if (errors.length) return { ok: false, errors }
   return {
     ok: true,
@@ -288,7 +343,10 @@ export function parseStudy(input: unknown): ParseResult {
       tasks,
       scales,
       questions,
-      texts
+      texts,
+      contextQuestions,
+      fiveSecondTests,
+      comments: o.comments !== false
     }
   }
 }

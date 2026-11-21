@@ -31,6 +31,20 @@ export interface EditorTask {
   overrides?: Record<string, EditorOverride>
 }
 
+export interface EditorContextQuestion {
+  id: string
+  text: string
+  type: 'text' | 'choice'
+  options?: string[]
+}
+
+export interface EditorFiveSecond {
+  id: string
+  screen: string
+  seconds?: number
+  questions: string[]
+}
+
 export interface EditorStudy {
   name: string
   sourceType: 'figma' | 'script'
@@ -39,6 +53,10 @@ export interface EditorStudy {
   faceSignals: boolean
   screens: EditorScreen[]
   tasks: EditorTask[]
+  contextQuestions?: EditorContextQuestion[]
+  fiveSecondTests?: EditorFiveSecond[]
+  /** Pin-a-point comments; on unless false. */
+  comments?: boolean
   [extra: string]: unknown
 }
 
