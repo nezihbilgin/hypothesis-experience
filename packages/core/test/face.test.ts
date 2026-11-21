@@ -16,7 +16,7 @@ describe('face timeline', () => {
         blinkRate: 6
       })
     )
-    expect(faceTimeline(secs, base, true)).toEqual([
+    expect(faceTimeline(secs, base, { faceSignals: true })).toEqual([
       { kind: 'blink-drop', t: 0, sec: 18 },
       { kind: 'still', t: 2, sec: 7 },
       { kind: 'lean-in', t: 10, sec: 3 },
@@ -26,10 +26,17 @@ describe('face timeline', () => {
   })
   it('still means no interaction: seconds with a click break the run', () => {
     const secs = Array.from({ length: 12 }, (_, t) => s(t, { stillness: 1 }))
-    expect(faceTimeline(secs, base, true, [3, 4]).filter((m) => m.kind === 'still')).toEqual([{ kind: 'still', t: 5, sec: 7 }])
+    expect(faceTimeline(secs, base, { faceSignals: true, activeSeconds: [3, 4] }).filter((m) => m.kind === 'still')).toEqual([{ kind: 'still', t: 5, sec: 7 }])
+  })
+  it('a question or comment pause splits a run', () => {
+    const secs = Array.from({ length: 14 }, (_, t) => s(t, { stillness: 1 }))
+    expect(faceTimeline(secs, base, { faceSignals: true, breaks: [6.4] }).filter((m) => m.kind === 'still')).toEqual([
+      { kind: 'still', t: 0, sec: 7 },
+      { kind: 'still', t: 7, sec: 7 }
+    ])
   })
   it('without face signals only away and talking remain', () => {
     const secs = Array.from({ length: 6 }, (_, t) => s(t, { stillness: 1, talking: t < 3 ? 0.6 : 0 }))
-    expect(faceTimeline(secs, base, false)).toEqual([{ kind: 'talk', t: 0, sec: 3 }])
+    expect(faceTimeline(secs, base, { faceSignals: false })).toEqual([{ kind: 'talk', t: 0, sec: 3 }])
   })
 })

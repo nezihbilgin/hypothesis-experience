@@ -1,5 +1,5 @@
 // Researcher report data helpers (pure, unit-tested): session files -> rows for tables, CSV and the click map.
-import { HESITATION_FLOOR_SEC, computeScreenReport, taskOutcome, type Baseline, type HypothesisCard, type InteractionEvent, type Mismatch, type ScreenReport, type ScreenStats, type SecondSample, type SessionHealth, type Study, type TaskOutcome } from '@hx/core'
+import { HESITATION_FLOOR_SEC, computeScreenReport, faceTimeline, loopsFrom, visitsFrom, type FaceMoment, taskOutcome, type Baseline, type HypothesisCard, type InteractionEvent, type Mismatch, type ScreenReport, type ScreenStats, type SecondSample, type SessionHealth, type Study, type TaskOutcome } from '@hx/core'
 
 export interface SessionTask {
   id: string
@@ -39,6 +39,8 @@ export interface SessionFile {
   tasks: (SessionTask | null)[]
   contextAnswers?: { id: string; text: string; answer: string | null }[]
   fiveSecondResults?: { id: string; screen: string; shown: boolean; answers: { question: string; answer: string | null }[] }[]
+  /** Researcher notes saved with the report (item id -> text). */
+  researcherNotes?: Record<string, string>
   hardestTask?: { answer: string | null; dontRemember: boolean; skipped: boolean } | null
 }
 
@@ -109,18 +111,21 @@ const csvCell = (v: unknown): string => {
 }
 
 /** One row per participant × task × screen, plus task-level columns repeated (for spreadsheets). */
-export function metricsCsv(sessions: SessionFile[], names: (taskId: string) => HypothesisCard[]): string {
-  const head = ['participant', 'task', 'result', 'task_sec', 'orientation_sec', 'expectation', 'seq', 'screen', 'screen_name', 'off_path', 'duration_sec', 'effort', 'friction', 'first_action_sec', 'backs', 'loops', 'clicks', 'dead_clicks', 'misclick_rate', 'rage_clicks', 'away_sec', 'mismatches']
+export function metricsCsv(sessions: SessionFile[], names: (taskId: string) => HypothesisCard[], notes: (s: SessionFile) => Record<string, string> = (s) => s.researcherNotes ?? {}): string {
+  const head = ['participant', 'task', 'result', 'task_sec', 'orientation_sec', 'expectation', 'seq', 'screen', 'screen_name', 'off_path', 'duration_sec', 'effort', 'friction', 'first_action_sec', 'backs', 'loops', 'clicks', 'dead_clicks', 'misclick_rate', 'rage_clicks', 'away_sec', 'mismatches', 'researcher_note']
   const rows = [head.join(',')]
   for (const s of sessions)
     for (const t of s.tasks) {
       if (!t?.report) continue
       const cards = names(t.id)
+      const ns = notes(s)
       for (const st of t.report.screens) {
+        // Step-card note, then notes on this screen's stuck moments.
+        const note = [ns[stepNoteId(t.id, st.screenKey)], ...Object.entries(ns).filter(([k, v]) => v && k.startsWith(`moment:${t.id}:${st.screenKey}@`)).map(([k, v]) => `Takılma anı ${k.split('@')[1]}. sn: ${v}`)].filter(Boolean).join(' | ')
         const card = cards.find((c) => c.screenKey === st.screenKey)
         const mm = t.report.mismatches.filter((m) => m.screenKey === st.screenKey).map((m) => m.kind).join(' ')
         rows.push(
-          [s.participant || s.startedAt, t.id, t.outcome?.result ?? '', t.endSec, t.report.orientationSec, t.expectation, t.seq, st.screenKey, card?.screenName ?? '', st.offPath ? 1 : 0, st.durationSec, st.observed.effort, st.observed.friction, st.firstActionSec, st.backs, st.loops ?? 0, st.clicks ?? '', st.deadClicks, st.misclickRate ?? '', st.rageClicks, st.awaySec, mm]
+          [s.participant || s.startedAt, t.id, t.outcome?.result ?? '', t.endSec, t.report.orientationSec, t.expectation, t.seq, st.screenKey, card?.screenName ?? '', st.offPath ? 1 : 0, st.durationSec, st.observed.effort, st.observed.friction, st.firstActionSec, st.backs, st.loops ?? 0, st.clicks ?? '', st.deadClicks, st.misclickRate ?? '', st.rageClicks, st.awaySec, mm, note]
             .map(csvCell)
             .join(',')
         )
@@ -176,7 +181,7 @@ export interface Highlight {
  * is added. Approximate when the scroll offset may be stale (no click on this screen in the last 10 s) or unknown
  * on a frame taller than the viewport.
  */
-export function commentPosition(c: SessionComment, img: { w: number; h: number }, viewportH: number): { x: number; y: number; approximate: boolean } {
+export function commentPosition(c: SessionComment, img: { w: number; h: number }, viewportH: number): { x: number; y: number; approximate: boolean; yRange?: [number, number] } {
   const vw = img.w
   const vh = Math.min(img.h, viewportH > 0 ? viewportH : img.h)
   const { ix, iy, iw, ih } = c.point
@@ -184,7 +189,12 @@ export function commentPosition(c: SessionComment, img: { w: number; h: number }
   const x = (ix - (iw - vw * s) / 2) / s + (c.scroll?.x ?? 0)
   const y = (iy - (ih - vh * s) / 2) / s + (c.scroll?.y ?? 0)
   const scrolls = img.h > vh + 1
-  return { x: Math.round(x), y: Math.round(y), approximate: !c.precise && scrolls }
+  if (c.precise || !scrolls) return { x: Math.round(x), y: Math.round(y), approximate: false }
+  // Scroll unknown or possibly stale: the point is somewhere between "not scrolled" and "scrolled to the end".
+  const y0 = (iy - (ih - vh * s) / 2) / s
+  const top = Math.round(Math.max(0, y0))
+  const bottom = Math.round(Math.min(img.h, y0 + (img.h - vh)))
+  return { x: Math.round(x), y: Math.round(y), approximate: true, yRange: [top, bottom] }
 }
 
 /** Most common height among reference images of the same width: the device viewport for scrolling frames. */
@@ -266,7 +276,7 @@ export function pauseText(st: ScreenStats, normalSec: number, isFirstScreen: boo
   return { text: `İlk tıklamaya kadar ${fmtSec(st.firstActionSec)}${normalSec > 0 ? ` (bu katılımcının normali ${fmtSec(normalSec)})` : ''}`, flagged }
 }
 
-/** "Sorun işareti yok" or the reasons, e.g. "1 geri dönüş, 3 tepkisiz tıklama". */
+/** The friction reasons, e.g. "1 geri dönüş, 3 tepkisiz tıklama"; empty when there are none (the row is hidden). */
 export function frictionText(st: ScreenStats): string {
   const r: string[] = []
   if (st.offPath) r.push('beklenen yolun dışında')
@@ -274,7 +284,7 @@ export function frictionText(st: ScreenStats): string {
   if (st.deadClicks) r.push(`${st.deadClicks} tepkisiz tıklama`)
   if (st.rageClicks) r.push(`${st.rageClicks} kez art arda tıklama`)
   if (st.loops) r.push(`${st.loops} gidip gelme`)
-  return r.length ? r.join(', ') : 'Sorun işareti yok'
+  return r.join(', ')
 }
 
 /** "Bu ekrana 2 kez geldi, toplam 34 sn kaldı" */
@@ -299,3 +309,139 @@ export function taskTotals(screens: ScreenStats[]): { durationSec: number; visit
     misclickRate: clicks ? Math.round((dead / clicks) * 100) / 100 : null
   }
 }
+
+
+// ---- Face behaviour on the task clock ------------------------------------------------------------------------
+/** Face behaviour moments for a whole task (task seconds), split at question/comment pauses. */
+export function taskFaceMoments(task: SessionTask, baseline: Baseline | undefined, signals: boolean, hasCamera: boolean): FaceMoment[] {
+  if (!hasCamera || !baseline || !task.samples?.length) return []
+  const breaks = [...task.questions.map((q) => (q.moment as { askedAt?: number }).askedAt).filter((x): x is number => typeof x === 'number'), ...(task.comments ?? []).map((c) => c.t)]
+  const activeSeconds = task.events.filter((e) => e.type === 'click' || e.type === 'dead-click').map((e) => Math.floor(e.t))
+  return faceTimeline(task.samples, baseline, { faceSignals: signals, activeSeconds, breaks })
+}
+
+export const FACE_LABEL: Record<FaceMoment['kind'], string> = {
+  still: 'hiç tıklamadan hareketsiz kaldı',
+  'lean-in': 'ekrana yaklaştı',
+  brow: 'kaş hareketi arttı',
+  'blink-drop': 'göz kırpması azaldı',
+  talk: 'kendi kendine konuştu',
+  away: 'ekrandan uzaklaştı'
+}
+
+/** "görev başından 15. sn" / "görev başından 24.–42. sn (19 sn)". */
+export function atText(t: number, sec?: number): string {
+  const a = Math.floor(t)
+  if (!sec || sec <= 1) return `görev başından ${a}. sn`
+  return `görev başından ${a}.–${a + sec - 1}. sn (${sec} sn)`
+}
+
+/** One face moment as a step-card line: "görev başından 24.–42. sn (19 sn): hiç tıklamadan hareketsiz kaldı". */
+export function faceLine(m: FaceMoment): string {
+  return m.kind === 'blink-drop' ? `${atText(m.t)} ve sonrası: ${FACE_LABEL[m.kind]}` : `${atText(m.t, m.sec)}: ${FACE_LABEL[m.kind]}`
+}
+
+// ---- Stuck moments ("Takılma anları") -------------------------------------------------------------------------
+export interface StuckSignal {
+  kind: 'dead' | 'rage' | 'back' | 'loop' | 'pause'
+  t: number
+  end: number
+}
+
+export interface StuckMoment {
+  id: string
+  screenKey: string
+  start: number
+  end: number
+  signals: StuckSignal[]
+  face: FaceMoment[]
+  comments: SessionComment[]
+  /** What the participant answered about this screen, if asked. */
+  answer?: string
+}
+
+const STUCK_GAP_SEC = 3
+const FACE_PAD_SEC = 2
+
+/**
+ * Friction signals on one screen close in time (dead or repeated clicks, going back, back-and-forth, a long pause
+ * before the first click) merged into one moment, with the face behaviour and comments in the same time window and
+ * the participant's answer about that screen. Observations only: no intent or emotion.
+ */
+export function stuckMoments(task: SessionTask, face: FaceMoment[], cards: HypothesisCard[], normalSec: number): StuckMoment[] {
+  const r = task.report
+  if (!r) return []
+  const endSec = task.endSec ?? task.events[task.events.length - 1]?.t ?? 0
+  const visits = visitsFrom(task.events, endSec)
+  const order = new Map(cards.map((c) => [c.screenKey, c.order]))
+  const sig: (StuckSignal & { screenKey: string })[] = []
+  for (const e of task.events) {
+    if (e.type === 'dead-click') sig.push({ kind: 'dead', t: e.t, end: e.t, screenKey: e.screenKey })
+    if (e.type === 'rage-click') sig.push({ kind: 'rage', t: e.t, end: e.t, screenKey: e.screenKey })
+  }
+  for (let i = 1; i < visits.length; i++) {
+    const a = order.get(visits[i - 1].screenKey)
+    const b = order.get(visits[i].screenKey)
+    if (a !== undefined && b !== undefined && b < a) sig.push({ kind: 'back', t: visits[i].start, end: visits[i].start, screenKey: visits[i - 1].screenKey })
+  }
+  for (const l of loopsFrom(visits)) for (const at of l.at) sig.push({ kind: 'loop', t: at, end: at, screenKey: l.screens[1] })
+  const first = visits[0]?.screenKey
+  const threshold = Math.max(HESITATION_FLOOR_SEC, 2 * normalSec)
+  for (const v of visits) {
+    if (v.screenKey === first && v.start === visits[0].start) continue // orientation, not a pause
+    const click = task.events.find((e) => (e.type === 'click' || e.type === 'dead-click') && e.t >= v.start && e.t < v.end)
+    const wait = (click?.t ?? v.end) - v.start
+    if (wait > threshold) sig.push({ kind: 'pause', t: v.start, end: v.start + wait, screenKey: v.screenKey })
+  }
+  const out: StuckMoment[] = []
+  const byScreen = new Map<string, typeof sig>()
+  for (const x of sig) byScreen.set(x.screenKey, [...(byScreen.get(x.screenKey) ?? []), x])
+  for (const [screenKey, xs] of byScreen) {
+    xs.sort((a, b) => a.t - b.t)
+    let cur: StuckMoment | null = null
+    const flush = (): void => {
+      if (cur) out.push(cur)
+      cur = null
+    }
+    for (const x of xs) {
+      if (cur && x.t <= cur.end + STUCK_GAP_SEC) {
+        cur.signals.push(x)
+        cur.end = Math.max(cur.end, x.end)
+      } else {
+        flush()
+        cur = { id: `${screenKey}@${Math.floor(x.t)}`, screenKey, start: x.t, end: x.end, signals: [x], face: [], comments: [] }
+      }
+    }
+    flush()
+  }
+  const onScreen = (t: number, k: string): boolean => visits.some((v) => v.screenKey === k && t >= v.start - 0.5 && t < v.end + 0.5)
+  for (const m of out) {
+    const lo = m.start - FACE_PAD_SEC
+    const hi = m.end + FACE_PAD_SEC
+    m.face = face.filter((f) => f.t <= hi && f.t + f.sec >= lo && onScreen(f.t, m.screenKey))
+    m.comments = (task.comments ?? []).filter((c) => c.screenKey === m.screenKey && c.t >= lo && c.t <= hi + 5)
+    const q = task.questions.find((x) => x.moment.screenKey === m.screenKey && x.answer)
+    if (q?.answer) m.answer = q.answer
+  }
+  // Heaviest first: more signals, then face behaviour at the same time.
+  return out.sort((a, b) => b.signals.length + b.face.length - (a.signals.length + a.face.length) || a.start - b.start)
+}
+
+/** "3 tepkisiz tıklama, 1 kez geri döndü, ilk tıklamadan önce 11 sn bekledi" */
+export function stuckSignalsText(m: StuckMoment): string {
+  const n = (k: StuckSignal['kind']): number => m.signals.filter((x) => x.kind === k).length
+  const parts: string[] = []
+  const pause = m.signals.find((x) => x.kind === 'pause')
+  if (pause) parts.push(`ilk tıklamadan önce ${Math.round(pause.end - pause.t)} sn bekledi`)
+  if (n('dead')) parts.push(`${n('dead')} tepkisiz tıklama`)
+  if (n('rage')) parts.push(`${times(n('rage'))} aynı yere art arda tıkladı`)
+  if (n('back')) parts.push(`${times(n('back'))} geri döndü`)
+  if (n('loop')) parts.push(`${times(n('loop'))} bir önceki ekranla arasında gidip geldi`)
+  return parts.join(', ')
+}
+
+// ---- Researcher notes ----------------------------------------------------------------------------------------
+/** Notes are kept per session (participant + start time) and item ("step:<task>:<screen>", "moment:<task>:<id>"). */
+export const sessionKey = (s: Pick<SessionFile, 'participant' | 'startedAt'>): string => `${s.participant}|${s.startedAt}`
+export const stepNoteId = (taskId: string, screenKey: string): string => `step:${taskId}:${screenKey}`
+export const momentNoteId = (taskId: string, momentId: string): string => `moment:${taskId}:${momentId}`

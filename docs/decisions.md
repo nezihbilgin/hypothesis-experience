@@ -8,6 +8,20 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 
 ---
 
+## 2026-11-21: Rapor: görev kutuları, zaman çizgisi, takılma anları, araştırmacı notu
+
+Kaynak: Nezih'in test geri bildirimi, PM iş listesi. Durum: uygulandı (`faz1-core`).
+
+- **Görev kutusu:** her görev kendi kutusunda; başlıkta "Görev N", görev metni ve sonuç rozeti.
+- **Zaman çizgisi:** her görev için görevin başından saniye sayan yatay çizgi. Üstte ekran bölümleri (yol dışı kesikli), altında tıklamalar (çalışan mavi, tepkisiz kırmızı), sorular (◆), yorumlar (numaralı daire) ve süreli çubuklar olarak kamera davranışları. Soru ve yorum yazarken saat durduğu için o süre çizgide yok.
+- **Yüz davranışları görev saatinde:** davranışlar artık görev boyunca hesaplanıyor ve soru ya da yorum anında kesiliyor (bir davranış o anın iki yanına yayılmaz). Adım kartında "görev başından 24.–33. sn (10 sn): hiç tıklamadan hareketsiz kaldı" biçiminde.
+- **Sürtünme satırı:** işaret yoksa hiç gösterilmez; varsa sebepleri yazar.
+- **Takılma anları:** aynı ekranda 3 sn içinde birbirini izleyen sürtünme işaretleri (tepkisiz ya da art arda tıklama, geri dönüş, gidip gelme, kişisel normalin 2 katını ve 3 sn'yi aşan bekleme) tek an olarak birleşir. Yanına aynı saniyelerdeki (±2 sn) kamera davranışları, o ekrandaki yorumlar ve katılımcının o ekran için cevabı yazılır. Niyet ya da duygu yorumu yok. En fazla 6 an, en çok işareti olan önce.
+- **Araştırmacı notu:** her takılma anının ve adım kartının altında not alanı. Notlar bu tarayıcıda (localStorage) oturum başına saklanır, "Notlarla birlikte oturum dosyasını indir" ile dosyaya yazılır (`researcherNotes`), dosya açılınca geri gelir. PDF'te metin olarak, CSV'de `researcher_note` sütununda görünür.
+- **Kaydırılmış ekranda yorum:** Figma kaydırma bilgisini sadece tıklamayla gönderiyor. Yorumdan önce o ekranda kaydırmadan sonra tıklama yoksa konum bilinmiyor; rapor artık noktayı tek yere koymak yerine olabileceği dikey şeridi (kaydırılmamış ile sonuna kadar kaydırılmış arası) kesikli çiziyor. Lejantta yorum sayısı yazıyor.
+
+---
+
 ## 2026-11-21: Görevler tek tek; prototip yüklenirken bekleme yazısı; "hareketsiz kaldı" tanımı
 
 Kaynak: Nezih'in kameralı test oturumu ve notları. Durum: uygulandı (`faz1-core`).

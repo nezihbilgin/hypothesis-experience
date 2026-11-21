@@ -69,3 +69,53 @@ ul.timeline { margin: 0; padding-left: 16px; }
 .fivesec-report { margin: 16px 0; }
 .fivesec-item { display: flex; gap: 16px; align-items: flex-start; margin: 8px 0; }
 .fivesec-item img { width: 160px; border: 1px solid #ddd; border-radius: 6px; }
+
+/* Each task in its own box (Nezih's feedback 2026-11-21) */
+.task-box { border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px 18px; margin: 22px 0; background: var(--card); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04); }
+.task-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px solid var(--line); }
+.task-head h3 { flex: 1; margin: 0; min-width: 240px; }
+.task-no { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.result-badge { font-size: 0.8rem; font-weight: 600; padding: 2px 10px; border-radius: 999px; background: var(--line); }
+.result-badge.direct { background: #dcefdc; color: #1f5f22; }
+.result-badge.indirect { background: #e6ecfb; color: #23408f; }
+.result-badge.failed, .result-badge.dropped { background: #f8dcda; color: #8c1d17; }
+
+/* Task timeline */
+.timeline-fig { margin: 6px 0 14px; }
+.timeline-fig svg { width: 100%; height: auto; display: block; font: 11px system-ui, sans-serif; }
+.tl-grid { stroke: var(--line); stroke-width: 1; }
+.tl-tick { fill: var(--muted); text-anchor: middle; }
+.tl-label { fill: var(--muted); font-size: 11px; }
+.tl-screen { fill: color-mix(in srgb, var(--accent) 16%, var(--card)); stroke: var(--card); }
+.tl-screen.alt { fill: color-mix(in srgb, var(--accent) 28%, var(--card)); }
+.tl-screen.off { fill: var(--card); stroke: var(--muted); stroke-dasharray: 3 2; }
+.tl-screen-text { fill: var(--fg); font-size: 10.5px; pointer-events: none; }
+.tl-click { fill: rgb(47 91 211 / 0.8); stroke: #fff; stroke-width: 1; }
+.tl-click.dead { fill: rgb(179 38 30 / 0.85); }
+.tl-question { fill: #6b4fd6; }
+.tl-comment { fill: #f2a900; stroke: #fff; stroke-width: 1.5; }
+.tl-comment-text { fill: #1a1a1a; font-size: 9px; font-weight: 700; text-anchor: middle; pointer-events: none; }
+.tl-face { fill: #8a8a85; }
+.tl-face.still { fill: #7a8fa6; }
+.tl-face.talk { fill: #4f9a8a; }
+.tl-face.away { fill: #b5895a; }
+.tl-face.lean-in { fill: #8a7ab8; }
+.tl-face.brow { fill: #a8798f; }
+
+/* Stuck moments */
+.stuck ol { padding-left: 22px; }
+.stuck li { margin: 10px 0; padding: 8px 10px; border-left: 3px solid #b3261e; background: var(--bg); }
+.stuck li p { margin: 2px 0; }
+
+/* Researcher notes */
+.note textarea { width: 100%; margin-top: 8px; font: inherit; font-size: 0.88rem; padding: 6px 8px; border: 1px dashed var(--line); border-radius: 8px; background: transparent; color: var(--fg); resize: vertical; }
+.note textarea:focus { border-style: solid; outline: 2px solid color-mix(in srgb, var(--accent) 40%, transparent); }
+.print-only { display: none; }
+@media print {
+  .print-only { display: block; }
+  .task-box { break-inside: auto; box-shadow: none; }
+}
+
+/* Approximate comment on a scrolled screen: somewhere on this band */
+.cband { position: absolute; width: 0; border-left: 2px dashed #b07a00; transform: translateX(-1px); }
+.cband .cpin { left: 0; top: 0; }

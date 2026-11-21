@@ -1,13 +1,13 @@
 // Researcher report (local, v1): load one or more session files, show the health block first, then per task the
 // outcome, times, questions, mismatches, screen metrics and a static click map on reference images.
 // Export: CSV of the metrics and a printable view (browser "Save as PDF"). Nothing is uploaded.
-import { cardsFromTask, faceTimeline, parseStudy, summarizeTask, type Baseline, type FaceMoment, type HypothesisCard, type ScreenStats, type Study } from '@hx/core'
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { cardsFromTask, parseStudy, summarizeTask, type FaceMoment, type HypothesisCard, type ScreenStats, type Study } from '@hx/core'
+import { createContext, Fragment, useContext, useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import example from '../studies/example.json'
 import '../style.css'
 import './report.css'
-import { clickLegend, clicksByScreen, commentPosition, typicalViewportHeight, type SessionComment, fmtSec, frictionText, highlights, metricsCsv, mismatchLines, parseSessionFile, pauseText, recompute, taskLine, taskTotals, visitText, type SessionFile, type SessionTask } from './data'
+import { atText, clickLegend, clicksByScreen, commentPosition, faceLine, FACE_LABEL, momentNoteId, sessionKey, stepNoteId, stuckMoments, stuckSignalsText, taskFaceMoments, typicalViewportHeight, type SessionComment, type StuckMoment, fmtSec, frictionText, highlights, metricsCsv, mismatchLines, parseSessionFile, pauseText, recompute, taskLine, taskTotals, visitText, type SessionFile, type SessionTask } from './data'
 import { allFrameSizes, figmaFrames, hasFigmaFrames, type ReferenceImageProvider } from './images'
 
 const localStudies = import.meta.glob('../studies/*.local.json', { eager: true, import: 'default' })
@@ -41,13 +41,36 @@ function download(name: string, text: string, type: string): void {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000)
 }
 
-const MOMENT: Record<FaceMoment['kind'], (sec: number) => string> = {
-  still: (sec) => `${sec} sn hareketsiz kaldı`,
-  'lean-in': (sec) => `ekrana yaklaştı (${sec} sn)`,
-  brow: (sec) => `kaş hareketi arttı (${sec} sn)`,
-  'blink-drop': () => 'göz kırpması azaldı',
-  talk: (sec) => `kendi kendine konuştu (${sec} sn)`,
-  away: (sec) => `ekrandan uzaklaştı (${sec} sn)`
+
+// ---- Researcher notes: kept in this browser (localStorage) per session, and saved into the session file on demand.
+interface Notes {
+  get: (id: string) => string
+  set: (id: string, text: string) => void
+}
+const NotesCtx = createContext<Notes>({ get: () => '', set: () => {} })
+const notesStoreKey = (s: SessionFile): string => `hx-report-notes:${sessionKey(s)}`
+function loadNotes(s: SessionFile): Record<string, string> {
+  try {
+    return { ...(s.researcherNotes ?? {}), ...JSON.parse(localStorage.getItem(notesStoreKey(s)) ?? '{}') }
+  } catch {
+    return { ...(s.researcherNotes ?? {}) }
+  }
+}
+
+/** Researcher's own note next to a moment or step card; printed as text in the PDF. */
+function NoteField({ id, label }: { id: string; label: string }) {
+  const notes = useContext(NotesCtx)
+  const v = notes.get(id)
+  return (
+    <div className="note">
+      <textarea className="no-print" rows={v ? 3 : 1} aria-label={label} placeholder="Araştırmacı notu…" value={v} onChange={(e) => notes.set(id, e.target.value)} />
+      {v ? (
+        <p className="print-only">
+          <b>Araştırmacı notu:</b> {v}
+        </p>
+      ) : null}
+    </div>
+  )
 }
 
 /** Reference image sizes, for the viewport height of scrolling frames (comment positions). */
@@ -95,9 +118,17 @@ function ClickMap({ screenKey, task, images }: { screenKey: string; task: Sessio
                 const pos = commentPosition(c, sz, typicalViewportHeight(sizes, sz.w))
                 const x = Math.min(Math.max(pos.x, 0), sz.w)
                 const y = Math.min(Math.max(pos.y, 0), sz.h)
+                const num = comments.indexOf(c) + 1
+                if (pos.yRange)
+                  // Scroll unknown: the point is somewhere on this vertical band (between not scrolled and scrolled to the end).
+                  return (
+                    <span key={`c${i}`} className="cband" style={{ left: `${(x / sz.w) * 100}%`, top: `${(pos.yRange[0] / sz.h) * 100}%`, height: `${((pos.yRange[1] - pos.yRange[0]) / sz.h) * 100}%` }} title={`${c.text} (konum yaklaşık: bu şeridin üzerinde bir yer)`}>
+                      <span className="cpin approx">{num}</span>
+                    </span>
+                  )
                 return (
-                  <span key={`c${i}`} className={pos.approximate ? 'cpin approx' : 'cpin'} style={{ left: `${(x / sz.w) * 100}%`, top: `${(y / sz.h) * 100}%` }} title={c.text}>
-                    {comments.indexOf(c) + 1}
+                  <span key={`c${i}`} className="cpin" style={{ left: `${(x / sz.w) * 100}%`, top: `${(y / sz.h) * 100}%` }} title={c.text}>
+                    {num}
                   </span>
                 )
               })
@@ -108,7 +139,11 @@ function ClickMap({ screenKey, task, images }: { screenKey: string; task: Sessio
           <span className="lg"><i className="dot-lg" /> {l.working} çalışan</span>
           <span className="lg"><i className="dot-lg dead" /> {l.dead} tepkisiz</span>
           {l.outside ? <span className="lg">Tasarımın dışına tıklama: {l.outside}</span> : null}
-          {commentsOf.get(node)?.length ? <span className="lg"><i className="cpin-lg" /> yorum</span> : null}
+          {commentsOf.get(node)?.length ? (
+            <span className="lg">
+              <i className="cpin-lg" /> {commentsOf.get(node)!.length} yorum
+            </span>
+          ) : null}
         </figcaption>
       </figure>
     ]
@@ -121,7 +156,7 @@ function ClickMap({ screenKey, task, images }: { screenKey: string; task: Sessio
         <ol className="comments">
           {comments.map((c, i) => (
             <li key={i}>
-              “{c.text}” <span className="muted small">({fmtSec(c.t)}{!images.image(c.node) ? ', ekran görüntüsü yok' : size[c.node] && commentPosition(c, size[c.node], typicalViewportHeight(sizes, size[c.node].w)).approximate ? ', konum yaklaşık' : ''})</span>
+              “{c.text}” <span className="muted small">({atText(c.t)}{!images.image(c.node) ? ', ekran görüntüsü yok' : size[c.node] && commentPosition(c, size[c.node], typicalViewportHeight(sizes, size[c.node].w)).approximate ? ', konum yaklaşık: ekran kaydırılmıştı, Figma kaydırma bilgisini göndermedi; nokta kesikli şeridin üzerinde bir yerde' : ''})</span>
             </li>
           ))}
         </ol>
@@ -133,9 +168,10 @@ function ClickMap({ screenKey, task, images }: { screenKey: string; task: Sessio
 const stepId = (taskId: string, screenKey: string): string => `step-${taskId}-${screenKey.replace(/[^\w-]/g, '-')}`
 const pct = (v: number | null | undefined): string => (v === null || v === undefined ? '–' : `%${Math.round(v * 100)}`)
 
-function StepCard({ task, s, cards, normalSec, firstScreen, face }: { task: SessionTask; s: ScreenStats; cards: HypothesisCard[]; normalSec: number; firstScreen: string | undefined; face: { baseline: Baseline; signals: boolean } | null }) {
+function StepCard({ task, s, cards, normalSec, firstScreen, face }: { task: SessionTask; s: ScreenStats; cards: HypothesisCard[]; normalSec: number; firstScreen: string | undefined; face: FaceMoment[] }) {
   const inVisit = (t: number): boolean => s.visits.some((v) => t >= Math.floor(v.start) && t < v.end)
-  const moments = face && task.samples?.length ? faceTimeline(task.samples.filter((x) => inVisit(x.t)), face.baseline, face.signals, task.events.filter((e) => e.type === 'click' || e.type === 'dead-click').map((e) => Math.floor(e.t))) : []
+  const moments = face.filter((m) => inVisit(m.t))
+  const friction = frictionText(s)
   const pause = pauseText(s, normalSec, s.screenKey === firstScreen)
   const card = cards.find((c) => c.screenKey === s.screenKey)
   const r = task.report!
@@ -182,8 +218,12 @@ function StepCard({ task, s, cards, normalSec, firstScreen, face }: { task: Sess
               {pause.text}
               {pause.flagged ? ' · normalinin 2 katını ve 3 sn\'yi aştı' : ''}
             </dd>
-            <dt>Sürtünme</dt>
-            <dd>{frictionText(s)}</dd>
+            {friction ? (
+              <>
+                <dt>Sürtünme</dt>
+                <dd>{friction}</dd>
+              </>
+            ) : null}
             <dt>Tıklamalar</dt>
             <dd>
               {s.clicks ?? 0} tıklama, {s.deadClicks} tepkisiz{s.misclickRate != null ? ` (%${Math.round(s.misclickRate * 100)})` : ''}
@@ -201,23 +241,160 @@ function StepCard({ task, s, cards, normalSec, firstScreen, face }: { task: Sess
                 <dd>
                   <ul className="timeline">
                     {moments.map((m, i) => (
-                      <li key={i}>
-                        <span className="muted">{fmtSec(m.t)}:</span> {MOMENT[m.kind](m.sec)}
-                      </li>
+                      <li key={i}>{faceLine(m)}</li>
                     ))}
                   </ul>
                 </dd>
               </>
             ) : null}
           </dl>
+          <NoteField id={stepNoteId(task.id, s.screenKey)} label={`${card?.screenName ?? s.screenKey} için araştırmacı notu`} />
         </div>
       </div>
     </article>
   )
 }
 
-function TaskSection({ task, normalSec, face }: { task: SessionTask; normalSec: number; face: { baseline: Baseline; signals: boolean } | null }) {
+const TL_W = 1000
+const TL_LABEL = 150
+const TL_FACE: Record<FaceMoment['kind'], string> = { still: 'hareketsiz (tıklamasız)', 'lean-in': 'ekrana yaklaştı', brow: 'kaş hareketi arttı', talk: 'kendi kendine konuştu', away: 'ekrandan uzaklaştı', 'blink-drop': 'göz kırpması azaldı' }
+const TL_ROW = 22
+const shortName = (cards: HypothesisCard[], k: string): string => cards.find((c) => c.screenKey === k)?.participantName ?? cards.find((c) => c.screenKey === k)?.screenName ?? k
+
+/** Horizontal task timeline on the task clock (seconds from task start; question and comment time excluded). */
+function TaskTimeline({ task, cards, face }: { task: SessionTask; cards: HypothesisCard[]; face: FaceMoment[] }) {
+  const endSec = Math.max(1, task.endSec ?? task.events[task.events.length - 1]?.t ?? 1)
+  const visits = task.report ? task.report.screens.flatMap((st) => st.visits.map((v) => ({ ...v, screenKey: st.screenKey, offPath: st.offPath }))).sort((a, b) => a.start - b.start) : []
+  const clicks = task.events.filter((e) => e.type === 'click')
+  const kinds = (['still', 'lean-in', 'brow', 'talk', 'away', 'blink-drop'] as FaceMoment['kind'][]).filter((k) => face.some((m) => m.kind === k))
+  const rows = ['Ekran', 'Tıklama', 'Soru ve yorum', ...kinds.map((k) => TL_FACE[k])]
+  const H = 22 + rows.length * TL_ROW
+  const x = (t: number): number => TL_LABEL + (Math.min(Math.max(t, 0), endSec) / endSec) * (TL_W - TL_LABEL - 10)
+  const step = endSec > 120 ? 20 : endSec > 60 ? 10 : 5
+  const ticks = Array.from({ length: Math.floor(endSec / step) + 1 }, (_, i) => i * step)
+  const y = (row: number): number => 18 + row * TL_ROW
+  return (
+    <figure className="timeline-fig">
+      <svg viewBox={`0 0 ${TL_W} ${H}`} role="img" aria-label={`Görev zaman çizgisi, ${Math.round(endSec)} saniye`}>
+        {ticks.map((t) => (
+          <g key={t}>
+            <line x1={x(t)} x2={x(t)} y1={14} y2={H} className="tl-grid" />
+            <text x={x(t)} y={10} className="tl-tick">
+              {t} sn
+            </text>
+          </g>
+        ))}
+        {rows.map((r, i) => (
+          <text key={r} x={0} y={y(i) + 14} className="tl-label">
+            {r}
+          </text>
+        ))}
+        {visits.map((v, i) => {
+          const w = Math.max(1, x(v.end) - x(v.start))
+          const name = shortName(cards, v.screenKey)
+          return (
+            <g key={i}>
+              <title>{`${name}: ${atText(v.start)} – ${Math.round(v.end)}. sn${v.offPath ? ' (yol dışı)' : ''}`}</title>
+              <rect x={x(v.start)} y={y(0) + 2} width={w} height={TL_ROW - 4} className={v.offPath ? 'tl-screen off' : i % 2 ? 'tl-screen alt' : 'tl-screen'} />
+              {w > 46 ? (
+                <text x={x(v.start) + 4} y={y(0) + 15} className="tl-screen-text">
+                  {name.length > w / 6.5 ? name.slice(0, Math.max(3, Math.floor(w / 6.5) - 1)) + '…' : name}
+                </text>
+              ) : null}
+            </g>
+          )
+        })}
+        {clicks.map((e, i) => (
+          <circle key={i} cx={x(e.t)} cy={y(1) + TL_ROW / 2} r={4} className={e.payload?.handled === false ? 'tl-click dead' : 'tl-click'}>
+            <title>{`${atText(e.t)}: ${e.payload?.handled === false ? 'tepkisiz tıklama' : 'tıklama'}`}</title>
+          </circle>
+        ))}
+        {task.questions.map((q, i) => {
+          const t = (q.moment as { askedAt?: number }).askedAt
+          if (typeof t !== 'number') return null
+          return (
+            <g key={`q${i}`}>
+              <title>{`${atText(t)}: soru soruldu${q.answer ? ` · “${q.answer}”` : ''}`}</title>
+              <rect x={x(t) - 5} y={y(2) + 6} width={10} height={10} transform={`rotate(45 ${x(t)} ${y(2) + 11})`} className="tl-question" />
+            </g>
+          )
+        })}
+        {(task.comments ?? []).map((c, i) => (
+          <g key={`c${i}`}>
+            <title>{`${atText(c.t)}: yorum · “${c.text}”`}</title>
+            <circle cx={x(c.t)} cy={y(2) + 11} r={7} className="tl-comment" />
+            <text x={x(c.t)} y={y(2) + 15} className="tl-comment-text">
+              {(task.comments ?? []).filter((d) => d.screenKey === c.screenKey).indexOf(c) + 1}
+            </text>
+          </g>
+        ))}
+        {face.map((m, i) => {
+          const row = 3 + kinds.indexOf(m.kind)
+          return (
+            <g key={`f${i}`}>
+              <title>{faceLine(m)}</title>
+              <rect x={x(m.t)} y={y(row) + 5} width={Math.max(3, x(m.t + m.sec) - x(m.t))} height={TL_ROW - 10} rx={3} className={`tl-face ${m.kind}`} />
+            </g>
+          )
+        })}
+      </svg>
+      <figcaption className="muted small">Saniyeler görevin başından sayılır. Soru ve yorum yazılırken geçen süre sayılmaz; o anlar ◆ ve numaralı daire olarak görünür. Üzerine gelince ayrıntı çıkar.</figcaption>
+    </figure>
+  )
+}
+
+function StuckSection({ task, moments, cards }: { task: SessionTask; moments: StuckMoment[]; cards: HypothesisCard[] }) {
+  if (!moments.length) return null
+  return (
+    <div className="stuck">
+      <h4>Takılma anları</h4>
+      <p className="muted small">Aynı ekranda birbirine yakın sürtünme işaretleri tek an olarak birleştirildi; aynı saniyelerde kamerada görülen davranışlar ve katılımcının söyledikleri yanında. Yorum senin.</p>
+      <ol>
+        {moments.slice(0, 6).map((m) => {
+          const dur = Math.max(1, Math.round(m.end - m.start))
+          return (
+            <li key={m.id}>
+              <p>
+                <a href={`#${stepId(task.id, m.screenKey)}`}>
+                  <b>{shortName(cards, m.screenKey)}</b>
+                </a>{' '}
+                <span className="muted">· {atText(m.start, dur > 1 ? dur : undefined)}</span>
+              </p>
+              <p>
+                <span className="muted">Ne oldu:</span> {stuckSignalsText(m)}
+              </p>
+              {m.face.length ? (
+                <p>
+                  <span className="muted">Aynı anda kamerada:</span> {[...new Set(m.face.map((f) => f.kind))]
+                    .map((k) => {
+                      const secs = m.face.filter((f) => f.kind === k && k !== 'blink-drop').map((f) => `${f.sec} sn`)
+                      return `${FACE_LABEL[k]}${secs.length ? ` (${secs.join(' + ')})` : ''}`
+                    })
+                    .join(', ')}
+                </p>
+              ) : null}
+              {m.comments.map((c, i) => (
+                <p key={i}>
+                  <span className="muted">Yorumu ({atText(c.t)}):</span> “{c.text}”
+                </p>
+              ))}
+              {m.answer ? (
+                <p>
+                  <span className="muted">Bu ekran için cevabı:</span> “{m.answer}”
+                </p>
+              ) : null}
+              <NoteField id={momentNoteId(task.id, m.id)} label="Bu an için araştırmacı notu" />
+            </li>
+          )
+        })}
+      </ol>
+    </div>
+  )
+}
+
+function TaskSection({ task, index, normalSec, face }: { task: SessionTask; index: number; normalSec: number; face: FaceMoment[] }) {
   const cards = cardsOf(task.id)
+  const stuck = useMemo(() => stuckMoments(task, face, cards, normalSec), [task, face, cards, normalSec])
   const name = (k: string): string => cards.find((c) => c.screenKey === k)?.screenName ?? k
   const r = task.report
   const hl = highlights(task, cards)
@@ -229,15 +406,26 @@ function TaskSection({ task, normalSec, face }: { task: SessionTask; normalSec: 
   const firstScreen = steps[0]?.screenKey
   const tot = taskTotals(steps)
   return (
-    <section className="task-section">
-      <h3>{task.prompt}</h3>
+    <section className="task-section task-box">
+      <header className="task-head">
+        <span className="task-no">Görev {index + 1}</span>
+        <h3>{task.prompt}</h3>
+        <span className={`result-badge ${task.outcome?.result ?? ''}`}>{line.result}</span>
+      </header>
       <p className="task-summary">
-        <span className={`result ${task.outcome?.result ?? ''}`}>{line.result}</span> · {line.text}
+        {line.text}
         <br />
         <span className="muted">
           Katılımcının kendi puanı ({scaleText}): görevden önce {task.expectation ?? '–'} bekledi, sonra {task.seq ?? '–'} verdi.
         </span>
       </p>
+      <StuckSection task={task} moments={stuck} cards={cards} />
+      {r ? (
+        <>
+          <h4>Zaman çizgisi</h4>
+          <TaskTimeline task={task} cards={cards} face={face} />
+        </>
+      ) : null}
       {hl.length ? (
         <div className="highlights">
           <h4>Öne çıkan anlar</h4>
@@ -300,7 +488,7 @@ function TaskSection({ task, normalSec, face }: { task: SessionTask; normalSec: 
                     <td>{s.visits.length}</td>
                     <td>{fmtSec(s.durationSec)}</td>
                     <td>{s.screenKey === firstScreen && s.orientationSec !== undefined ? `${fmtSec(s.orientationSec)} (yönelim)` : fmtSec(s.firstActionSec)}</td>
-                    <td className="left">{frictionText(s)}</td>
+                    <td className="left">{frictionText(s) || '–'}</td>
                     <td>{s.backs}</td>
                     <td>{s.loops ?? 0}</td>
                     <td>{s.clicks ?? 0}</td>
@@ -336,8 +524,56 @@ function faceSignalsOn(s: SessionFile): boolean {
 }
 
 /** Behaviour timeline needs a camera and a valid baseline; blendshape moments also need face signals on. */
-function faceOf(s: SessionFile): { baseline: Baseline; signals: boolean } | null {
-  return s.capabilities?.hasCamera && s.baseline ? { baseline: s.baseline, signals: faceSignalsOn(s) } : null
+function faceOf(s: SessionFile, t: SessionTask): FaceMoment[] {
+  return taskFaceMoments(t, s.baseline, faceSignalsOn(s), !!s.capabilities?.hasCamera)
+}
+
+/** One session with its researcher notes (this browser's copy, plus notes saved in the file). */
+function SessionView({ s, onNotes }: { s: SessionFile; onNotes: (notes: Record<string, string>) => void }) {
+  const [notes, setNotes] = useState<Record<string, string>>(() => loadNotes(s))
+  useEffect(() => onNotes(notes), [notes]) // eslint-disable-line react-hooks/exhaustive-deps
+  const ctx = useMemo<Notes>(
+    () => ({
+      get: (id) => notes[id] ?? '',
+      set: (id, text) =>
+        setNotes((cur) => {
+          const next = { ...cur, [id]: text }
+          if (!text) delete next[id]
+          try {
+            localStorage.setItem(notesStoreKey(s), JSON.stringify(next))
+          } catch {
+            /* storage unavailable: notes stay for this page only */
+          }
+          return next
+        })
+    }),
+    [notes, s]
+  )
+  const tasks = s.tasks.filter((t): t is SessionTask => !!t)
+  return (
+    <NotesCtx.Provider value={ctx}>
+      <section className="session">
+        <h2>
+          {s.participant || 'Katılımcı'} · {s.startedAt.slice(0, 16).replace('T', ' ')}
+        </h2>
+        <div className="row no-print">
+          <button onClick={() => download(`hx-session-${s.participant || 'katilimci'}-notlu.json`, JSON.stringify({ ...s, researcherNotes: notes }, null, 2), 'application/json')}>Notlarla birlikte oturum dosyasını indir</button>
+          <span className="muted small">Notlar bu tarayıcıda da saklanır; dosyayı başka bir yerde açınca notlar dosyadan gelir.</span>
+        </div>
+        <ParticipantInfo s={s} />
+        <Health s={s} />
+        <FiveSecondSection s={s} />
+        {tasks.map((t, i) => (
+          <TaskSection key={t.id} task={t} index={i} normalSec={s.baseline?.firstActionP95 ?? 0} face={faceOf(s, t)} />
+        ))}
+        {s.hardestTask?.answer ? (
+          <p>
+            <b>En zor görev:</b> {s.hardestTask.answer}
+          </p>
+        ) : null}
+      </section>
+    </NotesCtx.Provider>
+  )
 }
 
 function ParticipantInfo({ s }: { s: SessionFile }) {
@@ -462,7 +698,8 @@ function StudySummary({ sessions }: { sessions: SessionFile[] }) {
 function App() {
   const [sessions, setSessions] = useState<SessionFile[]>([])
   const [error, setError] = useState<string | null>(null)
-  const csv = useMemo(() => (sessions.length ? metricsCsv(sessions, cardsOf) : ''), [sessions])
+  const [notesBySession, setNotesBySession] = useState<Record<string, Record<string, string>>>({})
+  const csv = useMemo(() => (sessions.length ? metricsCsv(sessions, cardsOf, (s) => notesBySession[sessionKey(s)] ?? s.researcherNotes ?? {}) : ''), [sessions, notesBySession])
   const load = async (files: FileList | null): Promise<void> => {
     if (!files) return
     try {
@@ -488,7 +725,13 @@ function App() {
             <b>Duraksama:</b> ekran açıldıktan ilk tıklamaya kadar geçen saniye. Yanında katılımcının ısınma görevindeki kendi normali yazar; normalinin 2 katını ve 3 sn'yi geçerse işaretlenir. Görevin ilk ekranındaki bekleme (görevi okuyup etrafa bakınma) yönelim süresidir ve duraksama sayılmaz.
           </li>
           <li>
-            <b>Sürtünme:</b> geri dönüş, tepkisiz tıklama (prototipte karşılığı olmayan), art arda tıklama (1 sn içinde aynı yere 3+), iki ekran arasında gidip gelme ve beklenen yolun dışına çıkma. Hiçbiri yoksa "Sorun işareti yok".
+            <b>Sürtünme:</b> geri dönüş, tepkisiz tıklama (prototipte karşılığı olmayan), art arda tıklama (1 sn içinde aynı yere 3+), iki ekran arasında gidip gelme ve beklenen yolun dışına çıkma. Hiçbiri yoksa bu satır görünmez.
+          </li>
+          <li>
+            <b>Takılma anları:</b> aynı ekranda birbirine yakın (3 sn içinde) sürtünme işaretleri tek an olarak birleşir; aynı saniyelerdeki kamera davranışları ve katılımcının o ekran için söyledikleri yanına yazılır. Her anın ve her adım kartının altına kendi notunu yazabilirsin; notlar PDF'te ve CSV'de görünür.
+          </li>
+          <li>
+            <b>Zaman çizgisi:</b> saniyeler görevin başından sayılır, soru ve yorum yazarken geçen süre sayılmaz. Üstte ekranlar, altında tıklamalar, sorular, yorumlar ve kamerada görülen davranışlar.
           </li>
           <li>
             <b>Sonuç:</b> doğrudan başarı (beklenen yoldan hedefe), dolaylı başarı (yol dışı ekranlardan ya da tıklamasız geçişle hedefe), başarısız (hedefe ulaşmadan bitirdi), yarıda bıraktı.
@@ -503,7 +746,7 @@ function App() {
             <b>Yorumlar:</b> numaralı işaret, katılımcının ekranda seçip yorum yazdığı nokta. Kaydırılan ekranlarda kaydırma bilgisi Figma'dan sadece tıklamayla gelir; son 10 sn içinde o ekranda tıklama yoksa konum yaklaşıktır ve kesikli çizilir.
           </li>
           <li>
-            <b>Davranış:</b> kamera açıksa ekranda gözlenen hareketler (hareketsiz kalma, ekrana yaklaşma, kendi kendine konuşma, ekrandan uzaklaşma), katılımcının ısınmadaki kendi normaline göre. Duygu ya da niyet çıkarımı yapılmaz.
+            <b>Davranış:</b> kamera açıksa ekranda gözlenen hareketler (hiç tıklamadan hareketsiz kalma, ekrana yaklaşma, kendi kendine konuşma, ekrandan uzaklaşma), katılımcının ısınmadaki kendi normaline göre. "Görev başından 24.–42. sn" o davranışın görevin hangi saniyelerinde sürdüğünü gösterir. Duygu ya da niyet çıkarımı yapılmaz.
           </li>
         </ul>
       </details>
@@ -521,16 +764,7 @@ function App() {
       </div>
       <StudySummary sessions={sessions} />
       {sessions.map((s, i) => (
-        <section key={i} className="session">
-          <h2>{s.participant || 'Katılımcı'} · {s.startedAt.slice(0, 16).replace('T', ' ')}</h2>
-          <ParticipantInfo s={s} />
-          <Health s={s} />
-          <FiveSecondSection s={s} />
-          {s.tasks.filter((t): t is SessionTask => !!t).map((t) => (
-            <TaskSection key={t.id} task={t} normalSec={s.baseline?.firstActionP95 ?? 0} face={faceOf(s)} />
-          ))}
-          {s.hardestTask?.answer ? <p><b>En zor görev:</b> {s.hardestTask.answer}</p> : null}
-        </section>
+        <SessionView key={sessionKey(s) + i} s={s} onNotes={(n) => setNotesBySession((cur) => ({ ...cur, [sessionKey(s)]: n }))} />
       ))}
     </main>
   )
