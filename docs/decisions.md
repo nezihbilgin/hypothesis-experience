@@ -8,6 +8,23 @@ Planın ve mimarinin değiştiği her karar burada, tarihli bir giriş olarak tu
 
 ---
 
+## 2026-11-21: Pilot öncesi sağlamlaştırma (QA bulguları)
+
+Kaynak: QA senaryo listesi v1, PM'in pilot öncesi ayıklama kuralı (veri kaybı, gizlilik ihlali ya da pilotu yarıda bırakan işler). Durum: uygulandı (`faz1-core`).
+
+- **KA-15:** "tıklamasız geçiş (muhtemelen klavye)" sadece tetikleyicisi olmayan ya da tuş olan geçişlerde sayılır (`NONE`, `ON_KEY_DOWN`). Figma'nın zamanlı, hover, fare ve sürükleme geçişleri prototipin tasarımıdır; sayılmaz, doğrudan başarıyı dolaylıya indirmez. Pilot oturumlarında sadece tıklama ve görev başı geçişleri görüldü.
+- **KA-19:** planlı sorular görev bazlı; aynı görevde bir ekranda en fazla 1 soru, ekrana dönünce tekrar sorulmaz (pilot çalışmasında bir ekran iki görevde farklı soruyla geçiyor).
+- **5 saniye testi görseli yoksa:** kurulumda ekran seçilince uyarı, raporda ve sağlık bloğunda "gösterilemedi" uyarısı.
+- **PK-07:** yüz modeli 20 sn içinde başlamazsa (GPU ve CPU başarısız, işçi sessiz) kamera kontrolü beklemez, kamerasız moda geçer.
+- **PK-16:** kamera ya da mikrofon oturum ortasında kesilirse oturum devam eder; kamera kesilince analiz durur, sonraki saniyeler "ölçülmedi" sayılır (uzaklaştı değil); mikrofon kesilince ses alanları boş bırakılır. Oturum dosyasında `deviceLosses`, raporun sağlık bloğunda uyarı.
+- **PK-17:** masaüstü Chrome ya da Edge dışında (Safari, Firefox, telefon, tablet) hoş geldin ekranında açık bir uyarı; akış engellenmez.
+- **PK-13:** Figma giriş/parola ekranında ya da prototip 45 sn içinde yüklenmezse katılımcıya "Bu görevi geç" seçeneği; görev raporda "Prototip açılmadı" olarak, katılımcı başarısızlığı sayılmadan görünür (CSV'de `blocked`).
+- **KA-28:** bağlantı koparsa görev saati durur, "Bağlantı koptu, bekleniyor" katmanı çıkar, bağlantı gelince görev kaldığı yerden devam eder; rapor kesintiyi görev saatindeki yeriyle gösterir ve sürelere katmaz.
+- **PK-05, PK-06:** kod incelemesiyle doğrulandı: izin reddi `startSensing`'i başarısız kılar ve kamerasız moda geçer; kalite kontrolü en fazla 15 sn sürer, düşük fps ya da yüz yoksa kamera hemen bırakılır. Gerçek cihazda denenmedi.
+- **İK-08:** Figma'ya giriş yapmış bir katılımcının dosya sahibine görünüp görünmediği otomatik doğrulanamaz; pilotta katılımcı Figma'ya girişsiz bir Chrome profiliyle (ya da gizli pencerede) katılır.
+
+---
+
 ## 2026-11-21: Think-aloud kapsamı ve soru modeli; pilot öncesi soru kuralları
 
 Kaynak: Nezih'in think-aloud soru-cevap onayları (PM thread'i, 21 Kasım), PM kararları (QA senaryo listesi v1 soruları 6–8). Durum: kararlaştırıldı. Think-aloud uygulaması M1 denemesinin sonucuna bağlı. 2026-11-20 "Sorular ekran geçişinde" girişindeki "ekranın ortasında asla" ve 2/6 sınırını **sadece think-aloud açıkken** geçersiz kılar.

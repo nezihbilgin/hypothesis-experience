@@ -66,6 +66,9 @@ export interface TaskRecord {
   reachedTargetAt: number | null
   /** Comments the participant pinned on the prototype (clock paused while writing). */
   comments: CommentRecord[]
+  /** Connection lost during the task (QA KA-28): task time where it happened and how long it lasted (wall seconds);
+   * the clock was stopped, so the gap is in no duration. */
+  connectionGaps?: { t: number; sec: number }[]
   /** Screens seen that the study JSON does not define (helps the researcher fill in node ids). */
   unknownScreens: string[]
   blocked: string | null
@@ -119,6 +122,13 @@ export function figmaEmbedUrl(raw: string, host: string, startNode?: string): st
   return u.toString()
 }
 
+/** v1 supports desktop Chrome and Edge (QA PK-17): other browsers and phones get a clear message, not a block. */
+export function supportedBrowser(ua: string, maxTouchPoints = 0): boolean {
+  const mobile = /Mobi|Android|iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && maxTouchPoints > 1)
+  const chromium = /Chrome\/|Edg\//.test(ua) && !/OPR\/|SamsungBrowser|CriOS|FxiOS/.test(ua)
+  return chromium && !mobile
+}
+
 export class SessionRun {
   readonly clock = new SessionClock(() => absoluteNow(performance))
   readonly startedAt = new Date().toISOString()
@@ -167,8 +177,25 @@ export class SessionRun {
     return this.tasks[this.taskIndex]
   }
 
+  /** Camera or microphone lost mid-session (QA PK-16): the session goes on; later seconds count as "not measured". */
+  deviceLosses: { kind: 'camera' | 'microphone'; at: string; step: string; taskIndex: number; t: number | null }[] = []
+  private micLost = false
+  private deviceLost(kind: 'video' | 'audio'): void {
+    const k = kind === 'video' ? 'camera' : 'microphone'
+    if (this.deviceLosses.some((d) => d.kind === k)) return
+    this.deviceLosses.push({ kind: k, at: new Date().toISOString(), step: this.step, taskIndex: this.taskIndex, t: this.clock.started ? Math.round(this.clock.t() * 10) / 10 : null })
+    if (k === 'microphone') this.micLost = true
+    if (k === 'camera') {
+      // No frames any more: stop the analysis and release the rest; seconds without samples are "no data", not "away".
+      this.sensing?.stop()
+      this.sensing = null
+    }
+  }
+
   private onSample = (s: SecondSample): void => {
-    const x = { ...s, streamId: CAMERA_STREAM }
+    // Without the microphone the voice fields would read as silence: drop them so they count as not measured.
+    const base = this.micLost ? { ...s, talking: null, voice: null, avSync: null } : s
+    const x = { ...base, streamId: CAMERA_STREAM }
     if (this.phase === 'quality') this.probe?.push(x)
     else if (this.phase === 'warmup') this.warmup.samples.push(x)
     else if (this.phase === 'task' && this.task) this.task.samples.push(x)
@@ -183,7 +210,8 @@ export class SessionRun {
       assetBase: new URL('./', location.href).href,
       clock: this.clock,
       audio: this.consent.microphone,
-      onSample: this.onSample
+      onSample: this.onSample,
+      onTrackEnded: (kind) => this.deviceLost(kind)
     })
     try {
       await client.start()
@@ -361,6 +389,22 @@ export class SessionRun {
     this.clock.resume()
   }
 
+  private offlineSince: number | null = null
+  /** Connection lost: stop the task clock (only if it was running) until it comes back. */
+  connectionLost(): void {
+    if (this.phase !== 'task' || this.offlineSince !== null || this.clock.paused) return
+    this.sensing?.flush()
+    this.clock.pause()
+    this.offlineSince = performance.now()
+  }
+  connectionBack(): void {
+    if (this.offlineSince === null) return
+    const sec = Math.round((performance.now() - this.offlineSince) / 100) / 10
+    this.offlineSince = null
+    ;(this.task.connectionGaps ??= []).push({ t: Math.round(this.clock.t() * 10) / 10, sec })
+    this.clock.resume()
+  }
+
   pauseForQuestion(): void {
     this.sensing?.flush()
     this.clock.pause()
@@ -373,6 +417,13 @@ export class SessionRun {
   }
 
   /** Ends the task ("Bitirdim"): closes the measurement, builds the report and any end-of-task retro questions. */
+  /** The prototype could not be opened (login/password screen or never loaded): end the task as not measurable, not
+   * as a participant failure (QA PK-13). */
+  skipBlockedTask(reason: string): QuestionMoment[] {
+    this.task.blocked = this.task.blocked ?? reason
+    return this.finishTask()
+  }
+
   finishTask(): QuestionMoment[] {
     const endSec = this.clock.t()
     this.sensing?.flush()
@@ -469,6 +520,7 @@ export class SessionRun {
       // grouped by origin and type. A fetch/xhr/beacon entry here would be an upload.
       network: networkSummary(),
       contextAnswers: this.contextAnswers,
+      deviceLosses: this.deviceLosses,
       fiveSecondResults: this.fiveSecondResults,
       hardestTask: this.hardestTask
     }

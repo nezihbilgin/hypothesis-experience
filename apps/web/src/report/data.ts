@@ -12,6 +12,9 @@ export interface SessionTask {
   report: ScreenReport | null
   outcome?: TaskOutcome
   comments?: SessionComment[]
+  connectionGaps?: { t: number; sec: number }[]
+  /** The prototype could not be opened ('login-required', 'password-required', 'not-loaded'). */
+  blocked?: string | null
   questions: { moment: { screenKey: string; source: string; probe?: string; mismatch?: { kind: string; text: string } }; answer: string | null; dontRemember: boolean; skipped: boolean }[]
 }
 
@@ -38,6 +41,7 @@ export interface SessionFile {
   consent?: { faceSignals: boolean }
   tasks: (SessionTask | null)[]
   contextAnswers?: { id: string; text: string; answer: string | null }[]
+  deviceLosses?: { kind: 'camera' | 'microphone'; at: string; step: string; taskIndex: number; t: number | null }[]
   fiveSecondResults?: { id: string; screen: string; shown: boolean; answers: { question: string; answer: string | null }[] }[]
   /** Researcher notes saved with the report (item id -> text). */
   researcherNotes?: Record<string, string>
@@ -125,7 +129,7 @@ export function metricsCsv(sessions: SessionFile[], names: (taskId: string) => H
         const card = cards.find((c) => c.screenKey === st.screenKey)
         const mm = t.report.mismatches.filter((m) => m.screenKey === st.screenKey).map((m) => m.kind).join(' ')
         rows.push(
-          [s.participant || s.startedAt, t.id, t.outcome?.result ?? '', t.endSec, t.report.orientationSec, t.expectation, t.seq, st.screenKey, card?.screenName ?? '', st.offPath ? 1 : 0, st.durationSec, st.observed.effort, st.observed.friction, st.firstActionSec, st.backs, st.loops ?? 0, st.clicks ?? '', st.deadClicks, st.misclickRate ?? '', st.rageClicks, st.awaySec, mm, note]
+          [s.participant || s.startedAt, t.id, t.blocked ? 'blocked' : (t.outcome?.result ?? ''), t.endSec, t.report.orientationSec, t.expectation, t.seq, st.screenKey, card?.screenName ?? '', st.offPath ? 1 : 0, st.durationSec, st.observed.effort, st.observed.friction, st.firstActionSec, st.backs, st.loops ?? 0, st.clicks ?? '', st.deadClicks, st.misclickRate ?? '', st.rageClicks, st.awaySec, mm, note]
             .map(csvCell)
             .join(',')
         )
@@ -258,6 +262,7 @@ const RESULT_TR: Record<string, string> = { direct: 'Doğrudan başarı', indire
 
 /** "Doğrudan başarı · Görev 33 sn sürdü. İlk 8 sn ilk ekranda etrafa bakınmakla geçti (...)" */
 export function taskLine(task: SessionTask): { result: string; text: string } {
+  if (task.blocked) return { result: 'Prototip açılmadı', text: 'Prototip bu görevde açılamadı (giriş ekranı ya da yüklenmedi); katılımcı görevi geçti. Bu bir katılımcı başarısızlığı değil, ölçüm yok.' }
   const result = task.outcome?.result ? RESULT_TR[task.outcome.result] : 'Sonuç yok'
   const parts: string[] = []
   if (task.endSec != null) parts.push(`Görev ${fmtSec(task.endSec)} sürdü.`)

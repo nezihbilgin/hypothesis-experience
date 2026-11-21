@@ -16,6 +16,10 @@ export interface SensingOptions {
   clock: SessionClock
   onSample: (s: SecondSample) => void
   onError?: (text: string) => void
+  /** A camera or microphone track ended mid-session (device unplugged, taken by another app, permission revoked). */
+  onTrackEnded?: (kind: 'video' | 'audio') => void
+  /** Face model start-up limit; past it start() rejects so the app falls back to camera-less mode (QA PK-07). */
+  initTimeoutMs?: number
   /** Calibration only: raw per-frame lip gap and per-frame loudness (numbers, never pixels or audio). */
   onRaw?: (r: { kind: 'mouth'; t: number; v: number | null } | { kind: 'audio'; t: number; rms: number }) => void
   targetFps?: number
@@ -58,15 +62,26 @@ export class SensingClient {
     video.srcObject = this.stream
     await video.play()
     this.video = video
+    for (const tr of this.stream.getTracks()) tr.addEventListener('ended', () => !this.stopped && this.o.onTrackEnded?.(tr.kind as 'video' | 'audio'))
 
     const worker = this.o.createWorker()
     this.worker = worker
     await new Promise<void>((resolve, reject) => {
+      // GPU and CPU both failing can leave the worker silent: never wait forever (QA PK-07).
+      const timer = window.setTimeout(() => reject(new Error('face model did not start in time')), this.o.initTimeoutMs ?? 20000)
+      worker.onerror = (e) => {
+        clearTimeout(timer)
+        reject(new Error(e.message || 'worker error'))
+      }
       worker.onmessage = (e: MessageEvent<WorkerOut>) => {
         if (e.data.type === 'ready') {
+          clearTimeout(timer)
           this.delegate = e.data.delegate
           resolve()
-        } else if (e.data.type === 'error') reject(new Error(e.data.text))
+        } else if (e.data.type === 'error') {
+          clearTimeout(timer)
+          reject(new Error(e.data.text))
+        }
       }
       worker.postMessage({ type: 'init', base: this.o.assetBase, allowCpu: shouldTryCpuDelegate(navigator.hardwareConcurrency) } satisfies WorkerIn)
     })

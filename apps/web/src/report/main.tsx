@@ -410,8 +410,13 @@ function TaskSection({ task, index, normalSec, face }: { task: SessionTask; inde
       <header className="task-head">
         <span className="task-no">Görev {index + 1}</span>
         <h3>{task.prompt}</h3>
-        <span className={`result-badge ${task.outcome?.result ?? ''}`}>{line.result}</span>
+        <span className={`result-badge ${task.blocked ? '' : (task.outcome?.result ?? '')}`}>{line.result}</span>
       </header>
+      {task.connectionGaps?.length ? (
+        <p className="hint" role="alert">
+          Bağlantı kesintisi: {task.connectionGaps.map((g) => `${atText(g.t)} (${Math.round(g.sec)} sn)`).join(', ')}. Bu süreler görev ve ekran sürelerine katılmadı.
+        </p>
+      ) : null}
       <p className="task-summary">
         {line.text}
         <br />
@@ -649,7 +654,12 @@ function Health({ s }: { s: SessionFile }) {
           </span>
         ))}
         {(s.fiveSecondResults ?? []).some((r) => !r.shown) ? <span className="flag">5 saniye testi gösterilemedi</span> : null}
-        {!h.flags.length && !(s.fiveSecondResults ?? []).some((r) => !r.shown) ? <span className="flag ok">Sorun görünmüyor</span> : null}
+        {(s.deviceLosses ?? []).map((d) => (
+          <span key={d.kind} className="flag">
+            {d.kind === 'camera' ? 'Kamera' : 'Mikrofon'} oturum ortasında kesildi{d.taskIndex >= 0 && d.step === 'task' ? ` (görev ${d.taskIndex + 1}${d.t != null ? `, görev başından ${Math.floor(d.t)}. sn` : ''})` : ''}; sonrası ölçülmedi
+          </span>
+        ))}
+        {!h.flags.length && !(s.fiveSecondResults ?? []).some((r) => !r.shown) && !(s.deviceLosses ?? []).length ? <span className="flag ok">Sorun görünmüyor</span> : null}
       </div>
       <p className="muted small">
         {face} · süre {n(h.sessionSec / 60)} dk · kamera {h.camera.on ? `açık, fps ${n(h.camera.fpsMedian, 0)} (p10 ${n(h.camera.fpsP10, 0)}), yüz %${Math.round((h.camera.faceShare ?? 0) * 100)}` : 'kapalı'} · ısınma {n(h.warmup.durationSec)} sn, {h.warmup.clicks} tıklama · tanımsız ekran {h.prototype.unknownScreens} · geçişsiz tıklama {h.prototype.clicksWithoutTransition} · tıklamasız geçiş {h.prototype.clicklessTransitions ?? '–'} · soru {h.questions.asked} (geç {h.questions.skipped}, hatırlamıyorum {h.questions.dontRemember})

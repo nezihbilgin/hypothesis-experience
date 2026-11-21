@@ -2,7 +2,7 @@
 // (expectation -> task with questions at screen transitions -> SEQ) -> hardest task -> summary.
 import type { QuestionMoment } from '@hx/core'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { downloadJson, figmaEmbedUrl, type QualityResult, type SessionRun } from './run'
+import { downloadJson, figmaEmbedUrl, supportedBrowser, type QualityResult, type SessionRun } from './run'
 import { figmaFrames } from './report/images'
 import { AnswerBox, Card, Rating, useT } from './ui'
 
@@ -14,6 +14,11 @@ export function Welcome({ run, next }: { run: SessionRun; next: () => void }) {
       <p>{t('welcome.body')}</p>
       {/* Task prompts are shown one at a time (task intro); listing them all here gave away later tasks (pilot feedback). */}
       <p>{t('welcome.tasks', { count: run.study.tasks.length })}</p>
+      {!supportedBrowser(navigator.userAgent, navigator.maxTouchPoints) ? (
+        <p className="hint" role="alert">
+          {t('welcome.browser')}
+        </p>
+      ) : null}
       <button className="primary" onClick={next}>
         {t('welcome.start')}
       </button>
@@ -289,6 +294,31 @@ export function TaskRun({ run, next }: { run: SessionRun; next: (retro: Question
   const [blocked, setBlocked] = useState<string | null>(null)
   const [loaded, setLoaded] = useState(false)
   const [reached, setReached] = useState(false)
+  // Connection lost (QA KA-28): the clock stops and a layer waits until it is back; the task continues where it was.
+  const [offline, setOffline] = useState(!navigator.onLine)
+  useEffect(() => {
+    const down = () => {
+      run.connectionLost()
+      setOffline(true)
+    }
+    const up = () => {
+      run.connectionBack()
+      setOffline(false)
+    }
+    window.addEventListener('offline', down)
+    window.addEventListener('online', up)
+    return () => {
+      window.removeEventListener('offline', down)
+      window.removeEventListener('online', up)
+    }
+  }, [run])
+  // The prototype never loaded: after 45 s offer to skip the task instead of a stuck screen (QA PK-13).
+  const [slow, setSlow] = useState(false)
+  useEffect(() => {
+    if (loaded) return
+    const id = setTimeout(() => setSlow(true), 45000)
+    return () => clearTimeout(id)
+  }, [loaded])
   // Comment mode: 'pick' = choose a point on the prototype, then write. The clock is paused throughout.
   const [comment, setComment] = useState<{ mode: 'pick' } | { mode: 'write'; point: { ix: number; iy: number; iw: number; ih: number } } | null>(null)
   const [commentText, setCommentText] = useState('')
@@ -393,11 +423,27 @@ export function TaskRun({ run, next }: { run: SessionRun; next: (retro: Question
           </div>
         </div>
       ) : null}
+      {offline ? (
+        <div className="overlay offline" role="alert">
+          <Card>
+            <p className="pulse">{t('task.offline')}</p>
+          </Card>
+        </div>
+      ) : null}
       {blocked ? (
         <div className="overlay">
           <Card>
             <p>{t('task.blocked')}</p>
+            <button className="primary" onClick={() => next(run.skipBlockedTask(blocked))}>
+              {t('task.skipBlocked')}
+            </button>
           </Card>
+        </div>
+      ) : null}
+      {!loaded && slow && !blocked ? (
+        <div className="slow-load" role="alert">
+          <p>{t('task.loadSlow')}</p>
+          <button onClick={() => next(run.skipBlockedTask('not-loaded'))}>{t('task.skipBlocked')}</button>
         </div>
       ) : null}
       {question ? (
