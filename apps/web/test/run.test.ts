@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { parseStudy } from '@hx/core'
 import example from '../src/studies/example.json'
-import { FIGMA_CLIENT_ID, SessionRun, figmaEmbedUrl, supportedBrowser } from '../src/run'
+import { FIGMA_CLIENT_ID, SessionRun, figmaEmbedUrl, maskAnswer, supportedBrowser } from '../src/run'
 
 describe('figma embed url', () => {
   it('turns a prototype link into an embed URL with host and client-id', () => {
@@ -63,6 +63,10 @@ describe('session delete', () => {
     expect(supportedBrowser('Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:140.0) Gecko/20100101 Firefox/140.0')).toBe(false)
     expect(supportedBrowser('Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Mobile Safari/537.36')).toBe(false)
     expect(supportedBrowser(`${mac} Version/19.0 Safari/605.1.15`, 5)).toBe(false) // iPad reports as Macintosh
+  })
+  it('masks personal data in written answers before keeping them', () => {
+    expect(maskAnswer('  Ayşe Yılmaz, 0532 123 45 67  ')).toBe('[isim], [telefon]')
+    expect(maskAnswer('   ')).toBeNull()
   })
 })
 

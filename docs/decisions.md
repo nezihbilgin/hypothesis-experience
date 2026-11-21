@@ -21,6 +21,7 @@ Kaynak: QA senaryo listesi v1, PM'in pilot öncesi ayıklama kuralı (veri kayb�
 - **PK-13:** Figma giriş/parola ekranında ya da prototip 45 sn içinde yüklenmezse katılımcıya "Bu görevi geç" seçeneği; görev raporda "Prototip açılmadı" olarak, katılımcı başarısızlığı sayılmadan görünür (CSV'de `blocked`).
 - **KA-28:** bağlantı koparsa görev saati durur, "Bağlantı koptu, bekleniyor" katmanı çıkar, bağlantı gelince görev kaldığı yerden devam eder; rapor kesintiyi görev saatindeki yeriyle gösterir ve sürelere katmaz.
 - **PK-05, PK-06:** kod incelemesiyle doğrulandı: izin reddi `startSensing`'i başarısız kılar ve kamerasız moda geçer; kalite kontrolü en fazla 15 sn sürer, düşük fps ya da yüz yoksa kamera hemen bırakılır. Gerçek cihazda denenmedi.
+- **Yazılı cevaplarda maskeleme:** soru cevapları, yorumlar, bağlam ve 5 saniye cevapları ile "en zor görev" cevabı cihazda `core` redact'tan geçip kaydediliyor (isim, telefon, e-posta, adres, kart).
 - **İK-08:** Figma'ya giriş yapmış bir katılımcının dosya sahibine görünüp görünmediği otomatik doğrulanamaz; pilotta katılımcı Figma'ya girişsiz bir Chrome profiliyle (ya da gizli pencerede) katılır.
 
 ---

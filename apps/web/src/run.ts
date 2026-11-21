@@ -23,8 +23,7 @@ import {
   type QuestionMoment,
   type ScreenReport,
   type SecondSample,
-  type Study
-} from '@hx/core'
+  type Study, redact } from '@hx/core'
 import { detectHover } from '@hx/embed-sdk'
 import { QualityProbe, SensingClient } from '@hx/sensing'
 
@@ -127,6 +126,13 @@ export function supportedBrowser(ua: string, maxTouchPoints = 0): boolean {
   const mobile = /Mobi|Android|iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && maxTouchPoints > 1)
   const chromium = /Chrome\/|Edg\//.test(ua) && !/OPR\/|SamsungBrowser|CriOS|FxiOS/.test(ua)
   return chromium && !mobile
+}
+
+/** Written answers and comments are masked on the device before they are kept (names, phone, e-mail, address,
+ * card number; decisions 2026-11-21). Empty -> null. */
+export function maskAnswer(text: string | null | undefined): string | null {
+  const t = text?.trim()
+  return t ? redact(t).text : null
 }
 
 export class SessionRun {
@@ -384,7 +390,7 @@ export class SessionRun {
       const ls = this.adapter?.lastScroll
       const scroll = ls && ls.node === node ? { x: ls.x, y: ls.y } : null
       const precise = !!(ls && ls.node === node && t - ls.t <= 10)
-      this.task.comments.push({ t: Math.round(t * 1000) / 1000, screenKey, node, point, scroll, precise, text: text.trim() })
+      this.task.comments.push({ t: Math.round(t * 1000) / 1000, screenKey, node, point, scroll, precise, text: maskAnswer(text) ?? '' })
     }
     this.clock.resume()
   }
@@ -411,7 +417,7 @@ export class SessionRun {
   }
 
   answer(moment: QuestionMoment, a: { answer?: string; dontRemember?: boolean; skipped?: boolean }, inTask = true): void {
-    this.task.questions.push({ moment, answer: a.answer?.trim() || null, dontRemember: !!a.dontRemember, skipped: !!a.skipped, answeredAt: new Date().toISOString() })
+    this.task.questions.push({ moment, answer: maskAnswer(a.answer), dontRemember: !!a.dontRemember, skipped: !!a.skipped, answeredAt: new Date().toISOString() })
     this.asked = { inTask: inTask ? [...this.asked.inTask, moment] : this.asked.inTask, inSession: [...this.asked.inSession, moment] }
     this.clock.resume()
   }

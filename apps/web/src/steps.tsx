@@ -2,7 +2,7 @@
 // (expectation -> task with questions at screen transitions -> SEQ) -> hardest task -> summary.
 import type { QuestionMoment } from '@hx/core'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { downloadJson, figmaEmbedUrl, supportedBrowser, type QualityResult, type SessionRun } from './run'
+import { downloadJson, figmaEmbedUrl, maskAnswer, supportedBrowser, type QualityResult, type SessionRun } from './run'
 import { figmaFrames } from './report/images'
 import { AnswerBox, Card, Rating, useT } from './ui'
 
@@ -183,7 +183,7 @@ export function ContextQuestions({ run, next }: { run: SessionRun; next: () => v
         <button
           className="primary"
           onClick={() => {
-            run.contextAnswers = qs.map((q) => ({ id: q.id, text: q.text, answer: answers[q.id]?.trim() || null }))
+            run.contextAnswers = qs.map((q) => ({ id: q.id, text: q.text, answer: maskAnswer(answers[q.id]) }))
             next()
           }}
         >
@@ -221,7 +221,7 @@ export function FiveSecondTests({ run, next }: { run: SessionRun; next: () => vo
   }, [phase, test])
   if (!test) return null
   const finish = (shown: boolean) => {
-    run.fiveSecondResults.push({ id: test.id, screen: test.screen, shown, answers: test.questions.map((q, k) => ({ question: q, answer: answers[k]?.trim() || null })) })
+    run.fiveSecondResults.push({ id: test.id, screen: test.screen, shown, answers: test.questions.map((q, k) => ({ question: q, answer: maskAnswer(answers[k]) })) })
     setAnswers([])
     setPhase('intro')
     setI(i + 1)
@@ -526,7 +526,7 @@ export function Hardest({ run, next }: { run: SessionRun; next: () => void }) {
       <AnswerBox
         prompt={t('session.hardestTask')}
         onDone={(a) => {
-          run.hardestTask = { answer: a.answer?.trim() || null, dontRemember: !!a.dontRemember, skipped: !!a.skipped }
+          run.hardestTask = { answer: maskAnswer(a.answer), dontRemember: !!a.dontRemember, skipped: !!a.skipped }
           next()
         }}
       />
